@@ -1,0 +1,800 @@
+import React, { useState } from 'react';
+import {
+    StyleSheet,
+    Text,
+    View,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    Dimensions,
+    Platform
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+
+const CATEGORIES = ['All', 'Leafy', 'Seasonals', 'Roots', 'Daily Essentials'];
+
+const PRODUCTS = [
+    {
+        id: 1,
+        name: 'Sweet Potatoes',
+        type: 'Roots',
+        price: '$1.79',
+        unit: '/lb',
+        discount: '-40%',
+        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyN5y-txNHOqaxZJy4yWA4lK_oiEQxjmX3xg&s',
+    },
+    {
+        id: 2,
+        name: 'Broccoli Fresh Green',
+        type: 'Hydroponic',
+        price: '$3.29',
+        unit: '/lb',
+        discount: '-30%',
+        image: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?q=80&w=2601&auto=format&fit=crop',
+    },
+    {
+        id: 3,
+        name: 'Fresh Parsley',
+        type: 'Organic',
+        price: '$1.49',
+        unit: '/bunch',
+        discount: '-30%',
+        image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=2574&auto=format&fit=crop',
+    },
+    {
+        id: 4,
+        name: 'Organic Spinach',
+        type: 'Leafy',
+        price: '$2.49',
+        unit: '/bunch',
+        discount: '-20%',
+        image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?q=80&w=2574&auto=format&fit=crop',
+    },
+    {
+        id: 5,
+        name: 'Fresh Lettuce',
+        type: 'Hydroponic',
+        price: '$1.99',
+        unit: '/head',
+        discount: '-15%',
+        image: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?q=80&w=2574&auto=format&fit=crop',
+    },
+    {
+        id: 6,
+        name: 'Red Tomatoes',
+        type: 'Daily',
+        price: '$2.99',
+        unit: '/lb',
+        discount: '-10%',
+        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
+    },
+    {
+        id: 7,
+        name: 'Crunchy Carrots',
+        type: 'Roots',
+        price: '$1.49',
+        unit: '/bunch',
+        discount: '-25%',
+        image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=2574&auto=format&fit=crop',
+    },
+    {
+        id: 8,
+        name: 'Red Onions',
+        type: 'Roots',
+        price: '$1.29',
+        unit: '/lb',
+        discount: '-5%',
+        image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?q=80&w=2574&auto=format&fit=crop',
+    },
+    {
+        id: 9,
+        name: 'Bell Peppers',
+        type: 'Daily',
+        price: '$3.49',
+        unit: '/lb',
+        discount: '-15%',
+        image: 'https://images.unsplash.com/photo-1563565375-f3fdf5dbc240?q=80&w=2574&auto=format&fit=crop',
+    },
+    {
+        id: 10,
+        name: 'Fresh Strawberries',
+        type: 'Fruit',
+        price: '$4.99',
+        unit: '/box',
+        discount: '-20%',
+        image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?q=80&w=2670&auto=format&fit=crop',
+    },
+    {
+        id: 11,
+        name: 'Sweet Watermelon',
+        type: 'Fruit',
+        price: '$5.99',
+        unit: '/each',
+        discount: 'Season',
+        image: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?q=80&w=2670&auto=format&fit=crop',
+    },
+];
+
+const DEAL_PRODUCTS = [
+    {
+        id: 101,
+        name: 'Veggie Saver Pack',
+        type: 'Combo',
+        price: '$12.99',
+        unit: '/pack',
+        discount: 'BOGO', // Buy One Get One
+        specialOffer: 'Limited Time Deal',
+        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2680&auto=format&fit=crop', // Bowl of veggies
+    },
+    {
+        id: 102,
+        name: 'Summer Fruit Basket',
+        type: 'Seasonal',
+        price: '$15.49',
+        unit: '/basket',
+        discount: '-50%',
+        specialOffer: 'Flash Sale',
+        image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop', // Fruits
+    },
+];
+
+const LOCATIONS = [
+    { id: '1', type: 'Home', address: 'Patna, Bihar', zip: '800001' },
+    { id: '2', type: 'Office', address: 'Boring Road, Patna', zip: '800002' },
+    { id: '3', type: 'Parents', address: 'Danapur, Patna', zip: '801503' },
+];
+
+export default function MarketScreen() {
+    const [activeCategory, setActiveCategory] = useState('All');
+    const [quantities, setQuantities] = useState<Record<number, number>>({});
+    const [location, setLocation] = useState(LOCATIONS[0]);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const insets = useSafeAreaInsets();
+    const totalCartItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
+
+    const updateQuantity = (id: number, delta: number) => {
+        setQuantities(prev => {
+            const current = prev[id] || 0;
+            const next = Math.max(0, current + delta);
+            if (next === 0) {
+                const { [id]: _, ...rest } = prev;
+                return rest;
+            }
+            return { ...prev, [id]: next };
+        });
+    };
+
+    const getItemQuantity = (id: number) => quantities[id] || 0;
+
+    // Combine for search
+    const allProducts = [...PRODUCTS, ...DEAL_PRODUCTS];
+    const filteredSearchResults = allProducts.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.type.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const renderProductCard = (item: any) => {
+        const qty = getItemQuantity(item.id);
+        const isDeal = item.specialOffer !== undefined;
+
+        // Dynamic style based on if it's a deal product or not, 
+        // passing existing logic.
+        const cardStyle = isDeal
+            ? [styles.productCard, { borderColor: '#FFD700', borderWidth: 2, backgroundColor: '#FFFDE7' }]
+            : styles.productCard;
+
+        return (
+            <View key={item.id} style={cardStyle}>
+                <View style={styles.productImageContainer}>
+                    <Image source={{ uri: item.image }} style={styles.productImage} contentFit="contain" />
+                    <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
+                        <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.favButton}>
+                        <Ionicons name="heart-outline" size={20} color="#1A1A1A" />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.productInfo}>
+                    {isDeal && (
+                        <Text style={[styles.productType, { color: '#F57F17', fontWeight: 'bold' }]}>{item.specialOffer}</Text>
+                    )}
+                    <Text style={styles.productType}>{!isDeal && item.type}</Text>
+                    <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+
+                    <View style={styles.priceRow}>
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.price}>{item.price}</Text>
+                            <Text style={styles.unit}>{item.unit}</Text>
+                        </View>
+
+                        {qty === 0 ? (
+                            <TouchableOpacity
+                                style={[styles.addButton, isDeal && { backgroundColor: '#F9A825' }]}
+                                onPress={() => updateQuantity(item.id, 1)}
+                            >
+                                <Ionicons name="add" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={[styles.quantityControl, isDeal && { backgroundColor: '#F9A825' }]}>
+                                <TouchableOpacity
+                                    style={styles.qtyBtn}
+                                    onPress={() => updateQuantity(item.id, -1)}
+                                >
+                                    <Ionicons name="remove" size={16} color="#fff" />
+                                </TouchableOpacity>
+                                <Text style={styles.qtyText}>{qty}</Text>
+                                <TouchableOpacity
+                                    style={styles.qtyBtn}
+                                    onPress={() => updateQuantity(item.id, 1)}
+                                >
+                                    <Ionicons name="add" size={16} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
+    return (
+        <View style={styles.container}>
+            <StatusBar style="light" />
+
+            {/* Header Section */}
+            <View style={[styles.header, { paddingTop: Math.max(insets.top + 10, 30), zIndex: 10 }]}>
+                <View style={styles.headerTop}>
+                    {/* Location Dropdown Trigger */}
+                    <TouchableOpacity
+                        style={styles.locationContainer}
+                        onPress={() => setShowLocationPicker(!showLocationPicker)}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.locationIconBg}>
+                            <Ionicons name="location-outline" size={20} color="#fff" />
+                        </View>
+                        <View>
+                            <View style={styles.locationRow}>
+                                <Text style={styles.locationTitle}>{location.type}</Text>
+                                <Ionicons name={showLocationPicker ? "chevron-up" : "chevron-down"} size={16} color="#fff" />
+                            </View>
+                            <Text style={styles.deliveryTime}>{location.address}</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.notificationBtn}>
+                        <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                    <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+                    <TextInput
+                        placeholder="Search 'Tomato' or 'Potato'"
+                        placeholderTextColor="#999"
+                        style={styles.searchInput}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                            <Ionicons name="close-circle" size={18} color="#999" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {/* Categories - Only show if NO search query */}
+                {searchQuery.length === 0 && (
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoriesContainer}
+                    >
+                        {CATEGORIES.map((cat, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[
+                                    styles.categoryChip,
+                                    activeCategory === cat ? styles.activeCategoryChip : styles.inactiveCategoryChip
+                                ]}
+                                onPress={() => setActiveCategory(cat)}
+                            >
+                                <Text style={[
+                                    styles.categoryText,
+                                    activeCategory === cat ? styles.activeCategoryText : styles.inactiveCategoryText
+                                ]}>
+                                    {cat}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                )}
+            </View>
+
+            {/* Main Content */}
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {searchQuery.length > 0 ? (
+                    // Search Results View
+                    <View style={styles.searchResultsContainer}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Search Results ({filteredSearchResults.length})</Text>
+                        </View>
+                        <View style={styles.gridContainer}>
+                            {filteredSearchResults.length > 0 ? (
+                                filteredSearchResults.map(renderProductCard)
+                            ) : (
+                                <View style={styles.noResults}>
+                                    <Ionicons name="search" size={48} color="#DDD" />
+                                    <Text style={styles.noResultText}>No items found for "{searchQuery}"</Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                ) : (
+                    // Normal Sections View
+                    <>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Bestsellers</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                            {PRODUCTS.filter(p => [2, 6, 10, 1, 11].includes(p.id)).map(renderProductCard)}
+                        </ScrollView>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Grab Best Deal</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                            {DEAL_PRODUCTS.map(renderProductCard)}
+                        </ScrollView>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Leafy & Fresh</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                            {/* Filter out Sweet Potatoes (1) and Parsley (3), keep leafy/green */}
+                            {PRODUCTS.filter(p => ['Leafy', 'Hydroponic', 'Organic'].includes(p.type) && !['Sweet Potatoes', 'Red Onions'].includes(p.name)).map(renderProductCard)}
+                        </ScrollView>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Seasonal Fruits</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                            {PRODUCTS.filter(p => p.type === 'Fruit').map(renderProductCard)}
+                        </ScrollView>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Farm Classics</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                            {PRODUCTS.filter(p => p.type === 'Daily').map(renderProductCard)}
+                        </ScrollView>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Root Vegetables</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                            {PRODUCTS.filter(p => p.type === 'Roots').map(renderProductCard)}
+                        </ScrollView>
+                    </>
+                )}
+
+                <View style={{ height: 120 }} />
+            </ScrollView>
+
+            {/* Floating Cart Popup */}
+            {totalCartItems > 0 && (
+                <View style={styles.cartPopupContainer}>
+                    <TouchableOpacity style={styles.cartPopup} activeOpacity={0.9}>
+                        <View style={styles.cartImages}>
+                            <Image source={{ uri: PRODUCTS[0].image }} style={[styles.tinyThumb, { left: 0, zIndex: 3 }]} />
+                            <Image source={{ uri: PRODUCTS[1].image }} style={[styles.tinyThumb, { left: 15, zIndex: 2 }]} />
+                            <View style={[styles.tinyThumb, styles.moreThumb, { left: 30, zIndex: 1 }]}>
+                                <Text style={styles.moreText}>..</Text>
+                            </View>
+                        </View>
+                        <Text style={styles.viewCartText}>View Cart</Text>
+                        <View style={styles.cartBadgeCount}>
+                            <Text style={styles.cartCountText}>{totalCartItems}</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Location Dropdown Overlay - Global Position */}
+            {showLocationPicker && (
+                <>
+                    <TouchableOpacity
+                        style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 900 }}
+                        activeOpacity={1}
+                        onPress={() => setShowLocationPicker(false)}
+                    />
+                    <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }]}>
+                        {LOCATIONS.map((loc) => (
+                            <TouchableOpacity
+                                key={loc.id}
+                                style={styles.locationOption}
+                                onPress={() => {
+                                    setLocation(loc);
+                                    setShowLocationPicker(false);
+                                }}
+                            >
+                                <Ionicons
+                                    name={location.id === loc.id ? "radio-button-on" : "radio-button-off"}
+                                    size={18}
+                                    color={location.id === loc.id ? "#1F5E2E" : "#999"}
+                                />
+                                <View style={{ marginLeft: 12 }}>
+                                    <Text style={[styles.locationOptionTitle, location.id === loc.id && { color: '#1F5E2E' }]}>{loc.type}</Text>
+                                    <Text style={styles.locationOptionAddress}>{loc.address}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </>
+            )}
+
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    header: {
+        backgroundColor: '#1F5E2E',
+        paddingBottom: 24,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        overflow: 'hidden', // Ensures content respects the rounded corners
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+    },
+    locationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    locationIconBg: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    locationTitle: {
+        color: '#fff',
+        fontFamily: 'DMSans_700Bold',
+        fontSize: 14,
+    },
+    deliveryTime: {
+        color: '#A5D6A7', // Light green text
+        fontFamily: 'DMSans_400Regular',
+        fontSize: 10,
+        marginTop: 2,
+    },
+    notificationBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        marginHorizontal: 20,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 48,
+        marginBottom: 20,
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
+        fontFamily: 'DMSans_400Regular',
+        fontSize: 14,
+        color: '#1A1A1A',
+    },
+    categoriesContainer: {
+        paddingHorizontal: 20,
+        gap: 10,
+    },
+    categoryChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        minWidth: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    activeCategoryChip: {
+        backgroundColor: '#AED581', // Limeish Green
+    },
+    inactiveCategoryChip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)', // Semi-transparent for "merged" look
+    },
+    categoryText: {
+        fontFamily: 'DMSans_700Bold',
+        fontSize: 13,
+    },
+    activeCategoryText: {
+        color: '#1F5E2E',
+    },
+    inactiveCategoryText: {
+        color: '#FFFFFF', // White text on transparent background
+    },
+    scrollContent: {
+        paddingTop: 24,
+    },
+    sectionHeader: {
+        paddingHorizontal: 20,
+        marginBottom: 16,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+    },
+    productsContainer: {
+        paddingHorizontal: 20,
+        gap: 16,
+        paddingBottom: 24, // Space for shadow
+    },
+    productCard: {
+        width: 160,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 12,
+        // Shadow
+        boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.06)',
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#F5F5F5',
+    },
+    productImageContainer: {
+        width: '100%',
+        height: 120,
+        backgroundColor: '#F9F9F9',
+        borderRadius: 12,
+        marginBottom: 12,
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    productImage: {
+        width: '90%',
+        height: '90%',
+    },
+    discountBadge: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        backgroundColor: '#1F5E2E',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    discountText: {
+        color: '#fff',
+        fontSize: 10,
+        fontFamily: 'DMSans_700Bold',
+    },
+    favButton: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        padding: 2,
+    },
+    productInfo: {
+        width: '100%',
+    },
+    productType: {
+        fontSize: 10,
+        color: '#888',
+        fontFamily: 'DMSans_400Regular',
+        marginBottom: 4,
+    },
+    productName: {
+        fontSize: 14,
+        color: '#1A1A1A',
+        fontFamily: 'DMSans_700Bold',
+        marginBottom: 8,
+    },
+    priceRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    priceContainer: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+    },
+    price: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1F5E2E',
+    },
+    unit: {
+        fontSize: 12,
+        color: '#888',
+        marginLeft: 2,
+        fontFamily: 'DMSans_400Regular',
+    },
+    // ... existing styles ...
+    addButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#1F5E2E',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    quantityControl: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#1F5E2E',
+        borderRadius: 16,
+        height: 32,
+        paddingHorizontal: 4,
+        gap: 8,
+    },
+    qtyBtn: {
+        width: 24,
+        height: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    qtyText: {
+        color: '#fff',
+        fontFamily: 'DMSans_700Bold',
+        fontSize: 14,
+    },
+    cartPopupContainer: {
+        // ... existing styles ...
+        position: 'absolute',
+        bottom: 90, // Above tab bar
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 100,
+    },
+    cartPopup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#1F5E2E',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 30,
+        gap: 12,
+        boxShadow: '0px 4px 15px rgba(31, 94, 46, 0.4)',
+        elevation: 8,
+        minWidth: 160,
+    },
+    cartImages: {
+        width: 50,
+        height: 30,
+        position: 'relative',
+        marginRight: 8,
+    },
+    tinyThumb: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: '#1F5E2E',
+        position: 'absolute',
+        top: 0,
+        backgroundColor: '#fff',
+    },
+    moreThumb: {
+        backgroundColor: '#E8F5E9',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    moreText: {
+        fontSize: 10,
+        color: '#1F5E2E',
+        fontWeight: 'bold',
+    },
+    viewCartText: {
+        color: '#fff',
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+    },
+    cartBadgeCount: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 10,
+        marginLeft: 'auto',
+    },
+    cartCountText: {
+        color: '#1F5E2E',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    // NEW STYLES
+    locationDropdown: {
+        position: 'absolute',
+        top: 60,
+        left: 20,
+        width: 280,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 8,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        zIndex: 1000,
+    },
+    locationOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F5F5F5',
+    },
+    locationOptionTitle: {
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+        color: '#333',
+    },
+    locationOptionAddress: {
+        fontSize: 12,
+        fontFamily: 'DMSans_400Regular',
+        color: '#666',
+        marginTop: 2,
+    },
+    searchResultsContainer: {
+        paddingBottom: 20,
+    },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 16,
+        paddingHorizontal: 20,
+    },
+    noResults: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 40,
+        gap: 12,
+    },
+    noResultText: {
+        fontSize: 16,
+        fontFamily: 'DMSans_500Medium',
+        color: '#999',
+    },
+});

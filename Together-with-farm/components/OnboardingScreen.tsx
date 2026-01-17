@@ -13,6 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,6 +39,7 @@ const onboardingData = [
 export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const scrollViewRef = useRef<ScrollView>(null);
+    const insets = useSafeAreaInsets();
 
     const [fontsLoaded] = useFonts({
         DMSans_400Regular,
@@ -72,7 +74,7 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
             <StatusBar style="dark" />
 
             {/* Background Image Container - Fixed position */}
-            <View style={styles.imageContainer}>
+            <View style={[styles.imageContainer, { top: insets.top + 20 }]}>
                 <Image
                     source={require('@/assets/images/3d-model-with-veg.png')}
                     style={styles.image}
@@ -107,7 +109,7 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
                         ))}
                     </ScrollView>
 
-                    <View style={styles.bottomControls}>
+                    <View style={[styles.bottomControls, { paddingBottom: Math.max(insets.bottom + 10, 24) }]}>
                         {/* Pagination dots */}
                         <View style={styles.dotsContainer}>
                             {onboardingData.map((_, dotIndex) => (
@@ -160,7 +162,6 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         position: 'absolute',
-        top: 50, // Adjust based on status bar/safe area
         left: 0,
         right: 0,
         height: height * 0.6, // Takes up top 60%
@@ -191,13 +192,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FAFAF8',
         borderTopLeftRadius: width, // Create the perfect arc
         borderTopRightRadius: width,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: -10, // Subtle shadow for depth
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        boxShadow: '0px -10px 10px rgba(0, 0, 0, 0.05)',
         elevation: 5,
     },
     foregroundContent: {
@@ -238,7 +233,6 @@ const styles = StyleSheet.create({
     bottomControls: {
         width: '100%',
         paddingHorizontal: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
         alignItems: 'center',
     },
     dotsContainer: {
@@ -264,10 +258,7 @@ const styles = StyleSheet.create({
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#1F5E2E',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        boxShadow: '0px 4px 8px rgba(31, 94, 46, 0.3)',
         elevation: 4,
     },
     buttonText: {
