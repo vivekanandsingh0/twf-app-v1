@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -28,7 +28,10 @@ const NOTIFICATIONS = [
         icon: 'gift-outline',
         highlight: true,
         section: 'Today',
-        bg: '#D3D3D3'
+        bg: '#D3D3D3',
+        voucherCode: 'FRESH20',
+        validity: 'Valid until 11:59 Today',
+        promoDetails: 'Save on all greens until midnight. Offers apply automatically when checkout'
     },
     {
         id: 3,
@@ -58,6 +61,13 @@ export default function NotificationsScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const [activeFilter, setActiveFilter] = useState('All 2');
+    const [selectedPromo, setSelectedPromo] = useState<typeof NOTIFICATIONS[0] | null>(null);
+
+    const handleNotificationPress = (item: typeof NOTIFICATIONS[0]) => {
+        if (item.type === 'promo') {
+            setSelectedPromo(item);
+        }
+    };
 
     const renderNotificationItem = (item: typeof NOTIFICATIONS[0]) => (
         <TouchableOpacity
@@ -67,6 +77,7 @@ export default function NotificationsScreen() {
                 { backgroundColor: item.highlight ? '#EDEDED' : '#fff' },
                 item.highlight ? styles.activeCard : null
             ]}
+            onPress={() => handleNotificationPress(item)}
         >
             <View style={[styles.iconContainer, item.type === 'success' ? { backgroundColor: '#000' } : { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#000' }]}>
                 <Ionicons
@@ -140,6 +151,42 @@ export default function NotificationsScreen() {
                 <Text style={styles.sectionHeader}>Yesterday</Text>
                 {NOTIFICATIONS.filter(n => n.section === 'Yesterday').map(renderNotificationItem)}
             </ScrollView>
+
+            {/* Voucher Modal */}
+            <Modal
+                visible={!!selectedPromo}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setSelectedPromo(null)}
+            >
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => setSelectedPromo(null)}
+                    />
+                    <View style={styles.voucherCard}>
+                        <View style={styles.voucherIconContainer}>
+                            <Ionicons name="ticket-outline" size={64} color="#1F5E2E" />
+                        </View>
+
+                        <Text style={styles.voucherTitle}>{selectedPromo?.title}</Text>
+                        <Text style={styles.voucherDesc}>
+                            {selectedPromo?.promoDetails || selectedPromo?.description}
+                        </Text>
+
+                        <View style={styles.codeContainer}>
+                            <Text style={styles.codeLabel}>Promo Code</Text>
+                            <Text style={styles.codeText}>{selectedPromo?.voucherCode}</Text>
+                            <Text style={styles.validityText}>{selectedPromo?.validity}</Text>
+                        </View>
+
+                        <TouchableOpacity style={styles.redeemButton} onPress={() => setSelectedPromo(null)}>
+                            <Text style={styles.redeemText}>Redeem Now</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
 
         </View>
     );
@@ -301,5 +348,87 @@ const styles = StyleSheet.create({
         alignSelf: 'center', // Vertically center? No top right usually.
         marginBottom: 'auto', // Push to top
         marginTop: 8,
+    },
+
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    modalBackdrop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', // White backdrop as per design, maybe slightly blurred/opaque
+    },
+    voucherCard: {
+        width: '85%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    voucherIconContainer: {
+        width: 100,
+        height: 100,
+        backgroundColor: '#F9F9F9',
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
+    },
+    voucherTitle: {
+        fontSize: 22,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+        textAlign: 'center',
+        marginBottom: 12,
+    },
+    voucherDesc: {
+        fontSize: 14,
+        fontFamily: 'DMSans_400Regular',
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 32,
+        lineHeight: 22,
+    },
+    codeContainer: {
+        backgroundColor: '#E0E0E0',
+        borderRadius: 24,
+        paddingVertical: 20,
+        paddingHorizontal: 40,
+        alignItems: 'center',
+        marginBottom: 40,
+        width: '100%',
+    },
+    codeLabel: {
+        fontSize: 12,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+        marginBottom: 4,
+    },
+    codeText: {
+        fontSize: 24,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1F5E2E',
+        marginBottom: 4,
+    },
+    validityText: {
+        fontSize: 10,
+        fontFamily: 'DMSans_400Regular',
+        color: '#666',
+    },
+    redeemButton: {
+        backgroundColor: '#1F5E2E',
+        paddingVertical: 16,
+        paddingHorizontal: 40,
+        borderRadius: 30,
+    },
+    redeemText: {
+        color: '#fff',
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
     }
 });
