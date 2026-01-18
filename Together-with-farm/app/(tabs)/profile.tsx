@@ -4,9 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
     const insets = useSafeAreaInsets();
+    const router = useRouter();
 
     const renderMenuItem = (icon: keyof typeof Ionicons.glyphMap, title: string, onPress?: () => void) => (
         <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
@@ -33,7 +35,10 @@ export default function ProfileScreen() {
                         <Ionicons name="gift-outline" size={24} color="#1A1A1A" />
                         <View style={styles.giftDot} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.iconButton, { marginLeft: 8 }]}>
+                    <TouchableOpacity
+                        style={[styles.iconButton, { marginLeft: 8 }]}
+                        onPress={() => router.push('/notifications')}
+                    >
                         <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                         <View style={styles.notificationBadge}>
                             <Text style={styles.badgeText}>2</Text>

@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -150,6 +151,7 @@ const LOCATIONS = [
 ];
 
 export default function MarketScreen() {
+    const router = useRouter();
     const [activeCategory, setActiveCategory] = useState('All');
     const [quantities, setQuantities] = useState<Record<number, number>>({});
     const [location, setLocation] = useState(LOCATIONS[0]);
@@ -270,7 +272,10 @@ export default function MarketScreen() {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.notificationBtn}>
+                    <TouchableOpacity
+                        style={styles.notificationBtn}
+                        onPress={() => router.push('/notifications')}
+                    >
                         <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                 </View>

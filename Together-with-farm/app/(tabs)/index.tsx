@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 
 const CATEGORIES = ['All', 'Nutrition', 'Storage Tips', 'Recipes', 'Tips'];
 
@@ -94,6 +95,7 @@ export default function FeedScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedFarmer, setSelectedFarmer] = useState<typeof SPOTLIGHT_FARMERS[0] | null>(null);
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -110,7 +112,10 @@ export default function FeedScreen() {
             <Ionicons name="gift-outline" size={24} color="#1A1A1A" />
             <View style={styles.giftBadge} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push('/notifications')}
+          >
             <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
             <View style={styles.notificationBadge}>
               <Text style={styles.badgeText}>2</Text>
@@ -123,6 +128,16 @@ export default function FeedScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Search fresh products or brands"
+            placeholderTextColor="#999"
+            style={styles.searchInput}
+          />
+        </View>
+
         {/* Spotlight Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Spotlight</Text>
@@ -145,16 +160,6 @@ export default function FeedScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            placeholder="Search fresh products or brands"
-            placeholderTextColor="#999"
-            style={styles.searchInput}
-          />
-        </View>
 
         {/* Categories */}
         <ScrollView
