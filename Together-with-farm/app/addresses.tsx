@@ -5,19 +5,34 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
+    Modal,
+    TextInput,
+    Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-const SAVED_ADDRESSES = [
+interface Address {
+    id: number;
+    type: string;
+    icon: string;
+    address: string;
+    city: string;
+    pincode?: string;
+    landmark?: string;
+}
+
+const INITIAL_ADDRESSES: Address[] = [
     {
         id: 1,
         type: 'Home',
         icon: 'home-outline',
         address: 'Kankarbagh Colony, Near Hanuman Nagar, road no.1',
         city: 'left, Near Nalanda',
+        pincode: '800020',
+        landmark: 'Near City Mall',
     },
     {
         id: 2,
@@ -25,6 +40,8 @@ const SAVED_ADDRESSES = [
         icon: 'briefcase-outline',
         address: 'Kankarbagh Colony, Near Hanuman Nagar, road no.1',
         city: 'left, Near Nalanda',
+        pincode: '800001',
+        landmark: 'Opposite Bank',
     },
     {
         id: 3,
@@ -32,12 +49,110 @@ const SAVED_ADDRESSES = [
         icon: 'cafe-outline',
         address: 'Kankarbagh Colony, Near Hanuman Nagar, road no.1',
         city: 'left, Near Nalanda',
+        pincode: '800015',
+        landmark: 'Near Park',
     },
 ];
 
 export default function AddressesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+
+    const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
+    const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+    const [showMenu, setShowMenu] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showAddressForm, setShowAddressForm] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        type: '',
+        address: '',
+        city: '',
+        pincode: '',
+        landmark: '',
+    });
+
+    const handleMenuPress = (address: Address) => {
+        setSelectedAddress(address);
+        setShowMenu(true);
+    };
+
+    const handleEdit = () => {
+        if (selectedAddress) {
+            setFormData({
+                type: selectedAddress.type,
+                address: selectedAddress.address,
+                city: selectedAddress.city,
+                pincode: selectedAddress.pincode || '',
+                landmark: selectedAddress.landmark || '',
+            });
+            setIsEditing(true);
+            setShowMenu(false);
+            setShowAddressForm(true);
+        }
+    };
+
+    const handleDelete = () => {
+        setShowMenu(false);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        if (selectedAddress) {
+            setAddresses(addresses.filter(addr => addr.id !== selectedAddress.id));
+            setShowDeleteConfirm(false);
+            setSelectedAddress(null);
+        }
+    };
+
+    const handleAddNew = () => {
+        setFormData({
+            type: '',
+            address: '',
+            city: '',
+            pincode: '',
+            landmark: '',
+        });
+        setIsEditing(false);
+        setShowAddressForm(true);
+    };
+
+    const handleSaveAddress = () => {
+        if (!formData.type || !formData.address || !formData.city) {
+            Alert.alert('Error', 'Please fill in all required fields');
+            return;
+        }
+
+        if (isEditing && selectedAddress) {
+            // Update existing address
+            setAddresses(addresses.map(addr =>
+                addr.id === selectedAddress.id
+                    ? { ...addr, ...formData }
+                    : addr
+            ));
+        } else {
+            // Add new address
+            const newAddress: Address = {
+                id: Math.max(...addresses.map(a => a.id), 0) + 1,
+                icon: getIconForType(formData.type),
+                ...formData,
+            };
+            setAddresses([...addresses, newAddress]);
+        }
+
+        setShowAddressForm(false);
+        setSelectedAddress(null);
+    };
+
+    const getIconForType = (type: string): string => {
+        const lowerType = type.toLowerCase();
+        if (lowerType.includes('home')) return 'home-outline';
+        if (lowerType.includes('office') || lowerType.includes('work')) return 'briefcase-outline';
+        if (lowerType.includes('cafe') || lowerType.includes('coffee')) return 'cafe-outline';
+        return 'location-outline';
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -67,7 +182,7 @@ export default function AddressesScreen() {
                 {/* My Addresses Section */}
                 <Text style={styles.sectionTitle}>My Addresses</Text>
 
-                {SAVED_ADDRESSES.map((item) => (
+                {addresses.map((item) => (
                     <TouchableOpacity
                         key={item.id}
                         style={styles.addressCard}
@@ -89,7 +204,10 @@ export default function AddressesScreen() {
                                 <Text style={styles.addressCity}>{item.city}</Text>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.moreButton}>
+                        <TouchableOpacity
+                            style={styles.moreButton}
+                            onPress={() => handleMenuPress(item)}
+                        >
                             <Ionicons name="ellipsis-horizontal" size={20} color="#1A1A1A" />
                         </TouchableOpacity>
                     </TouchableOpacity>
@@ -101,6 +219,7 @@ export default function AddressesScreen() {
                 <TouchableOpacity
                     style={styles.addAddressCard}
                     activeOpacity={0.7}
+                    onPress={handleAddNew}
                 >
                     <View style={styles.addressContent}>
                         <View style={styles.iconContainer}>
@@ -118,6 +237,149 @@ export default function AddressesScreen() {
                     </TouchableOpacity>
                 </TouchableOpacity>
             </ScrollView>
+
+            {/* Menu Modal */}
+            <Modal
+                visible={showMenu}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowMenu(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowMenu(false)}
+                >
+                    <View style={styles.menuModal}>
+                        <TouchableOpacity style={styles.menuItem} onPress={handleEdit}>
+                            <Ionicons name="create-outline" size={20} color="#1A1A1A" />
+                            <Text style={styles.menuText}>Edit</Text>
+                        </TouchableOpacity>
+                        <View style={styles.menuDivider} />
+                        <TouchableOpacity style={styles.menuItem} onPress={handleDelete}>
+                            <Ionicons name="trash-outline" size={20} color="#FF4B4B" />
+                            <Text style={[styles.menuText, { color: '#FF4B4B' }]}>Delete</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                visible={showDeleteConfirm}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowDeleteConfirm(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.confirmModal}>
+                        <Text style={styles.confirmTitle}>Delete Address?</Text>
+                        <Text style={styles.confirmText}>
+                            Are you sure you want to delete this address?
+                        </Text>
+                        <View style={styles.confirmButtons}>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={() => setShowDeleteConfirm(false)}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.deleteButton}
+                                onPress={confirmDelete}
+                            >
+                                <Text style={styles.deleteButtonText}>Delete</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Add/Edit Address Form Modal */}
+            <Modal
+                visible={showAddressForm}
+                animationType="slide"
+                onRequestClose={() => setShowAddressForm(false)}
+            >
+                <View style={[styles.formContainer, { paddingTop: insets.top + 10 }]}>
+                    <View style={styles.formHeader}>
+                        <TouchableOpacity onPress={() => setShowAddressForm(false)}>
+                            <Ionicons name="close" size={24} color="#1A1A1A" />
+                        </TouchableOpacity>
+                        <Text style={styles.formTitle}>
+                            {isEditing ? 'Edit Address' : 'Add New Address'}
+                        </Text>
+                        <View style={{ width: 24 }} />
+                    </View>
+
+                    <ScrollView
+                        style={styles.formScroll}
+                        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+                    >
+                        <View style={styles.formField}>
+                            <Text style={styles.formLabel}>Address Type *</Text>
+                            <TextInput
+                                style={styles.formInput}
+                                placeholder="e.g., Home, Office, Work"
+                                value={formData.type}
+                                onChangeText={(text) => setFormData({ ...formData, type: text })}
+                            />
+                        </View>
+
+                        <View style={styles.formField}>
+                            <Text style={styles.formLabel}>Full Address *</Text>
+                            <TextInput
+                                style={[styles.formInput, styles.textArea]}
+                                placeholder="House/Flat No., Street, Area"
+                                value={formData.address}
+                                onChangeText={(text) => setFormData({ ...formData, address: text })}
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
+
+                        <View style={styles.formField}>
+                            <Text style={styles.formLabel}>City/Town *</Text>
+                            <TextInput
+                                style={styles.formInput}
+                                placeholder="Enter city or town"
+                                value={formData.city}
+                                onChangeText={(text) => setFormData({ ...formData, city: text })}
+                            />
+                        </View>
+
+                        <View style={styles.formField}>
+                            <Text style={styles.formLabel}>Pincode</Text>
+                            <TextInput
+                                style={styles.formInput}
+                                placeholder="Enter pincode"
+                                value={formData.pincode}
+                                onChangeText={(text) => setFormData({ ...formData, pincode: text })}
+                                keyboardType="numeric"
+                            />
+                        </View>
+
+                        <View style={styles.formField}>
+                            <Text style={styles.formLabel}>Landmark (Optional)</Text>
+                            <TextInput
+                                style={styles.formInput}
+                                placeholder="Nearby landmark"
+                                value={formData.landmark}
+                                onChangeText={(text) => setFormData({ ...formData, landmark: text })}
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.saveButton}
+                            onPress={handleSaveAddress}
+                        >
+                            <Text style={styles.saveButtonText}>
+                                {isEditing ? 'Update Address' : 'Save Address'}
+                            </Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -270,5 +532,148 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginLeft: 8,
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    menuModal: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 8,
+        minWidth: 150,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+    },
+    menuText: {
+        fontSize: 16,
+        fontFamily: 'DMSans_500Medium',
+        color: '#1A1A1A',
+        marginLeft: 12,
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#E8E8E8',
+        marginVertical: 4,
+    },
+    confirmModal: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 24,
+        width: '80%',
+        maxWidth: 340,
+    },
+    confirmTitle: {
+        fontSize: 20,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+        marginBottom: 12,
+    },
+    confirmText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_400Regular',
+        color: '#666',
+        marginBottom: 24,
+        lineHeight: 20,
+    },
+    confirmButtons: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    cancelButton: {
+        flex: 1,
+        backgroundColor: '#F5F5F5',
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#666',
+    },
+    deleteButton: {
+        flex: 1,
+        backgroundColor: '#FF4B4B',
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    deleteButtonText: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#fff',
+    },
+    // Form styles
+    formContainer: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    formHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E8E8E8',
+    },
+    formTitle: {
+        fontSize: 18,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+    },
+    formScroll: {
+        flex: 1,
+    },
+    formField: {
+        paddingHorizontal: 20,
+        marginTop: 20,
+    },
+    formLabel: {
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+        marginBottom: 8,
+    },
+    formInput: {
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 14,
+        fontFamily: 'DMSans_500Medium',
+        color: '#333',
+        backgroundColor: '#FAFAFA',
+    },
+    textArea: {
+        height: 80,
+        textAlignVertical: 'top',
+    },
+    saveButton: {
+        backgroundColor: '#1F5E2E',
+        paddingVertical: 16,
+        borderRadius: 24,
+        alignItems: 'center',
+        marginHorizontal: 20,
+        marginTop: 32,
+    },
+    saveButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
     },
 });
