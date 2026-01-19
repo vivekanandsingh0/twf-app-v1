@@ -62,7 +62,7 @@ export default function ProfileScreen() {
                         <Text style={styles.userName}>Vivekanand Singh</Text>
                         <Text style={styles.userPhone}>+91 23456 7890</Text>
                     </View>
-                    <TouchableOpacity style={styles.editButton}>
+                    <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile-edit')}>
                         <Ionicons name="create-outline" size={20} color="#1A1A1A" />
                     </TouchableOpacity>
                 </View>
@@ -71,14 +71,14 @@ export default function ProfileScreen() {
                 <Text style={styles.sectionTitle}>My Activity</Text>
                 <View style={styles.menuGroup}>
                     {renderMenuItem('cart-outline', 'Your Orders')}
-                    {renderMenuItem('heart-outline', 'My Favourites')}
+                    {renderMenuItem('heart-outline', 'My Favourites', () => router.push('/favourites'))}
                     {renderMenuItem('pricetag-outline', 'Promotion & Vouchers')}
                 </View>
 
                 {/* Account Settings Section */}
                 <Text style={styles.sectionTitle}>Account Settings</Text>
                 <View style={styles.menuGroup}>
-                    {renderMenuItem('location-outline', 'Addresses')}
+                    {renderMenuItem('location-outline', 'Addresses', () => router.push('/addresses'))}
                     {renderMenuItem('card-outline', 'Payment Methods')}
                     {renderMenuItem('settings-outline', 'Settings')}
                 </View>

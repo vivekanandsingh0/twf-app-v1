@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFavourites } from '@/contexts/FavouritesContext';
 
 const { width } = Dimensions.get('window');
 
@@ -21,7 +22,7 @@ const CATEGORIES = ['All', 'Leafy', 'Seasonals', 'Roots', 'Daily Essentials'];
 
 const PRODUCTS = [
     {
-        id: 1,
+        id: 201,
         name: 'Sweet Potatoes',
         type: 'Roots',
         price: '$1.79',
@@ -30,7 +31,7 @@ const PRODUCTS = [
         image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyN5y-txNHOqaxZJy4yWA4lK_oiEQxjmX3xg&s',
     },
     {
-        id: 2,
+        id: 202,
         name: 'Broccoli Fresh Green',
         type: 'Hydroponic',
         price: '$3.29',
@@ -39,7 +40,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?q=80&w=2601&auto=format&fit=crop',
     },
     {
-        id: 3,
+        id: 203,
         name: 'Fresh Parsley',
         type: 'Organic',
         price: '$1.49',
@@ -48,7 +49,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=2574&auto=format&fit=crop',
     },
     {
-        id: 4,
+        id: 204,
         name: 'Organic Spinach',
         type: 'Leafy',
         price: '$2.49',
@@ -57,7 +58,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?q=80&w=2574&auto=format&fit=crop',
     },
     {
-        id: 5,
+        id: 205,
         name: 'Fresh Lettuce',
         type: 'Hydroponic',
         price: '$1.99',
@@ -66,7 +67,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?q=80&w=2574&auto=format&fit=crop',
     },
     {
-        id: 6,
+        id: 206,
         name: 'Red Tomatoes',
         type: 'Daily',
         price: '$2.99',
@@ -75,7 +76,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
     },
     {
-        id: 7,
+        id: 207,
         name: 'Crunchy Carrots',
         type: 'Roots',
         price: '$1.49',
@@ -84,7 +85,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=2574&auto=format&fit=crop',
     },
     {
-        id: 8,
+        id: 208,
         name: 'Red Onions',
         type: 'Roots',
         price: '$1.29',
@@ -93,7 +94,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?q=80&w=2574&auto=format&fit=crop',
     },
     {
-        id: 9,
+        id: 209,
         name: 'Bell Peppers',
         type: 'Daily',
         price: '$3.49',
@@ -102,7 +103,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1563565375-f3fdf5dbc240?q=80&w=2574&auto=format&fit=crop',
     },
     {
-        id: 10,
+        id: 210,
         name: 'Fresh Strawberries',
         type: 'Fruit',
         price: '$4.99',
@@ -111,7 +112,7 @@ const PRODUCTS = [
         image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?q=80&w=2670&auto=format&fit=crop',
     },
     {
-        id: 11,
+        id: 211,
         name: 'Sweet Watermelon',
         type: 'Fruit',
         price: '$5.99',
@@ -152,6 +153,7 @@ const LOCATIONS = [
 
 export default function MarketScreen() {
     const router = useRouter();
+    const { toggleFavourite, isFavourite } = useFavourites();
     const [activeCategory, setActiveCategory] = useState('All');
     const [quantities, setQuantities] = useState<Record<number, number>>({});
     const [location, setLocation] = useState(LOCATIONS[0]);
@@ -193,14 +195,29 @@ export default function MarketScreen() {
             : styles.productCard;
 
         return (
-            <View key={item.id} style={cardStyle}>
+            <TouchableOpacity
+                key={item.id}
+                style={cardStyle}
+                onPress={() => router.push(`/product/${item.id}`)}
+                activeOpacity={0.9}
+            >
                 <View style={styles.productImageContainer}>
                     <Image source={{ uri: item.image }} style={styles.productImage} contentFit="contain" />
                     <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
                         <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
                     </View>
-                    <TouchableOpacity style={styles.favButton}>
-                        <Ionicons name="heart-outline" size={20} color="#1A1A1A" />
+                    <TouchableOpacity
+                        style={styles.favButton}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            toggleFavourite(item.id);
+                        }}
+                    >
+                        <Ionicons
+                            name={isFavourite(item.id) ? "heart" : "heart-outline"}
+                            size={20}
+                            color={isFavourite(item.id) ? "#FF4B4B" : "#1A1A1A"}
+                        />
                     </TouchableOpacity>
                 </View>
 
@@ -243,7 +260,7 @@ export default function MarketScreen() {
                         )}
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 
@@ -277,6 +294,9 @@ export default function MarketScreen() {
                         onPress={() => router.push('/notifications')}
                     >
                         <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
+                        <View style={styles.notificationBadge}>
+                            <Text style={styles.badgeText}>2</Text>
+                        </View>
                     </TouchableOpacity>
                 </View>
 
@@ -354,7 +374,7 @@ export default function MarketScreen() {
                             <Text style={styles.sectionTitle}>Bestsellers</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                            {PRODUCTS.filter(p => [2, 6, 10, 1, 11].includes(p.id)).map(renderProductCard)}
+                            {PRODUCTS.filter(p => [202, 206, 210, 201, 211].includes(p.id)).map(renderProductCard)}
                         </ScrollView>
 
                         <View style={styles.sectionHeader}>
@@ -509,6 +529,25 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#1F5E2E',
+        borderRadius: 8,
+        width: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: '#fff',
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 9,
+        fontFamily: 'DMSans_700Bold',
+        lineHeight: 10,
     },
     searchContainer: {
         flexDirection: 'row',
