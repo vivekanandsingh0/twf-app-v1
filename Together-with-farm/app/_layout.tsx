@@ -10,6 +10,7 @@ import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleSelectionScreen from '@/components/RoleSelectionScreen';
 import LoginScreen from '@/components/LoginScreen';
 import { FavouritesProvider } from '@/contexts/FavouritesContext';
+import { AddressProvider } from '@/contexts/AddressContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -65,20 +66,23 @@ export default function RootLayout() {
   }
 
   return (
-    <FavouritesProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="notifications" options={{ headerShown: false }} />
-          <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
-          <Stack.Screen name="favourites" options={{ headerShown: false }} />
-          <Stack.Screen name="addresses" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </FavouritesProvider>
+    <AddressProvider>
+      <FavouritesProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="notifications" options={{ headerShown: false }} />
+            <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
+            <Stack.Screen name="favourites" options={{ headerShown: false }} />
+            <Stack.Screen name="addresses" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </FavouritesProvider>
+    </AddressProvider>
   );
 }

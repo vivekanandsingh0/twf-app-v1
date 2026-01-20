@@ -15,6 +15,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
+import { useAddresses } from '@/contexts/AddressContext';
 
 const { width } = Dimensions.get('window');
 
@@ -154,9 +155,9 @@ const LOCATIONS = [
 export default function MarketScreen() {
     const router = useRouter();
     const { toggleFavourite, isFavourite } = useFavourites();
+    const { addresses, selectedAddress, setSelectedAddress } = useAddresses();
     const [activeCategory, setActiveCategory] = useState('All');
     const [quantities, setQuantities] = useState<Record<number, number>>({});
-    const [location, setLocation] = useState(LOCATIONS[0]);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -280,12 +281,14 @@ export default function MarketScreen() {
                         <View style={styles.locationIconBg}>
                             <Ionicons name="location-outline" size={20} color="#fff" />
                         </View>
-                        <View>
+                        <View style={{ flex: 1 }}>
                             <View style={styles.locationRow}>
-                                <Text style={styles.locationTitle}>{location.type}</Text>
+                                <Text style={styles.locationTitle}>{selectedAddress.type}</Text>
                                 <Ionicons name={showLocationPicker ? "chevron-up" : "chevron-down"} size={16} color="#fff" />
                             </View>
-                            <Text style={styles.deliveryTime}>{location.address}</Text>
+                            <Text style={styles.deliveryTime} numberOfLines={1} ellipsizeMode="tail">
+                                {selectedAddress.address}
+                            </Text>
                         </View>
                     </TouchableOpacity>
 
@@ -446,23 +449,27 @@ export default function MarketScreen() {
                         onPress={() => setShowLocationPicker(false)}
                     />
                     <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }]}>
-                        {LOCATIONS.map((loc) => (
+                        {addresses.map((addr) => (
                             <TouchableOpacity
-                                key={loc.id}
+                                key={addr.id}
                                 style={styles.locationOption}
                                 onPress={() => {
-                                    setLocation(loc);
+                                    setSelectedAddress(addr);
                                     setShowLocationPicker(false);
                                 }}
                             >
                                 <Ionicons
-                                    name={location.id === loc.id ? "radio-button-on" : "radio-button-off"}
+                                    name={selectedAddress.id === addr.id ? "radio-button-on" : "radio-button-off"}
                                     size={18}
-                                    color={location.id === loc.id ? "#1F5E2E" : "#999"}
+                                    color={selectedAddress.id === addr.id ? "#1F5E2E" : "#999"}
                                 />
-                                <View style={{ marginLeft: 12 }}>
-                                    <Text style={[styles.locationOptionTitle, location.id === loc.id && { color: '#1F5E2E' }]}>{loc.type}</Text>
-                                    <Text style={styles.locationOptionAddress}>{loc.address}</Text>
+                                <View style={{ marginLeft: 12, flex: 1 }}>
+                                    <Text style={[styles.locationOptionTitle, selectedAddress.id === addr.id && { color: '#1F5E2E' }]}>
+                                        {addr.type}
+                                    </Text>
+                                    <Text style={styles.locationOptionAddress} numberOfLines={2}>
+                                        {addr.address}, {addr.city}
+                                    </Text>
                                 </View>
                             </TouchableOpacity>
                         ))}
@@ -497,6 +504,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        flex: 1,
+        maxWidth: '70%',
     },
     locationIconBg: {
         width: 36,

@@ -80,7 +80,7 @@ export default function ProfileScreen() {
                 <View style={styles.menuGroup}>
                     {renderMenuItem('location-outline', 'Addresses', () => router.push('/addresses'))}
                     {renderMenuItem('card-outline', 'Payment Methods')}
-                    {renderMenuItem('settings-outline', 'Settings')}
+                    {renderMenuItem('settings-outline', 'Settings', () => router.push('/settings'))}
                 </View>
 
                 {/* Logout Button */}

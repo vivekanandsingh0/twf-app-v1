@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAddresses, Address as AddressType } from '@/contexts/AddressContext';
 
 interface Address {
     id: number;
@@ -57,8 +58,8 @@ const INITIAL_ADDRESSES: Address[] = [
 export default function AddressesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { addresses, addAddress, updateAddress, deleteAddress } = useAddresses();
 
-    const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
     const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
     const [showMenu, setShowMenu] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -101,7 +102,7 @@ export default function AddressesScreen() {
 
     const confirmDelete = () => {
         if (selectedAddress) {
-            setAddresses(addresses.filter(addr => addr.id !== selectedAddress.id));
+            deleteAddress(selectedAddress.id);
             setShowDeleteConfirm(false);
             setSelectedAddress(null);
         }
@@ -127,11 +128,7 @@ export default function AddressesScreen() {
 
         if (isEditing && selectedAddress) {
             // Update existing address
-            setAddresses(addresses.map(addr =>
-                addr.id === selectedAddress.id
-                    ? { ...addr, ...formData }
-                    : addr
-            ));
+            updateAddress(selectedAddress.id, formData);
         } else {
             // Add new address
             const newAddress: Address = {
@@ -139,7 +136,7 @@ export default function AddressesScreen() {
                 icon: getIconForType(formData.type),
                 ...formData,
             };
-            setAddresses([...addresses, newAddress]);
+            addAddress(newAddress);
         }
 
         setShowAddressForm(false);
