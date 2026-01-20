@@ -14,7 +14,7 @@ export default function CheckoutScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { quantities, updateQuantity, totalCartItems } = useCart();
-    const { selectedAddress, addresses, setSelectedAddress } = useAddresses();
+    const { selectedAddress, addresses, setSelectedAddress, updateAddress } = useAddresses();
 
     // Local State
     const [tipAmount, setTipAmount] = useState<number>(0);
@@ -276,7 +276,14 @@ export default function CheckoutScreen() {
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Confirm Delivery</Text>
 
-                        <ConfirmationMap selectedAddress={selectedAddress} />
+                        <ConfirmationMap
+                            selectedAddress={selectedAddress}
+                            onPinChange={(lat, lng) => {
+                                if (selectedAddress) {
+                                    updateAddress(selectedAddress.id, { latitude: lat, longitude: lng });
+                                }
+                            }}
+                        />
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                             <View style={[styles.modalIcon, { marginBottom: 0, marginRight: 12, width: 40, height: 40, borderRadius: 12 }]}>
