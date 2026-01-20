@@ -6,22 +6,40 @@ import {
     TextInput,
     TouchableOpacity,
     Platform,
-    ScrollView
+    ScrollView,
+    Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useUser } from '@/contexts/UserContext';
 
 export default function ProfileEditScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { userData, updateProfile, setUserData } = useUser();
 
-    const [fullName, setFullName] = useState('Vivekanand Singh'); // Assuming mock starting user
-    const [phone, setPhone] = useState('+91 23456 7890');
-    const [gender, setGender] = useState('Male');
-    const [dob, setDob] = useState('10 August 1999');
+    const [fullName, setFullName] = useState(userData.fullName);
+    const [phone, setPhone] = useState(userData.phoneNumber || '+91 23456 7890');
+    const [gender, setGender] = useState(userData.gender);
+    const [dob, setDob] = useState(userData.dob);
+
+    const handleSave = () => {
+        // Update all profile fields including phone number
+        updateProfile(fullName, gender, dob);
+        setUserData({ phoneNumber: phone });
+
+        // Show success message
+        if (Platform.OS === 'web') {
+            alert('Profile updated successfully!');
+        } else {
+            Alert.alert('Success', 'Profile updated successfully!');
+        }
+
+        router.back();
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -77,11 +95,31 @@ export default function ProfileEditScreen() {
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Gender</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={gender}
-                            onChangeText={setGender}
-                        />
+                        <View style={styles.genderContainer}>
+                            {['Male', 'Female', 'Other'].map((option) => (
+                                <TouchableOpacity
+                                    key={option}
+                                    style={[
+                                        styles.genderOption,
+                                        gender === option && styles.genderOptionSelected
+                                    ]}
+                                    onPress={() => setGender(option)}
+                                >
+                                    <View style={[
+                                        styles.radioOuter,
+                                        gender === option && styles.radioOuterSelected
+                                    ]}>
+                                        {gender === option && <View style={styles.radioInner} />}
+                                    </View>
+                                    <Text style={[
+                                        styles.genderText,
+                                        gender === option && styles.genderTextSelected
+                                    ]}>
+                                        {option}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
 
                     <View style={styles.inputGroup}>
@@ -99,7 +137,7 @@ export default function ProfileEditScreen() {
                     <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
                         <Text style={styles.cancelText}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.saveButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                         <Text style={styles.saveText}>Save Changes</Text>
                     </TouchableOpacity>
                 </View>
@@ -224,6 +262,53 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'DMSans_500Medium',
         color: '#333',
+    },
+    genderContainer: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    genderOption: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        gap: 8,
+    },
+    genderOptionSelected: {
+        borderColor: '#1F5E2E',
+        backgroundColor: '#F1F8E9',
+    },
+    radioOuter: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: '#E0E0E0',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    radioOuterSelected: {
+        borderColor: '#1F5E2E',
+    },
+    radioInner: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#1F5E2E',
+    },
+    genderText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_500Medium',
+        color: '#666',
+    },
+    genderTextSelected: {
+        color: '#1F5E2E',
+        fontFamily: 'DMSans_700Bold',
     },
     actionRow: {
         flexDirection: 'row',

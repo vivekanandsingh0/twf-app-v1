@@ -108,10 +108,6 @@ export default function FeedScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Social Feed</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="gift-outline" size={24} color="#1A1A1A" />
-            <View style={styles.giftBadge} />
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => router.push('/notifications')}
@@ -317,17 +313,7 @@ const styles = StyleSheet.create({
     padding: 4,
     position: 'relative',
   },
-  giftBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4CAF50', // Green dot
-    borderWidth: 1,
-    borderColor: '#fff',
-  },
+
   notificationBadge: {
     position: 'absolute',
     top: 0,

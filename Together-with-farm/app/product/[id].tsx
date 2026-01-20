@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useCart } from '@/contexts/CartContext';
+import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
 
@@ -419,6 +421,7 @@ export default function ProductDetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { updateQuantity, getItemQuantity } = useCart();
 
     const product = getProduct(id);
 
@@ -430,7 +433,7 @@ export default function ProductDetailsScreen() {
         : "Fresh from the farm, delivered to you.";
     const displayDesc = product.description;
 
-    const [qty, setQty] = useState(0);
+    const qty = getItemQuantity(product.id);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     // Mock multiple images for demonstration
     const productImages = [product.image, product.image, product.image];
@@ -623,21 +626,24 @@ export default function ProductDetailsScreen() {
                 </View>
 
                 {qty === 0 ? (
-                    <TouchableOpacity style={styles.addToCartBtn} onPress={() => setQty(1)}>
+                    <TouchableOpacity style={styles.addToCartBtn} onPress={() => updateQuantity(product.id, 1)}>
                         <Text style={styles.addToCartText}>Add to Cart</Text>
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.qtyControlBig}>
-                        <TouchableOpacity style={styles.qtyBtnBig} onPress={() => setQty(q => q - 1)}>
+                        <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, -1)}>
                             <Ionicons name="remove" size={24} color="#fff" />
                         </TouchableOpacity>
                         <Text style={styles.qtyTextBig}>{qty}</Text>
-                        <TouchableOpacity style={styles.qtyBtnBig} onPress={() => setQty(q => q + 1)}>
+                        <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, 1)}>
                             <Ionicons name="add" size={24} color="#fff" />
                         </TouchableOpacity>
                     </View>
                 )}
             </View>
+
+            {/* Cart Popup */}
+            <CartPopup />
         </View>
     );
 }

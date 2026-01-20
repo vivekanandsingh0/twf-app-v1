@@ -107,10 +107,6 @@ export default function NotificationsScreen() {
                 <Text style={styles.headerTitle}>Notifications</Text>
                 <View style={styles.headerRight}>
                     <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="gift-outline" size={24} color="#1A1A1A" />
-                        <View style={styles.giftBadge} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
                         <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                         <View style={styles.notificationBadge}>
                             <Text style={styles.badgeText}>2</Text>
@@ -222,15 +218,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F5',
         borderRadius: 12,
     },
-    giftBadge: {
-        position: 'absolute',
-        top: 10,
-        right: 12,
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#4CAF50',
-    },
+
     notificationBadge: {
         position: 'absolute',
         top: -4,

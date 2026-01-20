@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
 import { useAddresses } from '@/contexts/AddressContext';
+import { useCart } from '@/contexts/CartContext';
+import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
 
@@ -156,27 +158,12 @@ export default function MarketScreen() {
     const router = useRouter();
     const { toggleFavourite, isFavourite } = useFavourites();
     const { addresses, selectedAddress, setSelectedAddress } = useAddresses();
+    const { updateQuantity, getItemQuantity } = useCart();
     const [activeCategory, setActiveCategory] = useState('All');
-    const [quantities, setQuantities] = useState<Record<number, number>>({});
     const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const insets = useSafeAreaInsets();
-    const totalCartItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
-
-    const updateQuantity = (id: number, delta: number) => {
-        setQuantities(prev => {
-            const current = prev[id] || 0;
-            const next = Math.max(0, current + delta);
-            if (next === 0) {
-                const { [id]: _, ...rest } = prev;
-                return rest;
-            }
-            return { ...prev, [id]: next };
-        });
-    };
-
-    const getItemQuantity = (id: number) => quantities[id] || 0;
 
     // Combine for search
     const allProducts = [...PRODUCTS, ...DEAL_PRODUCTS];
@@ -422,23 +409,7 @@ export default function MarketScreen() {
             </ScrollView>
 
             {/* Floating Cart Popup */}
-            {totalCartItems > 0 && (
-                <View style={styles.cartPopupContainer}>
-                    <TouchableOpacity style={styles.cartPopup} activeOpacity={0.9}>
-                        <View style={styles.cartImages}>
-                            <Image source={{ uri: PRODUCTS[0].image }} style={[styles.tinyThumb, { left: 0, zIndex: 3 }]} />
-                            <Image source={{ uri: PRODUCTS[1].image }} style={[styles.tinyThumb, { left: 15, zIndex: 2 }]} />
-                            <View style={[styles.tinyThumb, styles.moreThumb, { left: 30, zIndex: 1 }]}>
-                                <Text style={styles.moreText}>..</Text>
-                            </View>
-                        </View>
-                        <Text style={styles.viewCartText}>View Cart</Text>
-                        <View style={styles.cartBadgeCount}>
-                            <Text style={styles.cartCountText}>{totalCartItems}</Text>
-                        </View>
-                    </TouchableOpacity>
-                </View>
-            )}
+            <CartPopup />
 
             {/* Location Dropdown Overlay - Global Position */}
             {showLocationPicker && (

@@ -331,9 +331,6 @@ export default function FavouritesScreen() {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Favourites</Text>
                 <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="gift-outline" size={24} color="#1A1A1A" />
-                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.notificationBtn, { marginLeft: 8 }]}
                         onPress={() => router.push('/notifications')}

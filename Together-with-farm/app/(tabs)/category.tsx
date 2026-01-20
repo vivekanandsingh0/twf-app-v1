@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
+import { useCart } from '@/contexts/CartContext';
+import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
 
@@ -236,25 +238,9 @@ export default function CategoryScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { toggleFavourite, isFavourite } = useFavourites();
+    const { updateQuantity, getItemQuantity } = useCart();
     const [selectedCategoryId, setSelectedCategoryId] = useState('vegetables');
     const [searchQuery, setSearchQuery] = useState('');
-    const [quantities, setQuantities] = useState<Record<number, number>>({});
-
-    const totalCartItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
-
-    const updateQuantity = (id: number, delta: number) => {
-        setQuantities(prev => {
-            const current = prev[id] || 0;
-            const next = Math.max(0, current + delta);
-            if (next === 0) {
-                const { [id]: _, ...rest } = prev;
-                return rest;
-            }
-            return { ...prev, [id]: next };
-        });
-    };
-
-    const getItemQuantity = (id: number) => quantities[id] || 0;
 
     const activeCategoryProducts = PRODUCTS.filter(
         p => p.categoryId === selectedCategoryId && p.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -315,37 +301,35 @@ export default function CategoryScreen() {
                     <Text style={styles.tagText}>{item.tag}</Text>
                     <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
 
-                    <View style={styles.priceRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                            <Text style={styles.priceText}>${item.price}</Text>
-                            <Text style={styles.unitText}>/{item.unit}</Text>
-                        </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
+                        <Text style={styles.priceText}>${item.price}</Text>
+                        <Text style={styles.unitText}>/{item.unit}</Text>
+                    </View>
 
-                        {qty === 0 ? (
+                    {qty === 0 ? (
+                        <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={() => updateQuantity(item.id, 1)}
+                        >
+                            <Ionicons name="add" size={20} color="#fff" />
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.qtyControl}>
                             <TouchableOpacity
-                                style={styles.addButton}
+                                style={styles.qtyBtn}
+                                onPress={() => updateQuantity(item.id, -1)}
+                            >
+                                <Ionicons name="remove" size={14} color="#fff" />
+                            </TouchableOpacity>
+                            <Text style={styles.qtyText} numberOfLines={1}>{qty}</Text>
+                            <TouchableOpacity
+                                style={styles.qtyBtn}
                                 onPress={() => updateQuantity(item.id, 1)}
                             >
-                                <Ionicons name="add" size={20} color="#fff" />
+                                <Ionicons name="add" size={14} color="#fff" />
                             </TouchableOpacity>
-                        ) : (
-                            <View style={styles.qtyControl}>
-                                <TouchableOpacity
-                                    style={styles.qtyBtn}
-                                    onPress={() => updateQuantity(item.id, -1)}
-                                >
-                                    <Ionicons name="remove" size={14} color="#fff" />
-                                </TouchableOpacity>
-                                <Text style={styles.qtyText}>{qty}</Text>
-                                <TouchableOpacity
-                                    style={styles.qtyBtn}
-                                    onPress={() => updateQuantity(item.id, 1)}
-                                >
-                                    <Ionicons name="add" size={14} color="#fff" />
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </View>
+                        </View>
+                    )}
                 </View>
             </TouchableOpacity>
         );
@@ -415,24 +399,7 @@ export default function CategoryScreen() {
             </View>
 
             {/* Floating Cart Popup */}
-            {totalCartItems > 0 && (
-                <View style={styles.cartPopupContainer}>
-                    <TouchableOpacity style={styles.cartPopup} activeOpacity={0.9}>
-                        <View style={styles.cartImages}>
-                            {/* Show thumbnails of up to 2 random items */}
-                            <Image source={{ uri: PRODUCTS[0].image }} style={[styles.tinyThumb, { left: 0, zIndex: 3 }]} />
-                            <Image source={{ uri: PRODUCTS[1].image }} style={[styles.tinyThumb, { left: 15, zIndex: 2 }]} />
-                            <View style={[styles.tinyThumb, styles.moreThumb, { left: 30, zIndex: 1 }]}>
-                                <Text style={styles.moreText}>..</Text>
-                            </View>
-                        </View>
-                        <Text style={styles.viewCartText}>View Cart</Text>
-                        <View style={styles.cartBadgeCount}>
-                            <Text style={styles.cartCountText}>{totalCartItems}</Text>
-                        </View>
-                    </TouchableOpacity>
-                </View>
-            )}
+            <CartPopup />
         </View>
     );
 }
@@ -667,7 +634,7 @@ const styles = StyleSheet.create({
     },
     addButton: {
         backgroundColor: '#1F5E2E',
-        width: 32,
+        width: '100%',
         height: 32,
         borderRadius: 8,
         alignItems: 'center',
@@ -680,19 +647,25 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         height: 32,
         paddingHorizontal: 4,
-        gap: 6,
+        gap: 4,
+        width: '100%',
+        maxWidth: '100%',
+        justifyContent: 'space-between',
     },
     qtyBtn: {
-        width: 20,
-        height: 32, // Full height of control
+        width: 24,
+        height: 32,
         alignItems: 'center',
         justifyContent: 'center',
+        flexShrink: 0,
     },
     qtyText: {
         color: '#fff',
         fontFamily: 'DMSans_700Bold',
-        fontSize: 14,
-        marginHorizontal: 2,
+        fontSize: 13,
+        flex: 1,
+        textAlign: 'center',
+        minWidth: 20,
     },
     emptyContainer: {
         flex: 1,

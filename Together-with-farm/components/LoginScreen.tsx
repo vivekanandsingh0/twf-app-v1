@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '@/contexts/UserContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,6 +24,7 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'delete'
 
 export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginScreenProps) {
     const insets = useSafeAreaInsets();
+    const { setUserData } = useUser();
     const [step, setStep] = useState<'phone' | 'otp'>('phone');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otp, setOtp] = useState('');
@@ -64,10 +66,15 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
             setTimeout(() => setStep('otp'), 500);
         }
         if (step === 'otp' && otp.length === 6) {
+            // Save user data to context
+            setUserData({
+                phoneNumber: `+91 ${phoneNumber}`,
+                userType: userType,
+            });
             // Simulate Login
             setTimeout(onLoginSuccess, 500);
         }
-    }, [phoneNumber, step, otp, onLoginSuccess]);
+    }, [phoneNumber, step, otp, onLoginSuccess, setUserData, userType]);
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>

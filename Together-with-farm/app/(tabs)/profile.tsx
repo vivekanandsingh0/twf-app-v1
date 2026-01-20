@@ -5,10 +5,12 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useUser } from '@/contexts/UserContext';
 
 export default function ProfileScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { userData } = useUser();
 
     const renderMenuItem = (icon: keyof typeof Ionicons.glyphMap, title: string, onPress?: () => void) => (
         <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
@@ -31,10 +33,6 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Profile</Text>
                 <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="gift-outline" size={24} color="#1A1A1A" />
-                        <View style={styles.giftDot} />
-                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.iconButton, { marginLeft: 8 }]}
                         onPress={() => router.push('/notifications')}
@@ -59,8 +57,8 @@ export default function ProfileScreen() {
                         contentFit="cover"
                     />
                     <View style={styles.userInfo}>
-                        <Text style={styles.userName}>Vivekanand Singh</Text>
-                        <Text style={styles.userPhone}>+91 23456 7890</Text>
+                        <Text style={styles.userName}>{userData.fullName}</Text>
+                        <Text style={styles.userPhone}>{userData.phoneNumber || '+91 23456 7890'}</Text>
                     </View>
                     <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile-edit')}>
                         <Ionicons name="create-outline" size={20} color="#1A1A1A" />
@@ -123,15 +121,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F5',
         borderRadius: 12,
     },
-    giftDot: {
-        position: 'absolute',
-        top: 10,
-        right: 12,
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#4CAF50',
-    },
+
     notificationBadge: {
         position: 'absolute',
         top: -4,
