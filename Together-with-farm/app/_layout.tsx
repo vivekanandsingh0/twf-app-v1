@@ -77,6 +77,8 @@ export default function RootLayout() {
                   <Stack.Screen name="favourites" options={{ headerShown: false }} />
                   <Stack.Screen name="addresses" options={{ headerShown: false }} />
                   <Stack.Screen name="settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="cart" options={{ headerShown: false }} />
+                  <Stack.Screen name="checkout" options={{ headerShown: false }} />
                   <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                 </Stack>
                 <StatusBar style="auto" />

@@ -8,6 +8,8 @@ export interface Address {
     city: string;
     pincode?: string;
     landmark?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 const INITIAL_ADDRESSES: Address[] = [
@@ -16,27 +18,33 @@ const INITIAL_ADDRESSES: Address[] = [
         type: 'Home',
         icon: 'home-outline',
         address: 'Kankarbagh Colony, Near Hanuman Nagar, road no.1',
-        city: 'left, Near Nalanda',
+        city: 'Patna, Bihar',
         pincode: '800020',
         landmark: 'Near City Mall',
+        latitude: 25.5941,
+        longitude: 85.1376,
     },
     {
         id: 2,
         type: 'Office',
         icon: 'briefcase-outline',
-        address: 'Kankarbagh Colony, Near Hanuman Nagar, road no.1',
-        city: 'left, Near Nalanda',
+        address: 'Boring Road, Near Checkpoint',
+        city: 'Patna, Bihar',
         pincode: '800001',
         landmark: 'Opposite Bank',
+        latitude: 25.6100,
+        longitude: 85.1100,
     },
     {
         id: 3,
         type: 'Coffee Shop',
         icon: 'cafe-outline',
-        address: 'Kankarbagh Colony, Near Hanuman Nagar, road no.1',
-        city: 'left, Near Nalanda',
+        address: 'Frazer Road, Dak Bunglow',
+        city: 'Patna, Bihar',
         pincode: '800015',
         landmark: 'Near Park',
+        latitude: 25.6050,
+        longitude: 85.1400,
     },
 ];
 

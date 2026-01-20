@@ -1,27 +1,43 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useCart } from '@/contexts/CartContext';
-
-// Sample product images for the cart preview
-const SAMPLE_IMAGES = [
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyN5y-txNHOqaxZJy4yWA4lK_oiEQxjmX3xg&s',
-    'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?q=80&w=2601&auto=format&fit=crop',
-];
+import { PRODUCTS } from '@/constants/products';
 
 export default function CartPopup() {
-    const { totalCartItems } = useCart();
+    const { totalCartItems, quantities } = useCart();
+    const router = useRouter();
 
     if (totalCartItems === 0) {
         return null;
     }
 
+    // Get images of items actually in the cart
+    const cartProductIds = Object.keys(quantities)
+        .map(Number)
+        .filter(id => quantities[id] > 0);
+
+    // Get up to 2 product images
+    const cartImages = cartProductIds.slice(0, 2).map(id => {
+        const product = PRODUCTS.find(p => p.id === id);
+        return product?.image;
+    }).filter(Boolean);
+
     return (
         <View style={styles.cartPopupContainer}>
-            <TouchableOpacity style={styles.cartPopup} activeOpacity={0.9}>
+            <TouchableOpacity
+                style={styles.cartPopup}
+                activeOpacity={0.9}
+                onPress={() => router.push('/cart')}
+            >
                 <View style={styles.cartImages}>
-                    <Image source={{ uri: SAMPLE_IMAGES[0] }} style={[styles.tinyThumb, { left: 0, zIndex: 3 }]} />
-                    <Image source={{ uri: SAMPLE_IMAGES[1] }} style={[styles.tinyThumb, { left: 15, zIndex: 2 }]} />
+                    {cartImages[0] && (
+                        <Image source={{ uri: cartImages[0] }} style={[styles.tinyThumb, { left: 0, zIndex: 3 }]} />
+                    )}
+                    {cartImages[1] && (
+                        <Image source={{ uri: cartImages[1] }} style={[styles.tinyThumb, { left: 15, zIndex: 2 }]} />
+                    )}
                     <View style={[styles.tinyThumb, styles.moreThumb, { left: 30, zIndex: 1 }]}>
                         <Text style={styles.moreText}>..</Text>
                     </View>
