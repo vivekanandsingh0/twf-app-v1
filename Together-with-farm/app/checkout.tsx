@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ConfirmationMap from '@/components/ConfirmationMap';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -20,7 +19,6 @@ export default function CheckoutScreen() {
     const [tipAmount, setTipAmount] = useState<number>(0);
     const [couponApplied, setCouponApplied] = useState(false);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
-    const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
 
     // Derived Data
     const cartItems = PRODUCTS.filter(p => quantities[p.id] && quantities[p.id] > 0);
@@ -45,7 +43,7 @@ export default function CheckoutScreen() {
             );
             return;
         }
-        setShowOrderConfirmation(true);
+        router.push('/select-location');
     };
 
     return (
@@ -270,63 +268,7 @@ export default function CheckoutScreen() {
                 </>
             )}
 
-            {/* Order Confirmation Modal */}
-            {showOrderConfirmation && (
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Confirm Delivery</Text>
-
-                        <ConfirmationMap
-                            selectedAddress={selectedAddress}
-                            onPinChange={(lat, lng) => {
-                                if (selectedAddress) {
-                                    updateAddress(selectedAddress.id, { latitude: lat, longitude: lng });
-                                }
-                            }}
-                        />
-
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                            <View style={[styles.modalIcon, { marginBottom: 0, marginRight: 12, width: 40, height: 40, borderRadius: 12 }]}>
-                                <Ionicons name="location" size={20} color="#1F5E2E" />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={{ fontFamily: 'DMSans_700Bold', color: '#1A1A1A', fontSize: 16 }}>{selectedAddress?.type}</Text>
-                                <Text style={{ fontFamily: 'DMSans_400Regular', color: '#666', fontSize: 12 }} numberOfLines={2}>
-                                    {selectedAddress?.address}
-                                </Text>
-                            </View>
-                        </View>
-
-                        <TouchableOpacity
-                            onPress={() => {
-                                setShowOrderConfirmation(false);
-                                setShowLocationPicker(true);
-                            }}
-                            style={{ marginBottom: 20 }}
-                        >
-                            <Text style={styles.changeAddressText}>Change Address or Edit Pin</Text>
-                        </TouchableOpacity>
-
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, styles.cancelBtn]}
-                                onPress={() => setShowOrderConfirmation(false)}
-                            >
-                                <Text style={styles.cancelBtnText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, styles.confirmBtn]}
-                                onPress={() => {
-                                    setShowOrderConfirmation(false);
-                                    Alert.alert("Success", "Order Placed Successfully!");
-                                }}
-                            >
-                                <Text style={styles.confirmBtnText}>Confirm</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            )}
+            {/* Order Confirmation Modal - Moved to separate screen */}
         </View>
     );
 }

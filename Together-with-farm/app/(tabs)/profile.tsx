@@ -68,7 +68,7 @@ export default function ProfileScreen() {
                 {/* My Activity Section */}
                 <Text style={styles.sectionTitle}>My Activity</Text>
                 <View style={styles.menuGroup}>
-                    {renderMenuItem('cart-outline', 'Your Orders')}
+                    {renderMenuItem('cart-outline', 'Your Orders', () => router.push('/orders'))}
                     {renderMenuItem('heart-outline', 'My Favourites', () => router.push('/favourites'))}
                     {renderMenuItem('pricetag-outline', 'Promotion & Vouchers')}
                 </View>
