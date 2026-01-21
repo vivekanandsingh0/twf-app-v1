@@ -75,7 +75,19 @@ export default function OrdersScreen() {
     const [activeTab, setActiveTab] = useState<'Active' | 'Past'>('Active');
 
     const renderOrderCard = (order: Order, isPast: boolean) => (
-        <View key={order.id} style={styles.card}>
+        <TouchableOpacity
+            key={order.id}
+            style={styles.card}
+            activeOpacity={0.9}
+            onPress={() => {
+                const orderId = order.orderNumber.replace('#', '');
+                if (!isPast) {
+                    router.push(`/detailed-product/${orderId}` as any);
+                } else {
+                    router.push(`/order/${orderId}` as any);
+                }
+            }}
+        >
             <View style={styles.cardHeader}>
                 <Image source={{ uri: order.image }} style={styles.productImage} />
                 <View style={styles.badgeContainer}>
@@ -114,7 +126,7 @@ export default function OrdersScreen() {
                     </TouchableOpacity>
                 </View>
             )}
-        </View>
+        </TouchableOpacity>
     );
 
     return (
@@ -195,7 +207,6 @@ const styles = StyleSheet.create({
 
     tabContainer: {
         flexDirection: 'row',
-        mx: 20,
         marginHorizontal: 20,
         backgroundColor: '#F9F9F9',
         borderRadius: 12,
