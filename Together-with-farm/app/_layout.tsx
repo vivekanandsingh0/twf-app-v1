@@ -1,7 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -11,14 +12,15 @@ import RoleSelectionScreen from '@/components/RoleSelectionScreen';
 import LoginScreen from '@/components/LoginScreen';
 import { FavouritesProvider } from '@/contexts/FavouritesContext';
 import { AddressProvider } from '@/contexts/AddressContext';
-import { UserProvider } from '@/contexts/UserContext';
+import { UserProvider, useUser } from '@/contexts/UserContext';
 import { CartProvider } from '@/contexts/CartContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
+function AppContent() {
+  const { session, loading } = useUser();
   const colorScheme = useColorScheme();
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
@@ -26,67 +28,99 @@ export default function RootLayout() {
   const [showLogin, setShowLogin] = useState(false);
   const [userType, setUserType] = useState<'User' | 'Vendor'>('User');
 
+  // Logic to handle transitioning from Auth flow to App is handled implicitly:
+  // When session becomes true (login/verify), the component re-renders and shows the Stack.
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
+
+  // If Supabase is still loading the session after Splash is done, show a loader
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#1F5E2E" />
+      </View>
+    );
+  }
+
+  // If user is authenticated, show the main app
+  if (session) {
+    return (
+      <CartProvider>
+        <AddressProvider>
+          <FavouritesProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="notifications" options={{ headerShown: false }} />
+                <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
+                <Stack.Screen name="favourites" options={{ headerShown: false }} />
+                <Stack.Screen name="addresses" options={{ headerShown: false }} />
+                <Stack.Screen name="settings" options={{ headerShown: false }} />
+                <Stack.Screen name="cart" options={{ headerShown: false }} />
+                <Stack.Screen name="checkout" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </FavouritesProvider>
+        </AddressProvider>
+      </CartProvider>
+    );
+  }
+
+  // Auth Flow
+  if (showOnboarding) {
+    return <OnboardingScreen onFinish={() => {
+      setShowOnboarding(false);
+      setShowRoleSelection(true);
+    }} />;
+  }
+
+  if (showRoleSelection) {
+    return (
+      <RoleSelectionScreen
+        onSelectUser={() => {
+          setUserType('User');
+          setShowRoleSelection(false);
+          setShowLogin(true);
+        }}
+        onSelectVendor={() => {
+          setUserType('Vendor');
+          setShowRoleSelection(false);
+          setShowLogin(true);
+        }}
+      />
+    );
+  }
+
+  if (showLogin) {
+    return (
+      <LoginScreen
+        userType={userType}
+        onLoginSuccess={() => {
+          // Context handles session update, triggering re-render to main app
+          // But strictly we can reset this local state too
+          setShowLogin(false);
+        }}
+        onBack={() => {
+          setShowLogin(false);
+          setShowRoleSelection(true);
+        }}
+      />
+    );
+  }
+
+  return null;
+}
+
+export default function RootLayout() {
   return (
     <UserProvider>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-
-      {!showSplash && showOnboarding && (
-        <OnboardingScreen onFinish={() => {
-          setShowOnboarding(false);
-          setShowRoleSelection(true);
-        }} />
-      )}
-
-      {!showSplash && !showOnboarding && showRoleSelection && (
-        <RoleSelectionScreen
-          onSelectUser={() => {
-            setUserType('User');
-            setShowRoleSelection(false);
-            setShowLogin(true);
-          }}
-          onSelectVendor={() => {
-            setUserType('Vendor');
-            setShowRoleSelection(false);
-            setShowLogin(true);
-          }}
-        />
-      )}
-
-      {!showSplash && !showOnboarding && !showRoleSelection && showLogin && (
-        <LoginScreen
-          userType={userType}
-          onLoginSuccess={() => setShowLogin(false)}
-          onBack={() => {
-            setShowLogin(false);
-            setShowRoleSelection(true);
-          }}
-        />
-      )}
-
-      {!showSplash && !showOnboarding && !showRoleSelection && !showLogin && (
-        <CartProvider>
-          <AddressProvider>
-            <FavouritesProvider>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="notifications" options={{ headerShown: false }} />
-                  <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
-                  <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
-                  <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
-                  <Stack.Screen name="favourites" options={{ headerShown: false }} />
-                  <Stack.Screen name="addresses" options={{ headerShown: false }} />
-                  <Stack.Screen name="settings" options={{ headerShown: false }} />
-                  <Stack.Screen name="cart" options={{ headerShown: false }} />
-                  <Stack.Screen name="checkout" options={{ headerShown: false }} />
-                  <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-                </Stack>
-                <StatusBar style="auto" />
-              </ThemeProvider>
-            </FavouritesProvider>
-          </AddressProvider>
-        </CartProvider>
-      )}
+      <AppContent />
     </UserProvider>
   );
 }

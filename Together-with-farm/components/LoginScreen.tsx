@@ -24,12 +24,15 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'delete'
 
 export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginScreenProps) {
     const insets = useSafeAreaInsets();
-    const { setUserData } = useUser();
+    const { setUserData, sendOtp, verifyOtp } = useUser();
     const [step, setStep] = useState<'phone' | 'otp'>('phone');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otp, setOtp] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleKeyPress = (key: string) => {
+        if (loading) return;
+
         if (key === 'back') {
             if (step === 'otp') {
                 setStep('phone');
@@ -61,20 +64,51 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
 
     // Auto-proceed logic
     useEffect(() => {
+        const handlePhoneSubmit = async () => {
+            if (loading) return;
+            setLoading(true);
+            const formattedPhone = `+91${phoneNumber}`;
+            const { error } = await sendOtp(formattedPhone);
+            setLoading(false);
+
+            if (error) {
+                if (error.message.includes('Twilio') || error.message.includes('provider')) {
+                    alert(
+                        "SMS Setup Required\n\n" +
+                        "Supabase cannot send real SMS yet (Twilio is not configured).\n\n" +
+                        "SOLUTION: Go to Supabase Dashboard > Authentication > Providers > Phone > Phone Numbers for Testing.\n\n" +
+                        "Add your number and a fixed OTP (e.g., 123456) to log in immediately."
+                    );
+                } else {
+                    alert(`Error: ${error.message}`);
+                }
+            } else {
+                setStep('otp');
+            }
+        };
+
+        const handleOtpSubmit = async () => {
+            if (loading) return;
+            setLoading(true);
+            const formattedPhone = `+91${phoneNumber}`;
+            const { error } = await verifyOtp(formattedPhone, otp, userType);
+            setLoading(false);
+
+            if (error) {
+                alert(`Verification Failed: ${error.message}`);
+                setOtp('');
+            } else {
+                onLoginSuccess();
+            }
+        };
+
         if (step === 'phone' && phoneNumber.length === 10) {
-            // Simulate API call delay then move to OTP
-            setTimeout(() => setStep('otp'), 500);
+            handlePhoneSubmit();
         }
         if (step === 'otp' && otp.length === 6) {
-            // Save user data to context
-            setUserData({
-                phoneNumber: `+91 ${phoneNumber}`,
-                userType: userType,
-            });
-            // Simulate Login
-            setTimeout(onLoginSuccess, 500);
+            handleOtpSubmit();
         }
-    }, [phoneNumber, step, otp, onLoginSuccess, setUserData, userType]);
+    }, [phoneNumber, otp, step]);
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
