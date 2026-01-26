@@ -45,8 +45,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const { data: { session } } = await supabase.auth.getSession();
             setSession(session);
             setUser(session?.user ?? null);
-            setLoading(false);
-
             if (session?.user) {
                 const { data: profile } = await supabase
                     .from('profiles')
@@ -64,6 +62,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     });
                 }
             }
+            setLoading(false);
         };
 
         initializeSession();
@@ -71,7 +70,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
-            setLoading(false);
+            // Don't set loading false yet
 
             if (session?.user) {
                 const { data: profile } = await supabase
@@ -90,6 +89,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     });
                 }
             }
+            setLoading(false);
         });
 
         return () => subscription.unsubscribe();
@@ -129,9 +129,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         });
 
         if (data.session) {
-            setSession(data.session);
-            setUser(data.user);
-
             // Check if profile exists, if not create it
             const { data: profile } = await supabase
                 .from('profiles')
@@ -143,20 +140,39 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 const newProfile = {
                     id: data.session.user.id,
                     phone_number: phone,
-                    full_name: 'New User',
+                    full_name: 'New ' + userType,
                     user_type: userType,
                 };
 
-                await supabase.from('profiles').insert(newProfile);
+                const { error: insertError } = await supabase.from('profiles').insert(newProfile);
+
+                if (insertError) {
+                    await supabase.auth.signOut();
+                    return { session: null, error: insertError };
+                }
 
                 setUserDataState({
                     phoneNumber: phone,
-                    fullName: 'New User',
+                    fullName: 'New ' + userType,
                     gender: 'Male',
                     dob: '',
                     userType: userType,
                 });
+
+                setSession(data.session);
+                setUser(data.user);
             } else {
+                // STRICT ROLE CHECK
+                if (profile.user_type !== userType) {
+                    await supabase.auth.signOut();
+                    return {
+                        session: null,
+                        error: {
+                            message: `Access Denied. This number is registered as a "${profile.user_type}". Please go back and select "${profile.user_type}" to log in.`
+                        }
+                    };
+                }
+
                 setUserDataState({
                     phoneNumber: profile.phone_number,
                     fullName: profile.full_name,
@@ -164,6 +180,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     dob: profile.dob,
                     userType: profile.user_type,
                 });
+
+                setSession(data.session);
+                setUser(data.user);
             }
         }
 
@@ -171,9 +190,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        console.log("UserContext: signOut called - forcing local logout immediately");
+
+        // Immediately clear local state to update UI
         setSession(null);
         setUser(null);
+
+        try {
+            // Perform network logout in background
+            const { error } = await supabase.auth.signOut();
+            console.log("UserContext: supabase.auth.signOut finished", error ? "with error" : "successfully");
+            if (error) console.error("Supabase signout error:", error);
+        } catch (error) {
+            console.error("Error signing out:", error);
+        }
     };
 
     return (

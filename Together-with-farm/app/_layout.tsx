@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
+import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import SplashScreen from '@/components/SplashScreen';
 import OnboardingScreen from '@/components/OnboardingScreen';
@@ -21,17 +22,32 @@ export const unstable_settings = {
 
 function AppContent() {
   const { session, loading } = useUser();
+  console.log("_layout: AppContent rendered", { session: !!session, loading });
   const colorScheme = useColorScheme();
+
+  const [fontsLoaded] = useFonts({
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_700Bold,
+  });
+
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [userType, setUserType] = useState<'User' | 'Vendor'>('User');
 
-  // Logic to handle transitioning from Auth flow to App is handled implicitly:
-  // When session becomes true (login/verify), the component re-renders and shows the Stack.
+  // Reset auth flow state when user logs out
+  useEffect(() => {
+    if (!session && !loading) {
+      setShowSplash(true);
+      setShowOnboarding(true);
+      setShowRoleSelection(false);
+      setShowLogin(false);
+    }
+  }, [session, loading]);
 
-  if (showSplash) {
+  if (showSplash || !fontsLoaded) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
@@ -53,6 +69,9 @@ function AppContent() {
             <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="(vendor-tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="add-product-vendor" options={{ headerShown: false }} />
+                <Stack.Screen name="vendor-payouts" options={{ headerShown: false }} />
                 <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />

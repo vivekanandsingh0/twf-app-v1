@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,44 @@ import { useUser } from '@/contexts/UserContext';
 export default function ProfileScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { userData } = useUser();
+    const { userData, signOut } = useUser();
+
+    const handleLogout = () => {
+        console.log("Logout button pressed");
+        if (Platform.OS === 'web') {
+            if (window.confirm("Are you sure you want to log out?")) {
+                console.log("Web logout confirmed");
+                signOut().catch(error => {
+                    console.error("Logout failed:", error);
+                    alert("Failed to log out");
+                });
+            }
+        } else {
+            console.log("Showing alert dialog");
+            Alert.alert(
+                "Log Out",
+                "Are you sure you want to log out?",
+                [
+                    { text: "Cancel", style: "cancel", onPress: () => console.log("Logout cancelled") },
+                    {
+                        text: "Log Out",
+                        style: "destructive",
+                        onPress: async () => {
+                            console.log("Logout confirmed in Alert");
+                            try {
+                                console.log("Calling signOut...");
+                                await signOut();
+                                console.log("signOut completed");
+                            } catch (error) {
+                                console.error("Logout failed:", error);
+                                Alert.alert("Error", "Failed to log out. Please try again.");
+                            }
+                        }
+                    }
+                ]
+            );
+        }
+    };
 
     const renderMenuItem = (icon: keyof typeof Ionicons.glyphMap, title: string, onPress?: () => void) => (
         <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
@@ -82,7 +119,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Logout Button */}
-                <TouchableOpacity style={styles.logoutButton}>
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
 

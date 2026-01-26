@@ -11,7 +11,6 @@ import {
     Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,16 +39,6 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const scrollViewRef = useRef<ScrollView>(null);
     const insets = useSafeAreaInsets();
-
-    const [fontsLoaded] = useFonts({
-        DMSans_400Regular,
-        DMSans_500Medium,
-        DMSans_700Bold,
-    });
-
-    if (!fontsLoaded) {
-        return null;
-    }
 
     const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const offsetX = event.nativeEvent.contentOffset.x;
