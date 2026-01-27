@@ -58,7 +58,10 @@ export default function VendorProfileScreen() {
                         <Text style={styles.profileName}>Amit Kumar</Text>
                         <Text style={styles.profilePhone}>+912345689</Text>
                     </View>
-                    <TouchableOpacity style={styles.editButton}>
+                    <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => router.push('/edit-profile-vendor')}
+                    >
                         <Ionicons name="create-outline" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                 </View>

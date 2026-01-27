@@ -76,6 +76,7 @@ function AppContent() {
                 <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
+                <Stack.Screen name="edit-profile-vendor" options={{ headerShown: false }} />
                 <Stack.Screen name="favourites" options={{ headerShown: false }} />
                 <Stack.Screen name="addresses" options={{ headerShown: false }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
