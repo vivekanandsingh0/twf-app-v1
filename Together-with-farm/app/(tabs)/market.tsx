@@ -17,136 +17,12 @@ import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
 import { useAddresses } from '@/contexts/AddressContext';
 import { useCart } from '@/contexts/CartContext';
+import { useMarket, MarketProduct } from '@/contexts/MarketContext';
 import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
 
 const CATEGORIES = ['All', 'Leafy', 'Seasonals', 'Roots', 'Daily Essentials'];
-
-const PRODUCTS = [
-    {
-        id: 201,
-        name: 'Sweet Potatoes',
-        type: 'Roots',
-        price: '$1.79',
-        unit: '/lb',
-        discount: '-40%',
-        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyN5y-txNHOqaxZJy4yWA4lK_oiEQxjmX3xg&s',
-    },
-    {
-        id: 202,
-        name: 'Broccoli Fresh Green',
-        type: 'Hydroponic',
-        price: '$3.29',
-        unit: '/lb',
-        discount: '-30%',
-        image: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?q=80&w=2601&auto=format&fit=crop',
-    },
-    {
-        id: 203,
-        name: 'Fresh Parsley',
-        type: 'Organic',
-        price: '$1.49',
-        unit: '/bunch',
-        discount: '-30%',
-        image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=2574&auto=format&fit=crop',
-    },
-    {
-        id: 204,
-        name: 'Organic Spinach',
-        type: 'Leafy',
-        price: '$2.49',
-        unit: '/bunch',
-        discount: '-20%',
-        image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?q=80&w=2574&auto=format&fit=crop',
-    },
-    {
-        id: 205,
-        name: 'Fresh Lettuce',
-        type: 'Hydroponic',
-        price: '$1.99',
-        unit: '/head',
-        discount: '-15%',
-        image: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?q=80&w=2574&auto=format&fit=crop',
-    },
-    {
-        id: 206,
-        name: 'Red Tomatoes',
-        type: 'Daily',
-        price: '$2.99',
-        unit: '/lb',
-        discount: '-10%',
-        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
-    },
-    {
-        id: 207,
-        name: 'Crunchy Carrots',
-        type: 'Roots',
-        price: '$1.49',
-        unit: '/bunch',
-        discount: '-25%',
-        image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=2574&auto=format&fit=crop',
-    },
-    {
-        id: 208,
-        name: 'Red Onions',
-        type: 'Roots',
-        price: '$1.29',
-        unit: '/lb',
-        discount: '-5%',
-        image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?q=80&w=2574&auto=format&fit=crop',
-    },
-    {
-        id: 209,
-        name: 'Bell Peppers',
-        type: 'Daily',
-        price: '$3.49',
-        unit: '/lb',
-        discount: '-15%',
-        image: 'https://images.unsplash.com/photo-1563565375-f3fdf5dbc240?q=80&w=2574&auto=format&fit=crop',
-    },
-    {
-        id: 210,
-        name: 'Fresh Strawberries',
-        type: 'Fruit',
-        price: '$4.99',
-        unit: '/box',
-        discount: '-20%',
-        image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?q=80&w=2670&auto=format&fit=crop',
-    },
-    {
-        id: 211,
-        name: 'Sweet Watermelon',
-        type: 'Fruit',
-        price: '$5.99',
-        unit: '/each',
-        discount: 'Season',
-        image: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?q=80&w=2670&auto=format&fit=crop',
-    },
-];
-
-const DEAL_PRODUCTS = [
-    {
-        id: 101,
-        name: 'Veggie Saver Pack',
-        type: 'Combo',
-        price: '$12.99',
-        unit: '/pack',
-        discount: 'BOGO', // Buy One Get One
-        specialOffer: 'Limited Time Deal',
-        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2680&auto=format&fit=crop', // Bowl of veggies
-    },
-    {
-        id: 102,
-        name: 'Summer Fruit Basket',
-        type: 'Seasonal',
-        price: '$15.49',
-        unit: '/basket',
-        discount: '-50%',
-        specialOffer: 'Flash Sale',
-        image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop', // Fruits
-    },
-];
 
 const LOCATIONS = [
     { id: '1', type: 'Home', address: 'Patna, Bihar', zip: '800001' },
@@ -156,6 +32,7 @@ const LOCATIONS = [
 
 export default function MarketScreen() {
     const router = useRouter();
+    const { products } = useMarket();
     const { toggleFavourite, isFavourite } = useFavourites();
     const { addresses, selectedAddress, setSelectedAddress } = useAddresses();
     const { updateQuantity, getItemQuantity } = useCart();
@@ -165,8 +42,11 @@ export default function MarketScreen() {
 
     const insets = useSafeAreaInsets();
 
+    const dealProducts = products.filter(p => p.specialOffer);
+    const regularProducts = products.filter(p => !p.specialOffer);
+
     // Combine for search
-    const allProducts = [...PRODUCTS, ...DEAL_PRODUCTS];
+    const allProducts = products;
     const filteredSearchResults = allProducts.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.type.toLowerCase().includes(searchQuery.toLowerCase())
@@ -190,7 +70,7 @@ export default function MarketScreen() {
                 activeOpacity={0.9}
             >
                 <View style={styles.productImageContainer}>
-                    <Image source={{ uri: item.image }} style={styles.productImage} contentFit="contain" />
+                    <Image source={item.image} style={styles.productImage} contentFit="contain" />
                     <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
                         <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
                     </View>
@@ -270,11 +150,11 @@ export default function MarketScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                             <View style={styles.locationRow}>
-                                <Text style={styles.locationTitle}>{selectedAddress.type}</Text>
+                                <Text style={styles.locationTitle}>{selectedAddress?.type || 'Select Location'}</Text>
                                 <Ionicons name={showLocationPicker ? "chevron-up" : "chevron-down"} size={16} color="#fff" />
                             </View>
                             <Text style={styles.deliveryTime} numberOfLines={1} ellipsizeMode="tail">
-                                {selectedAddress.address}
+                                {selectedAddress?.address || 'No address selected'}
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -364,43 +244,47 @@ export default function MarketScreen() {
                             <Text style={styles.sectionTitle}>Bestsellers</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                            {PRODUCTS.filter(p => [202, 206, 210, 201, 211].includes(p.id)).map(renderProductCard)}
+                            {/* Show top rated or random products */}
+                            {products.filter(p => p.isFavorite).slice(0, 5).map(renderProductCard)}
                         </ScrollView>
 
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Grab Best Deal</Text>
-                        </View>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                            {DEAL_PRODUCTS.map(renderProductCard)}
-                        </ScrollView>
+                        {dealProducts.length > 0 && (
+                            <>
+                                <View style={styles.sectionHeader}>
+                                    <Text style={styles.sectionTitle}>Grab Best Deal</Text>
+                                </View>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                                    {dealProducts.map(renderProductCard)}
+                                </ScrollView>
+                            </>
+                        )}
 
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Leafy & Fresh</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                            {/* Filter out Sweet Potatoes (1) and Parsley (3), keep leafy/green */}
-                            {PRODUCTS.filter(p => ['Leafy', 'Hydroponic', 'Organic'].includes(p.type) && !['Sweet Potatoes', 'Red Onions'].includes(p.name)).map(renderProductCard)}
+                            {products.filter(p => ['Leafy', 'Hydroponic', 'Organic', 'Fresh'].includes(p.type) || p.tag === 'Fresh').map(renderProductCard)}
                         </ScrollView>
 
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Seasonal Fruits</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                            {PRODUCTS.filter(p => p.type === 'Fruit').map(renderProductCard)}
+                            {products.filter(p => p.type.includes('Fruit')).map(renderProductCard)}
                         </ScrollView>
 
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Farm Classics</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                            {PRODUCTS.filter(p => p.type === 'Daily').map(renderProductCard)}
+                            {products.filter(p => p.type === 'Daily' || p.tag === 'Local').map(renderProductCard)}
                         </ScrollView>
 
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Root Vegetables</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                            {PRODUCTS.filter(p => p.type === 'Roots').map(renderProductCard)}
+                            {products.filter(p => p.type === 'Roots').map(renderProductCard)}
                         </ScrollView>
                     </>
                 )}
@@ -430,12 +314,12 @@ export default function MarketScreen() {
                                 }}
                             >
                                 <Ionicons
-                                    name={selectedAddress.id === addr.id ? "radio-button-on" : "radio-button-off"}
+                                    name={selectedAddress?.id === addr.id ? "radio-button-on" : "radio-button-off"}
                                     size={18}
-                                    color={selectedAddress.id === addr.id ? "#1F5E2E" : "#999"}
+                                    color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
                                 />
                                 <View style={{ marginLeft: 12, flex: 1 }}>
-                                    <Text style={[styles.locationOptionTitle, selectedAddress.id === addr.id && { color: '#1F5E2E' }]}>
+                                    <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#1F5E2E' }]}>
                                         {addr.type}
                                     </Text>
                                     <Text style={styles.locationOptionAddress} numberOfLines={2}>

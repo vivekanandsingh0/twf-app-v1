@@ -27,9 +27,8 @@ export default function ProfileEditScreen() {
     const [dob, setDob] = useState(userData.dob);
 
     const handleSave = () => {
-        // Update all profile fields including phone number
-        updateProfile(fullName, gender, dob);
-        setUserData({ phoneNumber: phone });
+        // Update all profile fields including phone number to DB
+        updateProfile(fullName, gender, dob, phone);
 
         // Show success message
         if (Platform.OS === 'web') {

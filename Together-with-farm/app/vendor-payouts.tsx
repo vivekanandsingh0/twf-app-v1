@@ -4,10 +4,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useVendor, VendorTransaction } from '@/contexts/VendorContext';
 
 export default function PayoutsScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { transactions, dashboardStats } = useVendor();
+
+    // Derived Stats
+    const availableBalance = transactions
+        .filter(t => t.type === 'Credit' && t.status === 'Processing')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const payouts = transactions.filter(t => t.description.includes('Settlement') || t.description.includes('Payout'));
+    // Simplified logic: treat settlements as payouts
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -35,9 +45,9 @@ export default function PayoutsScreen() {
                 <View style={styles.balanceCard}>
                     <View>
                         <Text style={styles.balanceLabel}>AVAILABLE BALANCE</Text>
-                        <Text style={styles.balanceValue}>₹2500.00</Text>
+                        <Text style={styles.balanceValue}>₹{availableBalance.toFixed(2)}</Text>
                         <Text style={styles.payoutSchedule}>NEXT SCHEDULED PAYOUT</Text>
-                        <Text style={styles.payoutDate}>Oct 24,2026</Text>
+                        <Text style={styles.payoutDate}>Oct 24, 2026</Text>
                     </View>
                     <TouchableOpacity style={styles.requestButton}>
                         <Text style={styles.requestButtonText}>Request Payout</Text>
@@ -48,7 +58,7 @@ export default function PayoutsScreen() {
                 <Text style={styles.sectionTitle}>Monthly Performance</Text>
                 <View style={styles.performanceCard}>
                     <Text style={styles.performanceLabel}>Avg. Monthly Revenue</Text>
-                    <Text style={styles.performanceValue}>₹2500.00</Text>
+                    <Text style={styles.performanceValue}>₹{dashboardStats.totalSales}</Text>
 
                     {/* Dummy Chart Mockup */}
                     <View style={styles.chartContainer}>
@@ -69,12 +79,13 @@ export default function PayoutsScreen() {
                 {/* Recent Payouts */}
                 <Text style={styles.sectionTitle}>Recent Payouts</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.payoutsScroll}>
+                    {/* Mock Payouts or Filtered Transactions */}
                     <View style={styles.payoutCard}>
                         <View style={styles.payoutHeader}>
                             <Text style={styles.payoutStatusPaid}>PAID</Text>
                             <Text style={styles.payoutDateSmall}>Oct 12</Text>
                         </View>
-                        <Text style={styles.payoutAmount}>₹2500.00</Text>
+                        <Text style={styles.payoutAmount}>₹{dashboardStats.totalSales}</Text>
                         <Text style={styles.payoutMethod}>Bank Transfer-1467</Text>
                     </View>
                     <View style={[styles.payoutCard, { marginLeft: 16 }]}>
@@ -90,27 +101,22 @@ export default function PayoutsScreen() {
                 {/* Transaction History */}
                 <Text style={styles.sectionTitle}>Transaction History</Text>
                 <View style={styles.transactionList}>
-                    {[
-                        { id: '1004', date: 'Oct 21', amount: '+₹84.00' },
-                        { id: '1003', date: 'Oct 21', amount: '+₹124.00' },
-                        { id: '1002', date: 'Oct 21', amount: '+₹94.00' },
-                        { id: '1001', date: 'Oct 21', amount: '+₹114.00' },
-                    ].map((tx) => (
+                    {transactions.map((tx) => (
                         <View key={tx.id} style={styles.transactionCard}>
                             <View style={styles.transactionIcon}>
                                 <Ionicons name="cube" size={20} color="#1F5E2E" />
-                                {/* Using cube as placeholder for the basket-like icon */}
                             </View>
                             <View style={styles.transactionInfo}>
-                                <Text style={styles.transactionId}>#FARM-{tx.id}</Text>
-                                <Text style={styles.transactionMeta}>Ramesh Kumar~{tx.date}</Text>
+                                <Text style={styles.transactionId}>#{tx.id}</Text>
+                                <Text style={styles.transactionMeta}>{tx.description}~{new Date(tx.date).toLocaleDateString()}</Text>
                             </View>
                             <View style={styles.transactionAmountContainer}>
-                                <Text style={styles.transactionAmount}>{tx.amount}</Text>
-                                <Text style={styles.netEarned}>Net Earned</Text>
+                                <Text style={styles.transactionAmount}>+{tx.amount}</Text>
+                                <Text style={styles.netEarned}>{tx.status}</Text>
                             </View>
                         </View>
                     ))}
+                    {transactions.length === 0 && <Text style={{ color: '#999' }}>No recent transactions</Text>}
                 </View>
 
                 <View style={{ height: 40 }} />

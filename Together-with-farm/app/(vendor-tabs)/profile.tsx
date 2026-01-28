@@ -1,21 +1,50 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useUser } from '@/contexts/UserContext';
+import { useVendor } from '@/contexts/VendorContext';
+import { useCallback } from 'react';
 
 export default function VendorProfileScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { signOut, switchUserRole, userData } = useUser();
+    const { profile } = useVendor();
+    const [requestStatus, setRequestStatus] = React.useState<{ status: string; note?: string } | null>(null);
 
-    const renderMenuItem = (icon: any, label: string, onPress?: () => void) => (
+    // Mock status check (No Supabase)
+    useFocusEffect(
+        useCallback(() => {
+            // MOCK: Check local state or just do nothing
+            // setRequestStatus(null); 
+        }, [])
+    );
+
+    const handleSwitchRole = async () => {
+        // Dev Only: Immediate switch for testing without dialogs that might be blocked
+        console.log("Switching to User...");
+        const success = await switchUserRole('User');
+        if (success) {
+            router.replace('/(tabs)');
+        } else {
+            alert("Failed to switch role. Check console.");
+        }
+    };
+
+    const handleLogout = async () => {
+        await signOut();
+    };
+
+    const renderMenuItem = (icon: any, label: string, onPress?: () => void, textColor: string = '#1A1A1A') => (
         <TouchableOpacity style={styles.menuItem} onPress={onPress}>
             <View style={styles.menuIconContainer}>
-                <Ionicons name={icon} size={22} color="#1A1A1A" />
+                <Ionicons name={icon} size={22} color={textColor} />
             </View>
-            <Text style={styles.menuLabel}>{label}</Text>
+            <Text style={[styles.menuLabel, { color: textColor }]}>{label}</Text>
             <Ionicons name="chevron-forward" size={20} color="#CCCCCC" />
         </TouchableOpacity>
     );
@@ -43,6 +72,28 @@ export default function VendorProfileScreen() {
                 </View>
             </View>
 
+            {requestStatus?.status === 'Pending' && (
+                <View style={styles.reviewBanner}>
+                    <Ionicons name="time-outline" size={20} color="#856404" />
+                    <Text style={styles.reviewText}>Your profile edits are currently under review.</Text>
+                </View>
+            )}
+
+            {requestStatus?.status === 'Rejected' && (
+                <View style={styles.rejectedBanner}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                        <Ionicons name="alert-circle-outline" size={20} color="#721C24" />
+                        <Text style={styles.rejectedTitle}>Profile Update Rejected</Text>
+                    </View>
+                    <Text style={styles.rejectedText}>
+                        {requestStatus.note ? `Reason: "${requestStatus.note}"` : 'Please check your details and try again.'}
+                    </Text>
+                    <TouchableOpacity onPress={() => router.push('/edit-profile-vendor')} style={{ marginTop: 8 }}>
+                        <Text style={{ color: '#721C24', fontFamily: 'DMSans_700Bold', fontSize: 13, textDecorationLine: 'underline' }}>Fix Now</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
@@ -55,8 +106,8 @@ export default function VendorProfileScreen() {
                         contentFit="cover"
                     />
                     <View style={styles.profileInfo}>
-                        <Text style={styles.profileName}>Amit Kumar</Text>
-                        <Text style={styles.profilePhone}>+912345689</Text>
+                        <Text style={styles.profileName}>{userData?.fullName || profile.ownerName}</Text>
+                        <Text style={styles.profilePhone}>{userData?.phoneNumber || profile.phone}</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.editButton}
@@ -89,8 +140,22 @@ export default function VendorProfileScreen() {
                     <View style={styles.divider} />
                     {renderMenuItem('headset-outline', 'Support')}
                     <View style={styles.divider} />
+                    <TouchableOpacity style={styles.menuItem} onPress={handleSwitchRole}>
+                        <View style={styles.menuIconContainer}>
+                            <Ionicons name="construct-outline" size={22} color="#E65100" />
+                        </View>
+                        <Text style={[styles.menuLabel, { color: '#E65100' }]}>Switch to User (Dev)</Text>
+                        <Ionicons name="swap-horizontal-outline" size={20} color="#E65100" />
+                    </TouchableOpacity>
+                    <View style={styles.divider} />
                     {renderMenuItem('information-circle-outline', 'About Us')}
                 </View>
+
+                {/* Logout Button */}
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                    <Ionicons name="log-out-outline" size={24} color="#FF5252" />
+                    <Text style={styles.logoutText}>Log Out</Text>
+                </TouchableOpacity>
 
                 <View style={{ height: 40 }} />
             </ScrollView>
@@ -228,5 +293,62 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: '#F5F5F5',
         width: '100%',
+    },
+    logoutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFF0F0',
+        paddingVertical: 16,
+        borderRadius: 16,
+        marginTop: 8,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: '#FFDBDB',
+    },
+    logoutText: {
+        marginLeft: 8,
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#FF5252',
+    },
+    reviewBanner: {
+        backgroundColor: '#FFF3CD',
+        borderColor: '#FFEEBA',
+        borderWidth: 1,
+        padding: 12,
+        marginHorizontal: 20,
+        borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    reviewText: {
+        color: '#856404',
+        fontFamily: 'DMSans_500Medium',
+        fontSize: 14,
+        marginLeft: 8,
+        flex: 1,
+    },
+    rejectedBanner: {
+        backgroundColor: '#F8D7DA',
+        borderColor: '#F5C6CB',
+        borderWidth: 1,
+        padding: 12,
+        marginHorizontal: 20,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    rejectedTitle: {
+        color: '#721C24',
+        fontFamily: 'DMSans_700Bold',
+        fontSize: 14,
+        marginLeft: 8,
+    },
+    rejectedText: {
+        color: '#721C24',
+        fontFamily: 'DMSans_500Medium',
+        fontSize: 13,
+        marginTop: 4,
     },
 });

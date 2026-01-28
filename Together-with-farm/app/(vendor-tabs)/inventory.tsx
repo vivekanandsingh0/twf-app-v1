@@ -5,53 +5,37 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-
-interface InventoryItem {
-    id: string;
-    name: string;
-    description: string; // e.g., '45kg available', 'Out of Stock', 'Only 4 units left'
-    price: string;
-    status: 'IN STOCK' | 'RESTOCK' | 'LOW STOCK'; // Matches visual design text
-    image: any;
-}
+import { useVendor, VendorProduct } from '@/contexts/VendorContext';
 
 export default function VendorInventoryScreen() {
     const insets = useSafeAreaInsets();
-    const router = useRouter(); // Initialize router
+    const router = useRouter();
     const [shopOpen, setShopOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All Stock');
 
+    const { products, orders } = useVendor();
+
     const filters = ['All Stock', 'Low Stock', 'Organic', 'Roots', 'Daily'];
 
-    const inventoryItems: InventoryItem[] = [
-        {
-            id: '1',
-            name: 'Sweet Tomatoes',
-            description: '45kg available',
-            price: '$5.49/each',
-            status: 'IN STOCK',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-        },
-        {
-            id: '2',
-            name: 'Sweet Tomatoes',
-            description: 'Out of Stock',
-            price: '$5.49/each',
-            status: 'RESTOCK',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-        },
-        {
-            id: '3',
-            name: 'Sweet Tomatoes',
-            description: 'Only 4 units left',
-            price: '$5.49/each',
-            status: 'LOW STOCK',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-        },
-    ];
+    // Stats
+    const activeOrdersCount = orders.filter(o => o.status === 'Pending' || o.status === 'Accepted' || o.status === 'Ready').length;
+    const outOfStockCount = products.filter(p => p.stock === 0).length;
 
-    const getStatusColor = (status: InventoryItem['status']) => {
+    // Derived Logic
+    const getStatus = (p: VendorProduct) => {
+        if (p.stock === 0) return 'RESTOCK';
+        if (p.stock < 10) return 'LOW STOCK';
+        return 'IN STOCK';
+    };
+
+    const getDescription = (p: VendorProduct) => {
+        if (p.stock === 0) return 'Out of Stock';
+        if (p.stock < 10) return `Only ${p.stock} units left`;
+        return `${p.stock}${p.unit} available`;
+    };
+
+    const getStatusColor = (status: string) => {
         switch (status) {
             case 'IN STOCK': return '#1F5E2E';
             case 'RESTOCK': return '#FF5252';
@@ -60,7 +44,7 @@ export default function VendorInventoryScreen() {
         }
     };
 
-    const getDescriptionColor = (status: InventoryItem['status']) => {
+    const getDescriptionColor = (status: string) => {
         switch (status) {
             case 'IN STOCK': return '#999999';
             case 'RESTOCK': return '#FF5252';
@@ -69,32 +53,44 @@ export default function VendorInventoryScreen() {
         }
     };
 
-    const renderInventoryItem = (item: InventoryItem) => (
-        <View key={item.id} style={styles.itemCard}>
-            <Image
-                source={item.image}
-                style={styles.itemImage}
-                contentFit="cover"
-            />
-            <View style={styles.itemInfo}>
-                <View style={styles.itemRow}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <View style={styles.priceContainer}>
-                        <Text style={styles.priceText}>{item.price}</Text>
+    const filteredInventory = products.filter(p => {
+        if (activeFilter === 'All Stock') return true;
+        if (activeFilter === 'Low Stock') return p.stock > 0 && p.stock < 10;
+        // Mock filtering for other tags if not present in context yet
+        return true;
+    }).filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const renderInventoryItem = (item: VendorProduct) => {
+        const status = getStatus(item);
+        const description = getDescription(item);
+
+        return (
+            <View key={item.id} style={styles.itemCard}>
+                <Image
+                    source={item.image}
+                    style={styles.itemImage}
+                    contentFit="cover"
+                />
+                <View style={styles.itemInfo}>
+                    <View style={styles.itemRow}>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.priceText}>₹{item.price}/{item.unit}</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.itemRow}>
+                        <Text style={[styles.itemDescription, { color: getDescriptionColor(status) }]}>
+                            {description}
+                        </Text>
+                        <Text style={[styles.statusText, { color: getStatusColor(status) }]}>
+                            {status}
+                        </Text>
                     </View>
                 </View>
-
-                <View style={styles.itemRow}>
-                    <Text style={[styles.itemDescription, { color: getDescriptionColor(item.status) }]}>
-                        {item.description}
-                    </Text>
-                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                        {item.status}
-                    </Text>
-                </View>
             </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -103,7 +99,7 @@ export default function VendorInventoryScreen() {
             {/* Header Area */}
             <View style={styles.header}>
                 <View style={{ width: 40 }} />
-                <TouchableOpacity style={styles.notificationButton}>
+                <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
                     <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
             </View>
@@ -112,7 +108,7 @@ export default function VendorInventoryScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Shop Status Card */}
+                {/* ShopStatus Card */}
                 <View style={styles.shopStatusCard}>
                     <Text style={styles.shopStatusTitle}>SHOP STATUS</Text>
                     <Text style={styles.shopStatusSubtitle}>
@@ -132,11 +128,11 @@ export default function VendorInventoryScreen() {
                 <View style={styles.statsRow}>
                     <View style={styles.statsCard}>
                         <Text style={styles.statsLabel}>Active Orders</Text>
-                        <Text style={styles.statsValue}>08</Text>
+                        <Text style={styles.statsValue}>{activeOrdersCount}</Text>
                     </View>
                     <View style={styles.statsCard}>
                         <Text style={styles.statsLabel}>Out of Stock</Text>
-                        <Text style={[styles.statsValue, { color: '#FF5252' }]}>03</Text>
+                        <Text style={[styles.statsValue, { color: '#FF5252' }]}>{outOfStockCount}</Text>
                     </View>
                 </View>
 
@@ -179,7 +175,10 @@ export default function VendorInventoryScreen() {
 
                 {/* Inventory List */}
                 <View style={styles.inventoryList}>
-                    {inventoryItems.map(renderInventoryItem)}
+                    {filteredInventory.map(renderInventoryItem)}
+                    {filteredInventory.length === 0 && (
+                        <Text style={{ textAlign: 'center', color: '#999', marginTop: 20 }}>No items found.</Text>
+                    )}
                 </View>
 
                 {/* Spacer for FAB and TabBar */}

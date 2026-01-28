@@ -7,431 +7,62 @@ import {
     TouchableOpacity,
     Dimensions,
     Share,
-    Platform
+    Platform,
+    ActivityIndicator,
+    Image
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+// import { Image } from 'expo-image';
 import { useCart } from '@/contexts/CartContext';
+import { useMarket, MarketProduct } from '@/contexts/MarketContext';
 import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
-
-// Reusing data from category page, extended with details
-const PRODUCTS_DATA = [
-    {
-        id: 1,
-        categoryId: 'vegetables',
-        title: 'Sweet Potatoes',
-        price: 1.79,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1596097635121-14b63b7a0c19?q=80&w=2574&auto=format&fit=crop',
-        discount: 40,
-        tag: 'Organic',
-        isFavorite: true,
-        description: 'Sweet potatoes are rich in fiber, vitamins, and minerals. They are also high in antioxidants that protect your body from free radical damage and chronic disease.',
-    },
-    {
-        id: 2,
-        categoryId: 'vegetables',
-        title: 'Fresh Sweet Corn',
-        price: 4.29,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?q=80&w=2670&auto=format&fit=crop',
-        discount: 30,
-        tag: 'Fresh',
-        isFavorite: false,
-        description: 'Crispy, juicy, and naturally sweet great for grilling, boiling or roasting. At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti.',
-    },
-    {
-        id: 3,
-        categoryId: 'vegetables',
-        title: 'Parsley',
-        price: 4.29,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?q=80&w=2630&auto=format&fit=crop',
-        discount: 30,
-        tag: 'Organic',
-        isFavorite: false,
-        description: 'Parsley is a popular herb often used to garnish dishes, but it includes many healthy nutrients like Vitamin K.',
-    },
-    {
-        id: 11,
-        categoryId: 'vegetables',
-        title: 'Tomatoes',
-        price: 2.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Fresh',
-        isFavorite: true,
-        description: 'Fresh, juicy tomatoes perfect for salads, sauces, and sandwiches.',
-    },
-    {
-        id: 4,
-        categoryId: 'fruits',
-        title: 'Bananas',
-        price: 0.99,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=2574&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh',
-        isFavorite: true,
-        description: 'Rich in potassium and perfect for a quick snack or smoothie.',
-    },
-    {
-        id: 5,
-        categoryId: 'fruits',
-        title: 'Red Apples',
-        price: 2.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?q=80&w=2674&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Local',
-        isFavorite: false,
-        description: 'Crisp and sweet red apples, locally sourced from best orchards.',
-    },
-    {
-        id: 12,
-        categoryId: 'fruits',
-        title: 'Strawberries',
-        price: 4.99,
-        unit: 'box',
-        image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?q=80&w=2670&auto=format&fit=crop',
-        discount: 15,
-        tag: 'Sweet',
-        isFavorite: true,
-        description: 'Sweet and juicy strawberries, perfect for desserts or snacking.',
-    },
-    {
-        id: 13,
-        categoryId: 'fruits',
-        title: 'Watermelon',
-        price: 5.99,
-        unit: 'each',
-        image: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?q=80&w=2670&auto=format&fit=crop',
-        discount: 20,
-        tag: 'Seasonal',
-        isFavorite: false,
-        description: 'Refreshing and hydrating watermelon, a summer favorite.',
-    },
-    {
-        id: 6,
-        categoryId: 'meats',
-        title: 'Chicken Breast',
-        price: 6.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?q=80&w=2574&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh',
-        isFavorite: false,
-        description: 'Lean and tender chicken breast, ideal for grilling or baking.',
-    },
-    {
-        id: 14,
-        categoryId: 'meats',
-        title: 'Ground Beef',
-        price: 5.49,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1613454320434-eca721df222a?q=80&w=2670&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Organic',
-        isFavorite: false,
-        description: 'High quality ground beef, perfect for burgers, tacos, and pastoral dishes.',
-    },
-    {
-        id: 7,
-        categoryId: 'seafood',
-        title: 'Salmon Fillet',
-        price: 12.99,
-        unit: 'each',
-        image: 'https://images.unsplash.com/photo-1601314167099-232775b3d6fd?q=80&w=2672&auto=format&fit=crop',
-        discount: 5,
-        tag: 'Wild Caught',
-        isFavorite: true,
-        description: 'Rich in Omega-3 fatty acids, this wild caught salmon is perfect for a healthy dinner.',
-    },
-    {
-        id: 15,
-        categoryId: 'seafood',
-        title: 'Shrimp',
-        price: 14.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?q=80&w=2670&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Frozen',
-        isFavorite: false,
-        description: 'Plump and juicy shrimp, great for stir-fries, pasta, or cocktails.',
-    },
-    {
-        id: 8,
-        categoryId: 'dairy',
-        title: 'Whole Milk',
-        price: 3.49,
-        unit: 'gal',
-        image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?q=80&w=2565&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh',
-        isFavorite: false,
-        description: 'Fresh whole milk, rich in calcium and vitamins.',
-    },
-    {
-        id: 16,
-        categoryId: 'dairy',
-        title: 'Organic Eggs',
-        price: 4.99,
-        unit: 'doz',
-        image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?q=80&w=2670&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Free Range',
-        isFavorite: true,
-        description: 'Free range organic eggs from happy hens.',
-    },
-    {
-        id: 9,
-        categoryId: 'bakery',
-        title: 'Sourdough Bread',
-        price: 5.99,
-        unit: 'loaf',
-        image: 'https://images.unsplash.com/photo-1585476644321-b9762181d164?q=80&w=2670&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh Baked',
-        isFavorite: false,
-        description: 'Artisan sourdough bread with a crispy crust and soft chewy center.',
-    },
-    {
-        id: 17,
-        categoryId: 'bakery',
-        title: 'Croissants',
-        price: 3.99,
-        unit: '4pk',
-        image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=2526&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Butter',
-        isFavorite: true,
-        description: 'Buttery, flaky croissants made with traditional french methods.',
-    },
-    // --- Market Screen Products ---
-    {
-        id: 201,
-        categoryId: 'vegetables',
-        title: 'Sweet Potatoes',
-        price: 1.79,
-        unit: 'lb',
-        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyN5y-txNHOqaxZJy4yWA4lK_oiEQxjmX3xg&s',
-        discount: 40,
-        tag: 'Roots',
-        isFavorite: true,
-        description: 'Nutritious sweet potatoes, perfect for baking or mashing.',
-    },
-    {
-        id: 202,
-        categoryId: 'vegetables',
-        title: 'Broccoli Fresh Green',
-        price: 3.29,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?q=80&w=2601&auto=format&fit=crop',
-        discount: 30,
-        tag: 'Hydroponic',
-        isFavorite: false,
-        description: 'Crisp and green broccoli, grown hydroponically for maximum freshness.',
-    },
-    {
-        id: 203,
-        categoryId: 'vegetables',
-        title: 'Fresh Parsley',
-        price: 1.49,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=2574&auto=format&fit=crop',
-        discount: 30,
-        tag: 'Organic',
-        isFavorite: false,
-        description: 'Aromatic fresh parsley, essential for garnishing and cooking.',
-    },
-    {
-        id: 204,
-        categoryId: 'vegetables',
-        title: 'Organic Spinach',
-        price: 2.49,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?q=80&w=2574&auto=format&fit=crop',
-        discount: 20,
-        tag: 'Leafy',
-        isFavorite: true,
-        description: 'Tender organic spinach leaves, rich in iron and vitamins.',
-    },
-    {
-        id: 205,
-        categoryId: 'vegetables',
-        title: 'Fresh Lettuce',
-        price: 1.99,
-        unit: 'head',
-        image: 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?q=80&w=2574&auto=format&fit=crop',
-        discount: 15,
-        tag: 'Hydroponic',
-        isFavorite: false,
-        description: 'Crisp lettuce head, clean and ready for your salads.',
-    },
-    {
-        id: 206,
-        categoryId: 'vegetables',
-        title: 'Red Tomatoes',
-        price: 2.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Daily',
-        isFavorite: false,
-        description: 'Plump red tomatoes, a kitchen staple for sauces and salads.',
-    },
-    {
-        id: 207,
-        categoryId: 'vegetables',
-        title: 'Crunchy Carrots',
-        price: 1.49,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=2574&auto=format&fit=crop',
-        discount: 25,
-        tag: 'Roots',
-        isFavorite: true,
-        description: 'Sweet and crunchy carrots, great for snacking or cooking.',
-    },
-    {
-        id: 208,
-        categoryId: 'vegetables',
-        title: 'Red Onions',
-        price: 1.29,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?q=80&w=2574&auto=format&fit=crop',
-        discount: 5,
-        tag: 'Roots',
-        isFavorite: false,
-        description: 'Flavorful red onions to add zest to your dishes.',
-    },
-    {
-        id: 209,
-        categoryId: 'vegetables',
-        title: 'Bell Peppers',
-        price: 3.49,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1563565375-f3fdf5dbc240?q=80&w=2574&auto=format&fit=crop',
-        discount: 15,
-        tag: 'Daily',
-        isFavorite: false,
-        description: 'Colorful bell peppers, crisp and sweet.',
-    },
-    {
-        id: 210,
-        categoryId: 'fruits',
-        title: 'Fresh Strawberries',
-        price: 4.99,
-        unit: 'box',
-        image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?q=80&w=2670&auto=format&fit=crop',
-        discount: 20,
-        tag: 'Fruit',
-        isFavorite: true,
-        description: 'Juicy fresh strawberries, a delightful treat.',
-    },
-    {
-        id: 211,
-        categoryId: 'fruits',
-        title: 'Sweet Watermelon',
-        price: 5.99,
-        unit: 'each',
-        image: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?q=80&w=2670&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Season',
-        isFavorite: false,
-        description: 'Big sweet watermelon, the taste of summer.',
-    },
-    // Deals
-    {
-        id: 101,
-        categoryId: 'vegetables',
-        title: 'Veggie Saver Pack',
-        price: 12.99,
-        unit: 'pack',
-        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2680&auto=format&fit=crop',
-        discount: 50,
-        tag: 'Combo',
-        isFavorite: true,
-        description: 'A value pack of essential vegetables to save you money.',
-    },
-    {
-        id: 102,
-        categoryId: 'fruits',
-        title: 'Summer Fruit Basket',
-        price: 15.49,
-        unit: 'basket',
-        image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop',
-        discount: 50,
-        tag: 'Seasonal',
-        isFavorite: true,
-        description: 'A basket full of the best summer fruits.',
-    },
-];
-
-// Helper to get product by ID (simulating database)
-const getProduct = (id: string | string[]) => {
-    const productId = Number(id);
-    const found = PRODUCTS_DATA.find(p => p.id === productId);
-    if (!found) {
-        return PRODUCTS_DATA[1]; // Default to Corn if not found
-    }
-    return found;
-};
-
-// Simplified copy of PRODUCTS for "Related Products"
-const RELATED_PRODUCTS = [
-    {
-        id: 1,
-        title: 'Sweet Potatoes',
-        price: 1.79,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1596097635121-14b63b7a0c19?q=80&w=2574&auto=format&fit=crop',
-        discount: 40,
-        tag: 'Organic',
-        isFavorite: true,
-    },
-    {
-        id: 3,
-        title: 'Parsley',
-        price: 4.29,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?q=80&w=2630&auto=format&fit=crop',
-        discount: 30,
-        tag: 'Organic',
-        isFavorite: false,
-    },
-    {
-        id: 11,
-        title: 'Tomatoes',
-        price: 2.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Fresh',
-        isFavorite: true,
-    }
-];
 
 export default function ProductDetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { updateQuantity, getItemQuantity } = useCart();
+    const { products, vendors } = useMarket();
 
-    const product = getProduct(id);
+    const productId = Number(id);
+    const product = products.find(p => p.id === productId);
 
-    const displayTitle = product.title;
+    // Find vendor
+    const vendor = product ? vendors.find(v => v.id === product.vendorId) : null;
+
+    // Find related products (Same Vendor)
+    const relatedProducts = product
+        ? products.filter(p => p.vendorId === product.vendorId && p.id !== product.id).slice(0, 5)
+        : [];
+
+    // Fallback: If no products from same vendor, show similar category
+    const similarProducts = (product && relatedProducts.length === 0)
+        ? products.filter(p => p.type === product.type && p.id !== product.id).slice(0, 5)
+        : relatedProducts;
+
+    const displayRelated = similarProducts;
+
+    if (!product) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text>Product not found.</Text>
+                <TouchableOpacity onPress={() => router.back()}>
+                    <Text style={{ color: '#1F5E2E', marginTop: 10 }}>Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    const displayTitle = product.name;
     const displayPrice = product.price;
     const displayUnit = `/${product.unit}`;
-    const displaySub = product.id === 2
-        ? "Each ear weighs around 250-300 gm."
-        : "Fresh from the farm, delivered to you.";
-    const displayDesc = product.description;
+    const displaySub = product.description;
+    const displayDesc = product.description; // or more detailed if available
 
     const qty = getItemQuantity(product.id);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -498,7 +129,7 @@ export default function ProductDetailsScreen() {
                         >
                             {productImages.map((img, index) => (
                                 <View key={index} style={{ width: width, height: 250, alignItems: 'center', justifyContent: 'center' }}>
-                                    <Image source={{ uri: img }} style={{ width: width - 100, height: '100%' }} contentFit="contain" />
+                                    <Image source={img} style={{ width: width - 100, height: '100%' }} resizeMode="contain" />
                                 </View>
                             ))}
                         </ScrollView>
@@ -517,11 +148,11 @@ export default function ProductDetailsScreen() {
 
                 {/* Details Section */}
                 <View style={styles.detailsContainer}>
-                    <Text style={styles.categoryText}>Veggies</Text>
+                    <Text style={styles.categoryText}>{product.type}</Text>
                     <View style={styles.titleRow}>
                         <Text style={styles.titleText}>{displayTitle}</Text>
                         <View style={styles.priceContainer}>
-                            <Text style={styles.mainPriceText}>${displayPrice}</Text>
+                            <Text style={styles.mainPriceText}>₹{displayPrice}</Text>
                             <Text style={styles.mainUnitText}>{displayUnit}</Text>
                         </View>
                     </View>
@@ -531,12 +162,12 @@ export default function ProductDetailsScreen() {
                     <Text style={styles.sectionHeader}>Product Details</Text>
                     <View style={styles.featureRow}>
                         <View style={styles.featureBox}>
-                            <Text style={styles.featureTitle}>48 hours</Text>
-                            <Text style={styles.featureSub}>Replacement</Text>
+                            <Text style={styles.featureTitle}>Fresh</Text>
+                            <Text style={styles.featureSub}>Guarantee</Text>
                         </View>
                         <View style={styles.featureBox}>
-                            <Text style={styles.featureTitle}>24/7</Text>
-                            <Text style={styles.featureSub}>Support</Text>
+                            <Text style={styles.featureTitle}>Organic</Text>
+                            <Text style={styles.featureSub}>Certified</Text>
                         </View>
                         <View style={styles.featureBox}>
                             <Text style={styles.featureTitle}>Fast</Text>
@@ -549,11 +180,11 @@ export default function ProductDetailsScreen() {
                         <Text style={styles.subHeader}>Highlights</Text>
                         <View style={styles.highlightRow}>
                             <Text style={styles.highlightLabel}>Health Benefits</Text>
-                            <Text style={styles.highlightValue}>Vitamin A Rich</Text>
+                            <Text style={styles.highlightValue}>Nutrient Rich</Text>
                         </View>
                         <View style={styles.highlightRow}>
                             <Text style={styles.highlightLabel}>Good to know</Text>
-                            <Text style={styles.highlightValue}>Gluten-free</Text>
+                            <Text style={styles.highlightValue}>Locally Sourced</Text>
                         </View>
                     </View>
 
@@ -567,42 +198,47 @@ export default function ProductDetailsScreen() {
                     </View>
 
                     {/* Meet the Farmer */}
-                    <Text style={styles.sectionHeader}>Meet the Farmer</Text>
-                    <View style={styles.farmerCard}>
-                        <View style={styles.farmerInfo}>
-                            <Text style={styles.farmerName}>Ramesh Kumar</Text>
-                            <Text style={styles.farmerLocation}>Patna, Bihar</Text>
-                            <TouchableOpacity onPress={() => router.push('/farmer/1')}>
-                                <Text style={styles.showMoreLink}>Show More About Farmer</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1595245860882-628d689656a4?q=80&w=2574&auto=format&fit=crop' }} // Farmer Portrait
-                            style={styles.farmerAvatar}
-                        />
-                    </View>
+                    {vendor && (
+                        <>
+                            <Text style={styles.sectionHeader}>Meet the Farmer</Text>
+                            <View style={styles.farmerCard}>
+                                <View style={styles.farmerInfo}>
+                                    <Text style={styles.farmerName}>{vendor.name}</Text>
+                                    <Text style={styles.farmerLocation}>{vendor.location}</Text>
+                                    <TouchableOpacity onPress={() => router.push(`/farmer/${vendor.id}`)}>
+                                        <Text style={styles.showMoreLink}>Show More About Farmer</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <Image
+                                    source={vendor.image}
+                                    style={styles.farmerAvatar}
+                                />
+                            </View>
+                        </>
+                    )}
 
-                    {/* Explore More Products */}
-                    <Text style={styles.sectionHeader}>Explore more products</Text>
+                    <Text style={styles.sectionHeader}>
+                        {vendor ? `More from ${vendor.name}` : 'Explore more products'}
+                    </Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.relatedScroll}>
-                        {RELATED_PRODUCTS.map((item) => (
+                        {displayRelated.map((item) => (
                             <TouchableOpacity
                                 key={item.id}
                                 style={styles.relatedCard}
                                 onPress={() => router.push(`/product/${item.id}`)}
                             >
                                 <View style={styles.discountBadge}>
-                                    <Text style={styles.discountText}>-{item.discount}%</Text>
+                                    <Text style={styles.discountText}>{item.discount || '-10%'}</Text>
                                 </View>
                                 <View style={styles.relatedImageContainer}>
-                                    <Image source={{ uri: item.image }} style={styles.relatedImage} contentFit="contain" />
+                                    <Image source={item.image} style={styles.relatedImage} resizeMode="contain" />
                                 </View>
                                 <View style={styles.favIconSmall}>
                                     <Ionicons name="heart-outline" size={16} color="#1A1A1A" />
                                 </View>
 
-                                <Text style={styles.relatedTag}>{item.tag}</Text>
-                                <Text style={styles.relatedTitle} numberOfLines={1}>{item.title}</Text>
+                                <Text style={styles.relatedTag}>{item.tag || item.type}</Text>
+                                <Text style={styles.relatedTitle} numberOfLines={1}>{item.name}</Text>
                                 <View style={styles.relatedPriceRow}>
                                     <Text style={styles.relatedPrice}>${item.price}<Text style={styles.relatedUnit}>/{item.unit}</Text></Text>
                                     <View style={styles.addButtonSmall}>

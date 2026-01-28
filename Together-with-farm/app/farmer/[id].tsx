@@ -14,77 +14,31 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useMarket, MarketVendor, MarketProduct } from '@/contexts/MarketContext';
 
 const { width } = Dimensions.get('window');
 
-// Mock Farmer Data
-const FARMER_DATA = {
-    id: 1,
-    name: 'Ramesh Kumar',
-    location: 'Patna, Bihar',
-    image: 'https://images.unsplash.com/photo-1595245860882-628d689656a4?q=80&w=2574&auto=format&fit=crop', // Portrait
-    coverImage: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2832&auto=format&fit=crop', // Field
-    stats: {
-        experience: '15+ Years',
-        method: 'Organic',
-        size: '5 Acres'
-    },
-    story: "For Ramesh Kumar, farming isn't just a profession; it's a legacy passed down through four generations in Muzaffarpur. Growing up in the fertile plains of Bihar, Ramesh learned the secret language of the soil early on.\n\nToday, he is a pioneer of organic practices in his village. By completely eliminating chemical pesticides and using traditional vermicompost methods, he ensures that every piece of produce harvested from his 5-acre farm is as pure as nature intended.",
-    quote: "My mission is simple: I want families in Patna to eat vegetables as fresh and safe as the ones I serve my own children."
-};
-
-// Mock Products for this farmer
-const FARMER_PRODUCTS = [
-    {
-        id: 201, // Sweet Potatoes
-        title: 'Sweet Potatoes',
-        price: 1.79,
-        unit: 'lb',
-        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyN5y-txNHOqaxZJy4yWA4lK_oiEQxjmX3xg&s',
-        discount: 40,
-        tag: 'Organic',
-        isFavorite: true,
-    },
-    {
-        id: 203, // Parsley
-        title: 'Parsley',
-        price: 4.29,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=2574&auto=format&fit=crop',
-        discount: 30,
-        tag: 'Organic',
-        isFavorite: false,
-    },
-    {
-        id: 204, // Spinach
-        title: 'Organic Spinach',
-        price: 2.49,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?q=80&w=2574&auto=format&fit=crop',
-        discount: 20,
-        tag: 'Leafy',
-        isFavorite: true,
-    },
-    {
-        id: 206, // Tomatoes
-        title: 'Red Tomatoes',
-        price: 2.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Daily',
-        isFavorite: false,
-    }
-];
-
 export default function FarmerDetailsScreen() {
     const router = useRouter();
+    const { id } = useLocalSearchParams();
     const insets = useSafeAreaInsets();
+    const { vendors, products } = useMarket();
 
-    // In real app, fetch farmer by ID
-    const farmer = FARMER_DATA;
+    const farmer = vendors.find(v => v.id === id);
+    const farmerProducts = products.filter(p => p.vendorId === id);
 
-    const renderProductCard = (item: typeof FARMER_PRODUCTS[0]) => (
+    if (!farmer) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text>Farmer not found</Text>
+                <TouchableOpacity onPress={() => router.back()}>
+                    <Text style={{ color: '#1F5E2E', marginTop: 10 }}>Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    const renderProductCard = (item: MarketProduct) => (
         <TouchableOpacity
             key={item.id}
             style={styles.productCard}
@@ -92,10 +46,10 @@ export default function FarmerDetailsScreen() {
             activeOpacity={0.9}
         >
             <View style={styles.productImageContainer}>
-                <Image source={{ uri: item.image }} style={styles.productImage} contentFit="contain" />
-                {item.discount > 0 && (
+                <Image source={item.image} style={styles.productImage} contentFit="contain" />
+                {item.discount && (
                     <View style={styles.discountBadge}>
-                        <Text style={styles.discountText}>-{item.discount}%</Text>
+                        <Text style={styles.discountText}>{item.discount}</Text>
                     </View>
                 )}
                 <TouchableOpacity style={styles.favoriteButton}>
@@ -108,8 +62,8 @@ export default function FarmerDetailsScreen() {
             </View>
 
             <View style={styles.productInfo}>
-                <Text style={styles.tagText}>{item.tag}</Text>
-                <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.tagText}>{item.tag || item.type}</Text>
+                <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
 
                 <View style={styles.priceRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
@@ -131,7 +85,7 @@ export default function FarmerDetailsScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                 {/* Cover Image */}
-                <ImageBackground source={{ uri: farmer.coverImage }} style={styles.coverImage}>
+                <ImageBackground source={farmer.coverImage} style={styles.coverImage}>
                     <View style={[styles.headerOverlay, { paddingTop: insets.top + 10 }]}>
                         <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
                             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
@@ -152,7 +106,7 @@ export default function FarmerDetailsScreen() {
                     <View style={styles.profileCard}>
                         {/* Avatar & Name Row */}
                         <View style={styles.profileHeader}>
-                            <Image source={{ uri: farmer.image }} style={styles.avatar} contentFit="cover" />
+                            <Image source={farmer.image} style={styles.avatar} contentFit="cover" />
                             <View style={styles.profileInfo}>
                                 <Text style={styles.farmerName}>{farmer.name}</Text>
                                 <View style={styles.locationRow}>
@@ -200,7 +154,7 @@ export default function FarmerDetailsScreen() {
                     {/* All Products */}
                     <Text style={styles.sectionTitleProducts}>All Products</Text>
                     <View style={styles.productsGrid}>
-                        {FARMER_PRODUCTS.map(renderProductCard)}
+                        {farmerProducts.map(renderProductCard)}
                     </View>
                 </View>
             </ScrollView>

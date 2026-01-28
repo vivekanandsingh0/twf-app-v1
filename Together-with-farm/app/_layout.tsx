@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState, useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -15,13 +15,16 @@ import { FavouritesProvider } from '@/contexts/FavouritesContext';
 import { AddressProvider } from '@/contexts/AddressContext';
 import { UserProvider, useUser } from '@/contexts/UserContext';
 import { CartProvider } from '@/contexts/CartContext';
+import { VendorProvider } from '@/contexts/VendorContext';
+import { MarketProvider } from '@/contexts/MarketContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 function AppContent() {
-  const { session, loading } = useUser();
+  const router = useRouter(); // Initialize router
+  const { session, loading, userData } = useUser(); // Destructure userData
   console.log("_layout: AppContent rendered", { session: !!session, loading });
   const colorScheme = useColorScheme();
 
@@ -38,14 +41,23 @@ function AppContent() {
   const [userType, setUserType] = useState<'User' | 'Vendor'>('User');
 
   // Reset auth flow state when user logs out
+  // Reset auth flow state when user logs out
   useEffect(() => {
     if (!session && !loading) {
       setShowSplash(true);
       setShowOnboarding(true);
       setShowRoleSelection(false);
       setShowLogin(false);
+    } else if (session && !loading) {
+      // Redirect to appropriate home screen on login
+      // This prevents stuck states like "Product not found"
+      if (userData.userType === 'Vendor') {
+        router.replace('/(vendor-tabs)');
+      } else {
+        router.replace('/(tabs)');
+      }
     }
-  }, [session, loading]);
+  }, [session, loading, userData.userType]);
 
   if (showSplash || !fontsLoaded) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
@@ -66,26 +78,30 @@ function AppContent() {
       <CartProvider>
         <AddressProvider>
           <FavouritesProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="(vendor-tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="add-product-vendor" options={{ headerShown: false }} />
-                <Stack.Screen name="vendor-payouts" options={{ headerShown: false }} />
-                <Stack.Screen name="notifications" options={{ headerShown: false }} />
-                <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
-                <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
-                <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
-                <Stack.Screen name="edit-profile-vendor" options={{ headerShown: false }} />
-                <Stack.Screen name="favourites" options={{ headerShown: false }} />
-                <Stack.Screen name="addresses" options={{ headerShown: false }} />
-                <Stack.Screen name="settings" options={{ headerShown: false }} />
-                <Stack.Screen name="cart" options={{ headerShown: false }} />
-                <Stack.Screen name="checkout" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              </Stack>
-              <StatusBar style="auto" />
-            </ThemeProvider>
+            <MarketProvider>
+              <VendorProvider>
+                <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                  <Stack>
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="(vendor-tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="add-product-vendor" options={{ headerShown: false }} />
+                    <Stack.Screen name="vendor-payouts" options={{ headerShown: false }} />
+                    <Stack.Screen name="notifications" options={{ headerShown: false }} />
+                    <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
+                    <Stack.Screen name="edit-profile-vendor" options={{ headerShown: false }} />
+                    <Stack.Screen name="favourites" options={{ headerShown: false }} />
+                    <Stack.Screen name="addresses" options={{ headerShown: false }} />
+                    <Stack.Screen name="settings" options={{ headerShown: false }} />
+                    <Stack.Screen name="cart" options={{ headerShown: false }} />
+                    <Stack.Screen name="checkout" options={{ headerShown: false }} />
+                    <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                  </Stack>
+                  <StatusBar style="auto" />
+                </ThemeProvider>
+              </VendorProvider>
+            </MarketProvider>
           </FavouritesProvider>
         </AddressProvider>
       </CartProvider>

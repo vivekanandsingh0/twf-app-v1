@@ -4,135 +4,142 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-
-interface Order {
-    id: string;
-    customerName: string;
-    orderIdDisplay: string;
-    items: string;
-    totalAmount: string;
-    status: 'Pending' | 'Preparing' | 'On the Way' | 'Delivered';
-    image: any;
-}
+import { useVendor, VendorOrder } from '@/contexts/VendorContext';
 
 export default function VendorOrdersScreen() {
     const insets = useSafeAreaInsets();
+    const router = require('expo-router').useRouter();
+    const { orders, updateOrderStatus } = useVendor();
+
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
 
-    const filters = ['All', 'Pending', 'Preparing', 'Out for Delivery', 'Delivered'];
+    const filters = ['All', 'Pending', 'Preparing', 'On the Way', 'Delivered'];
 
-    const orders: Order[] = [
-        {
-            id: '1',
-            customerName: 'Ramesh Kumar',
-            orderIdDisplay: 'Order #FARM-2341',
-            items: '2kg Tomatoes, 1kg Honey, 1X Fresh Basil',
-            totalAmount: '$5.49',
-            status: 'Pending',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-        },
-        {
-            id: '2',
-            customerName: 'Ramesh Kumar',
-            orderIdDisplay: 'Order #FARM-2341',
-            items: '2kg Tomatoes, 1kg Honey, 1X Fresh Basil',
-            totalAmount: '$5.49',
-            status: 'Preparing',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-        },
-        {
-            id: '3',
-            customerName: 'Ramesh Kumar',
-            orderIdDisplay: 'Order #FARM-2341',
-            items: '2kg Tomatoes, 1kg Honey, 1X Fresh Basil',
-            totalAmount: '$5.49',
-            status: 'On the Way',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-        }
-    ];
+    // Map Context Status to UI Status filters
+    const getUIStatus = (status: VendorOrder['status']) => {
+        if (status === 'Accepted') return 'Preparing';
+        if (status === 'Shipped') return 'On the Way';
+        return status;
+    };
 
-    const getStatusColor = (status: Order['status']) => {
+    const displayOrders = orders.filter(o => {
+        const uiStatus = getUIStatus(o.status);
+        if (activeFilter !== 'All' && uiStatus !== activeFilter) return false;
+
+        const searchLower = searchQuery.toLowerCase();
+        return o.id.toLowerCase().includes(searchLower) || o.customerName.toLowerCase().includes(searchLower);
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const getStatusColor = (status: VendorOrder['status']) => {
         switch (status) {
             case 'Pending': return '#D97706'; // Orange
-            case 'Preparing': return '#1F5E2E'; // Green
-            case 'On the Way': return '#5B4DBC'; // Purple/Blue as shown in screenshot for "On the Way"
+            case 'Accepted': return '#1F5E2E'; // Green (Preparing)
+            case 'Ready': return '#1F5E2E'; // Green
+            case 'Shipped': return '#5B4DBC'; // Purple/Blue (On the Way)
+            case 'Delivered': return '#666';
             default: return '#666';
         }
     };
 
-    const renderOrderCard = (order: Order) => (
-        <View key={order.id} style={styles.card}>
-            {/* Header Row */}
-            <View style={styles.cardHeader}>
-                <View style={styles.userInfo}>
-                    <Image
-                        source={order.image}
-                        style={styles.userImage}
-                        contentFit="cover"
-                    />
-                    <View>
-                        <Text style={styles.userName}>{order.customerName}</Text>
-                        <Text style={styles.orderId}>{order.orderIdDisplay}</Text>
+    const itemsToString = (items: VendorOrder['items']) => {
+        return items.map(i => `${i.quantity}x ${i.productName}`).join(', ');
+    };
+
+    const renderOrderCard = (order: VendorOrder) => {
+        const uiStatus = getUIStatus(order.status);
+
+        return (
+            <View key={order.id} style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.cardHeader}>
+                    <View style={styles.userInfo}>
+                        <Image
+                            source={require('@/assets/images/3d-model-with-veg.png')} // Placeholder for user avatar
+                            style={styles.userImage}
+                            contentFit="cover"
+                        />
+                        <View>
+                            <Text style={styles.userName}>{order.customerName}</Text>
+                            <Text style={styles.orderId}>{order.id}</Text>
+                        </View>
+                    </View>
+                    <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+                        {uiStatus}
+                    </Text>
+                </View>
+
+                {/* Order Details Box */}
+                <View style={styles.detailsBox}>
+                    <Text style={styles.itemsText} numberOfLines={2}>{itemsToString(order.items)}</Text>
+
+                    <View style={styles.amountRow}>
+                        <Text style={styles.amountLabel}>Total Amount</Text>
+                        <Text style={styles.amountValue}>₹{order.totalAmount}</Text>
                     </View>
                 </View>
-                <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-                    {order.status}
-                </Text>
-            </View>
 
-            {/* Order Details Box */}
-            <View style={styles.detailsBox}>
-                <Text style={styles.itemsText} numberOfLines={2}>{order.items}</Text>
+                {/* Actions */}
+                <View style={styles.actionsRow}>
+                    {order.status === 'Pending' && (
+                        <>
+                            <TouchableOpacity
+                                style={[styles.primaryButton, { flex: 1 }]}
+                                onPress={() => updateOrderStatus(order.id, 'Accepted')}
+                            >
+                                <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                <Text style={styles.primaryButtonText}>Accept Order</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
+                            </TouchableOpacity>
+                        </>
+                    )}
 
-                <View style={styles.amountRow}>
-                    <Text style={styles.amountLabel}>Total Amount</Text>
-                    <Text style={styles.amountValue}>{order.totalAmount}</Text>
+                    {(order.status === 'Accepted' || order.status === 'Ready') && (
+                        <>
+                            {order.status === 'Accepted' ? (
+                                <TouchableOpacity
+                                    style={[styles.primaryButton, { flex: 1 }]}
+                                    onPress={() => updateOrderStatus(order.id, 'Shipped')} // Or 'Ready' then Shipped? Let's go straight to On the Way for simplicity or Ready
+                                >
+                                    <Ionicons name="cube-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                    <Text style={styles.primaryButtonText}>Mark as Dispatched</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity
+                                    style={[styles.primaryButton, { flex: 1 }]}
+                                    onPress={() => updateOrderStatus(order.id, 'Shipped')}
+                                >
+                                    <Ionicons name="bicycle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                    <Text style={styles.primaryButtonText}>Dispatch Order</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Ionicons name="call-outline" size={20} color="#1A1A1A" />
+                            </TouchableOpacity>
+                        </>
+                    )}
+
+                    {order.status === 'Shipped' && (
+                        <>
+                            <TouchableOpacity
+                                style={[styles.primaryButton, { flex: 1 }]}
+                                onPress={() => updateOrderStatus(order.id, 'Delivered')}
+                            >
+                                <Ionicons name="checkmark-done-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                <Text style={styles.primaryButtonText}>Verify Delivery</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Ionicons name="call-outline" size={20} color="#1A1A1A" />
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
             </View>
-
-            {/* Actions */}
-            <View style={styles.actionsRow}>
-                {order.status === 'Pending' && (
-                    <>
-                        <TouchableOpacity style={[styles.primaryButton, { flex: 1 }]}>
-                            <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                            <Text style={styles.primaryButtonText}>Accept Order</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
-                        </TouchableOpacity>
-                    </>
-                )}
-
-                {order.status === 'Preparing' && (
-                    <>
-                        <TouchableOpacity style={[styles.primaryButton, { flex: 1 }]}>
-                            {/* Box icon mockup */}
-                            <Ionicons name="cube-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                            <Text style={styles.primaryButtonText}>Mark as Ready</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="call-outline" size={20} color="#1A1A1A" />
-                        </TouchableOpacity>
-                    </>
-                )}
-
-                {order.status === 'On the Way' && (
-                    <>
-                        <TouchableOpacity style={[styles.primaryButton, { flex: 1 }]}>
-                            {/* Bike/Delivery icon */}
-                            <Ionicons name="bicycle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                            <Text style={styles.primaryButtonText}>Track Delivery</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="call-outline" size={20} color="#1A1A1A" />
-                        </TouchableOpacity>
-                    </>
-                )}
-            </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -148,9 +155,9 @@ export default function VendorOrdersScreen() {
                     <Text style={styles.headerSubtitle}>GREENVALLEY FARM</Text>
                 </View>
 
-                <TouchableOpacity style={styles.notificationButton}>
+                <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
                     <View style={styles.badge}>
-                        <Text style={styles.badgeText}>2</Text>
+                        <Text style={styles.badgeText}>{orders.filter(o => o.status === 'Pending').length}</Text>
                     </View>
                     <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
@@ -198,7 +205,10 @@ export default function VendorOrdersScreen() {
                 contentContainerStyle={styles.ordersList}
                 showsVerticalScrollIndicator={false}
             >
-                {orders.map(renderOrderCard)}
+                {displayOrders.map(renderOrderCard)}
+                {displayOrders.length === 0 && (
+                    <Text style={{ textAlign: 'center', color: '#999', marginTop: 40 }}>No orders found.</Text>
+                )}
                 <View style={{ height: 100 }} />
             </ScrollView>
         </View>

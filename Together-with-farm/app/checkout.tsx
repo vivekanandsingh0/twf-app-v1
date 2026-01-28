@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+// import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCart } from '@/contexts/CartContext';
 import { useAddresses } from '@/contexts/AddressContext';
-import { PRODUCTS } from '@/constants/products';
+import { useMarket } from '@/contexts/MarketContext';
 
 export default function CheckoutScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { quantities, updateQuantity, totalCartItems } = useCart();
     const { selectedAddress, addresses, setSelectedAddress, updateAddress } = useAddresses();
+    const { products: marketProducts } = useMarket();
 
     // Local State
     const [tipAmount, setTipAmount] = useState<number>(0);
@@ -21,7 +22,7 @@ export default function CheckoutScreen() {
     const [showLocationPicker, setShowLocationPicker] = useState(false);
 
     // Derived Data
-    const cartItems = PRODUCTS.filter(p => quantities[p.id] && quantities[p.id] > 0);
+    const cartItems = marketProducts.filter(p => quantities[p.id] && quantities[p.id] > 0);
 
     const subtotal = cartItems.reduce((sum, item) => {
         return sum + (item.price * (quantities[item.id] || 0));
@@ -43,7 +44,7 @@ export default function CheckoutScreen() {
             );
             return;
         }
-        router.push('/select-location');
+        router.push('/payment');
     };
 
     return (
@@ -85,11 +86,11 @@ export default function CheckoutScreen() {
                     {cartItems.map((item) => (
                         <View key={item.id} style={styles.itemCard}>
                             <View style={styles.imageContainer}>
-                                <Image source={{ uri: item.image }} style={styles.image} contentFit="cover" />
+                                <Image source={item.image} style={styles.image} resizeMode="cover" />
                             </View>
 
                             <View style={styles.itemDetails}>
-                                <Text style={styles.itemTitle}>{item.title}</Text>
+                                <Text style={styles.itemTitle}>{item.name}</Text>
                                 <View style={styles.priceRow}>
                                     <Text style={styles.itemPrice}>${item.price}</Text>
                                     <Text style={styles.itemUnit}>/{item.unit}</Text>
@@ -237,12 +238,12 @@ export default function CheckoutScreen() {
                                 }}
                             >
                                 <Ionicons
-                                    name={selectedAddress.id === addr.id ? "radio-button-on" : "radio-button-off"}
+                                    name={selectedAddress?.id === addr.id ? "radio-button-on" : "radio-button-off"}
                                     size={18}
-                                    color={selectedAddress.id === addr.id ? "#1F5E2E" : "#999"}
+                                    color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
                                 />
                                 <View style={{ marginLeft: 12, flex: 1 }}>
-                                    <Text style={[styles.locationOptionTitle, selectedAddress.id === addr.id && { color: '#1F5E2E' }]}>
+                                    <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#1F5E2E' }]}>
                                         {addr.type}
                                     </Text>
                                     <Text style={styles.locationOptionAddress} numberOfLines={2}>

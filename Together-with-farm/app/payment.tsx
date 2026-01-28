@@ -4,6 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
+import { useCart } from '@/contexts/CartContext';
+import { useVendor, VendorOrder } from '@/contexts/VendorContext';
+import { useMarket } from '@/contexts/MarketContext';
+import { useUser } from '@/contexts/UserContext';
+import { useAddresses } from '@/contexts/AddressContext';
 
 // Types for Payment Methods
 type PaymentMethod = {
@@ -31,7 +36,65 @@ export default function PaymentScreen() {
     const router = useRouter();
     const [selectedId, setSelectedId] = useState<string>('phonepe_1');
 
+    const { quantities, clearCart } = useCart();
+    const { addOrder } = useVendor();
+    const { products: marketProducts } = useMarket();
+    const { userData } = useUser();
+    const { selectedAddress } = useAddresses();
+
     const handlePayment = () => {
+        // 1. Identify items in cart
+        const cartItemIds = Object.keys(quantities).map(Number).filter(id => quantities[id] > 0);
+
+        if (cartItemIds.length === 0) {
+            Alert.alert("Empty Cart", "Your cart is empty.");
+            return;
+        }
+
+        // 2. Group Items by Vendor
+        const ordersByVendor: Record<string, { items: any[], total: number }> = {};
+
+        cartItemIds.forEach(id => {
+            const product = marketProducts.find(p => p.id === id);
+            if (product) {
+                const vendorId = product.vendorId || 'vendor_def_001'; // Fallback to default
+                const qty = quantities[id];
+                const itemTotal = product.price * qty;
+
+                if (!ordersByVendor[vendorId]) {
+                    ordersByVendor[vendorId] = { items: [], total: 0 };
+                }
+
+                ordersByVendor[vendorId].items.push({
+                    productName: product.name,
+                    quantity: qty,
+                    price: product.price
+                });
+                ordersByVendor[vendorId].total += itemTotal;
+            }
+        });
+
+        // 3. Create Vendor Orders
+        Object.keys(ordersByVendor).forEach(vendorId => {
+            const vendorData = ordersByVendor[vendorId];
+
+            const newOrder: VendorOrder = {
+                id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                userId: userData && userData.userType === 'User' ? 'mock_user_id_' + Date.now() : 'guest_user', // Mock User ID matching context if possible, or just unique
+                customerName: userData ? userData.fullName : "Guest User",
+                items: vendorData.items,
+                totalAmount: vendorData.total,
+                status: 'Pending',
+                date: new Date().toISOString(),
+                paymentStatus: selectedId === 'cod' ? 'COD' : 'Paid', // Simplified logic
+                deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}` : "Patna, Bihar" // Fallback
+            };
+
+            addOrder(newOrder); // This adds it to the Vendor Context (shared memory)
+        });
+
+        // 4. Clear Cart and Redirect
+        clearCart();
         router.push('/order-success');
     };
 

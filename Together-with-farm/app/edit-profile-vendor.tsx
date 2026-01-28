@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useUser } from '@/contexts/UserContext';
 import {
     StyleSheet,
     Text,
@@ -7,8 +8,7 @@ import {
     TouchableOpacity,
     Platform,
     ScrollView,
-    Alert,
-    ImageBackground
+    Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,20 +19,54 @@ import { Image } from 'expo-image';
 export default function VendorProfileEditScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { userData, updateProfile, user } = useUser();
 
-    // Local state for vendor profile
-    const [fullName, setFullName] = useState('Amit Kumar');
-    const [phone, setPhone] = useState('+9175567776');
-    const [gender, setGender] = useState('Male');
-    const [dob, setDob] = useState('10 August 1992');
-    const [experience, setExperience] = useState('');
-    const [farmSize, setFarmSize] = useState('');
-    const [ourStory, setOurStory] = useState('');
+    // Local State
+    const [fullName, setFullName] = useState(userData.fullName);
+    const [phone, setPhone] = useState(userData.phoneNumber);
+    const [gender, setGender] = useState(userData.gender);
+    const [dob, setDob] = useState(userData.dob);
+    const [experience, setExperience] = useState(userData.experience || '');
+    const [farmSize, setFarmSize] = useState(userData.farmSize || '');
+    const [ourStory, setOurStory] = useState(userData.bio || '');
 
-    const handleSave = () => {
-        // Logic to save vendor profile would go here
-        Alert.alert('Success', 'Profile updated successfully!');
-        router.back();
+    const handleSave = async () => {
+        if (!user) {
+            alert("Error: Not logged in.");
+            return;
+        }
+
+        try {
+            if (userData.userType === 'Vendor') {
+                const requestedData = {
+                    full_name: fullName,
+                    gender: gender,
+                    dob: dob,
+                    phone_number: phone,
+                    experience: experience,
+                    farm_size: farmSize,
+                    bio: ourStory
+                };
+
+                // Mock Vendor Request logic (simulation)
+                console.log("Mock Vendor Profile Request Submitted:", requestedData);
+
+                // For mock, we can just update the profile directly as well to show changes
+                await updateProfile(fullName, gender, dob, phone, experience, farmSize, ourStory);
+
+                alert('Submitted Update!');
+                router.back();
+
+            } else {
+                // Regular User Update (Direct)
+                await updateProfile(fullName, gender, dob, phone, experience, farmSize, ourStory);
+                alert('Profile Updated!');
+                router.back();
+            }
+        } catch (error: any) {
+            console.error(error);
+            alert('Error: ' + error.message);
+        }
     };
 
     return (
@@ -44,283 +78,92 @@ export default function VendorProfileEditScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
                     <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Profile</Text>
-                <TouchableOpacity style={styles.notificationBtn}>
-                    <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                    <View style={styles.notificationBadge}>
-                        <Text style={styles.badgeText}>2</Text>
-                    </View>
-                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Edit Profile</Text>
+                <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Avatar Section */}
+            <ScrollView contentContainerStyle={styles.content}>
+                {/* Avatar Placeholder */}
                 <View style={styles.avatarContainer}>
                     <View style={styles.avatarWrapper}>
-                        <Image
-                            source={require('@/assets/images/3d-model-with-veg.png')}
-                            style={styles.avatar}
-                            contentFit="cover"
-                        />
+                        <Image source={require('@/assets/images/3d-model-with-veg.png')} style={styles.avatar} contentFit="cover" />
                         <View style={styles.cameraButton}>
                             <Ionicons name="camera-outline" size={20} color="#1A1A1A" />
                         </View>
                     </View>
                 </View>
 
-                {/* Form Fields */}
+                {/* Form */}
                 <View style={styles.formContainer}>
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Full Name</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={fullName}
-                            onChangeText={setFullName}
-                            placeholder="Full Name"
-                            placeholderTextColor="#999"
-                        />
+                        <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Name" />
                     </View>
-
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Phone Number</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={phone}
-                            onChangeText={setPhone}
-                            keyboardType="phone-pad"
-                            placeholder="Phone Number"
-                            placeholderTextColor="#999"
-                        />
+                        <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
                     </View>
-
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Gender</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={gender}
-                            onChangeText={setGender}
-                            placeholder="Gender"
-                            placeholderTextColor="#999"
-                        />
+                        <TextInput style={styles.input} value={gender} onChangeText={setGender} />
                     </View>
-
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Date of Birth</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={dob}
-                            onChangeText={setDob}
-                            placeholder="DD Month YYYY"
-                            placeholderTextColor="#999"
-                        />
+                        <Text style={styles.label}>DOB</Text>
+                        <TextInput style={styles.input} value={dob} onChangeText={setDob} placeholder="DD Month YYYY" />
                     </View>
 
-                    {/* Experience & Farm Size Row */}
+                    {/* Vendor Specific */}
                     <View style={styles.row}>
-                        <View style={[styles.inputGroup, { flex: 1, marginRight: 15 }]}>
+                        <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
                             <Text style={styles.label}>Experience</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={experience}
-                                onChangeText={setExperience}
-                                placeholder="e.g. 15 years"
-                                placeholderTextColor="#999"
-                            />
+                            <TextInput style={styles.input} value={experience} onChangeText={setExperience} placeholder="Years" />
                         </View>
                         <View style={[styles.inputGroup, { flex: 1 }]}>
                             <Text style={styles.label}>Farm Size</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={farmSize}
-                                onChangeText={setFarmSize}
-                                placeholder="e.g. 4 acre"
-                                placeholderTextColor="#999"
-                            />
+                            <TextInput style={styles.input} value={farmSize} onChangeText={setFarmSize} placeholder="Acres" />
                         </View>
                     </View>
 
-                    {/* Our Story */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Our Story</Text>
-                        <TextInput
-                            style={[styles.input, styles.textArea]}
-                            value={ourStory}
-                            onChangeText={setOurStory}
-                            placeholder="Tell something about yourself to us."
-                            placeholderTextColor="#999"
-                            multiline
-                            textAlignVertical="top"
-                        />
+                        <Text style={styles.label}>Our Story (Bio)</Text>
+                        <TextInput style={[styles.input, styles.textArea]} value={ourStory} onChangeText={setOurStory} multiline />
                     </View>
                 </View>
 
-                {/* Action Buttons */}
+                {/* Buttons */}
                 <View style={styles.actionRow}>
-                    <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} activeOpacity={0.8}>
+                    <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
                         <Text style={styles.cancelText}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSave} activeOpacity={0.8}>
-                        <Text style={styles.saveText}>Save Changes</Text>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                        <Text style={styles.saveText}>{userData.userType === 'Vendor' ? 'Submit' : 'Save'}</Text>
                     </TouchableOpacity>
                 </View>
 
-                <View style={{ height: 40 }} />
             </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        height: 60,
-        marginBottom: 10,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontFamily: 'DMSans_700Bold',
-        color: '#1A1A1A',
-    },
-    iconButton: {
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F9F9F9',
-        borderRadius: 20,
-    },
-    notificationBtn: {
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F9F9F9',
-        borderRadius: 20,
-    },
-    notificationBadge: {
-        position: 'absolute',
-        top: -2,
-        right: -2,
-        backgroundColor: '#1F5E2E',
-        borderRadius: 9,
-        width: 18,
-        height: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#FFFFFF',
-    },
-    badgeText: {
-        color: '#FFFFFF',
-        fontSize: 9,
-        fontFamily: 'DMSans_700Bold',
-        lineHeight: 10,
-    },
-    content: {
-        paddingHorizontal: 20,
-        paddingBottom: 40,
-    },
-    avatarContainer: {
-        alignItems: 'center',
-        marginBottom: 32,
-    },
-    avatarWrapper: {
-        position: 'relative',
-        width: 100,
-        height: 100,
-    },
-    avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 24, // Slightly squarish rounded as per screenshot? Or distinct enough.
-        // Screenshot shows rounded square or circle. Let's do rounded square like vendor images usually are in this app concept.
-        // Actually screenshot looks like a rounded square with radius ~20-24. 
-    },
-    cameraButton: {
-        position: 'absolute',
-        bottom: -5,
-        right: -5,
-        backgroundColor: '#FFFFFF',
-        width: 36,
-        height: 36,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#EEEEEE',
-        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-        elevation: 3,
-    },
-    formContainer: {
-        gap: 20,
-        marginBottom: 40,
-    },
-    inputGroup: {
-        gap: 8,
-    },
-    label: {
-        fontSize: 14,
-        fontFamily: 'DMSans_700Bold',
-        color: '#1A1A1A',
-        marginLeft: 2,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#CECECE', // Slightly darker border than typical light grey for visibility
-        borderRadius: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 14,
-        fontFamily: 'DMSans_500Medium',
-        color: '#1A1A1A',
-        backgroundColor: '#FFFFFF',
-    },
-    textArea: {
-        height: 120,
-        textAlignVertical: 'top',
-        paddingTop: 16,
-    },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-    },
-    actionRow: {
-        flexDirection: 'row',
-        gap: 16,
-        marginTop: 10,
-    },
-    cancelButton: {
-        flex: 1,
-        backgroundColor: '#9E9E9E', // Grey
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    saveButton: {
-        flex: 1,
-        backgroundColor: '#1F5E2E', // Green
-        paddingVertical: 16,
-        borderRadius: 12, // Slightly boxier than full pill
-        alignItems: 'center',
-    },
-    cancelText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontFamily: 'DMSans_700Bold',
-    },
-    saveText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontFamily: 'DMSans_700Bold',
-    },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, height: 60 },
+    headerTitle: { fontSize: 18, fontFamily: 'DMSans_700Bold' },
+    iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9F9F9', borderRadius: 20 },
+    content: { padding: 20 },
+    avatarContainer: { alignItems: 'center', marginBottom: 30 },
+    avatarWrapper: { width: 100, height: 100, position: 'relative' },
+    avatar: { width: 100, height: 100, borderRadius: 20 },
+    cameraButton: { position: 'absolute', bottom: -5, right: -5, backgroundColor: '#FFF', padding: 5, borderRadius: 10, borderWidth: 1, borderColor: '#EEE' },
+    formContainer: { gap: 15, marginBottom: 30 },
+    inputGroup: { gap: 5 },
+    label: { fontSize: 14, fontFamily: 'DMSans_700Bold', color: '#333' },
+    input: { borderWidth: 1, borderColor: '#EEE', borderRadius: 12, padding: 14, fontFamily: 'DMSans_500Medium' },
+    textArea: { height: 100, textAlignVertical: 'top' },
+    row: { flexDirection: 'row' },
+    actionRow: { flexDirection: 'row', gap: 15 },
+    cancelButton: { flex: 1, padding: 16, backgroundColor: '#EEE', borderRadius: 12, alignItems: 'center' },
+    saveButton: { flex: 1, padding: 16, backgroundColor: '#1F5E2E', borderRadius: 12, alignItems: 'center' },
+    cancelText: { fontFamily: 'DMSans_700Bold', color: '#333' },
+    saveText: { fontFamily: 'DMSans_700Bold', color: '#FFF' }
 });

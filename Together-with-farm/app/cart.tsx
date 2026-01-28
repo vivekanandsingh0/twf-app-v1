@@ -1,20 +1,21 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+// import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCart } from '@/contexts/CartContext';
-import { PRODUCTS } from '@/constants/products';
+import { useMarket } from '@/contexts/MarketContext';
 
 export default function CartScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { quantities, updateQuantity, totalCartItems } = useCart();
+    const { products: marketProducts } = useMarket();
 
     // Get all products that are currently in the cart
-    const cartItems = PRODUCTS.filter(p => quantities[p.id] && quantities[p.id] > 0);
+    const cartItems = marketProducts.filter(p => quantities[p.id] && quantities[p.id] > 0);
 
     const totalPrice = cartItems.reduce((sum, item) => {
         return sum + (item.price * (quantities[item.id] || 0));
@@ -47,11 +48,11 @@ export default function CartScreen() {
                         {cartItems.map((item) => (
                             <View key={item.id} style={styles.cartItem}>
                                 <View style={styles.imageContainer}>
-                                    <Image source={{ uri: item.image }} style={styles.image} contentFit="cover" />
+                                    <Image source={item.image} style={styles.image} resizeMode="cover" />
                                 </View>
 
                                 <View style={styles.itemDetails}>
-                                    <Text style={styles.itemTitle}>{item.title}</Text>
+                                    <Text style={styles.itemTitle}>{item.name}</Text>
                                     <View style={styles.priceContainer}>
                                         <Text style={styles.itemPrice}>${item.price}</Text>
                                         <Text style={styles.itemUnit}>/{item.unit}</Text>

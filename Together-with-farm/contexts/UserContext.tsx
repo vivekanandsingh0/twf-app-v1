@@ -1,36 +1,51 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { Platform } from 'react-native';
 
+// Helper Interface
 interface UserData {
     phoneNumber: string;
     fullName: string;
     gender: string;
     dob: string;
     userType: 'User' | 'Vendor';
+    experience?: string;
+    farmSize?: string;
+    bio?: string;
+}
+
+// Mock Types to replace Supabase Types
+interface MockSession {
+    user: MockUser;
+    access_token: string;
+}
+
+interface MockUser {
+    id: string;
+    email?: string;
+    phone?: string;
 }
 
 interface UserContextType {
-    session: Session | null;
-    user: User | null;
+    session: MockSession | null;
+    user: MockUser | null;
     loading: boolean;
     userData: UserData;
     setUserData: (data: Partial<UserData>) => void;
     updatePhoneNumber: (phone: string) => void;
-    updateProfile: (name: string, gender: string, dob: string) => void;
+    updateProfile: (name: string, gender: string, dob: string, phone?: string, experience?: string, farmSize?: string, bio?: string) => Promise<void>;
     sendOtp: (phone: string) => Promise<{ error: any }>;
-    verifyOtp: (phone: string, token: string, userType: 'User' | 'Vendor') => Promise<{ session: Session | null; error: any }>;
+    verifyOtp: (phone: string, token: string, userType: 'User' | 'Vendor') => Promise<{ session: MockSession | null; error: any }>;
     signOut: () => Promise<void>;
+    switchUserRole: (newRole: 'User' | 'Vendor') => Promise<boolean>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-    const [session, setSession] = useState<Session | null>(null);
-    const [user, setUser] = useState<User | null>(null);
+    const [session, setSession] = useState<MockSession | null>(null);
+    const [user, setUser] = useState<MockUser | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Legacy state for UI compatibility - eventually replace with DB Profile
     const [userData, setUserDataState] = useState<UserData>({
         phoneNumber: '',
         fullName: 'Vivekanand Singh',
@@ -40,61 +55,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
 
     useEffect(() => {
-        // Check active sessions and sets the user
+        // Init Session (Mock checking local storage or similar)
         const initializeSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
-
-                if (profile) {
-                    setUserDataState({
-                        phoneNumber: profile.phone_number || '',
-                        fullName: profile.full_name || 'User',
-                        gender: profile.gender || 'Male',
-                        dob: profile.dob || '',
-                        userType: profile.user_type || 'User',
-                    });
-                }
-            }
+            // For now, start logged out or check a local flag if we wanted persistence
+            // Let's assume we start logged out for the user to try the flow
             setLoading(false);
         };
 
         initializeSession();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            // Don't set loading false yet
-
-            if (session?.user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
-
-                if (profile) {
-                    setUserDataState({
-                        phoneNumber: profile.phone_number || '',
-                        fullName: profile.full_name || 'User',
-                        gender: profile.gender || 'Male',
-                        dob: profile.dob || '',
-                        userType: profile.user_type || 'User',
-                    });
-                }
-            }
-            setLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
     }, []);
 
+    // Context Actions
     const setUserData = (data: Partial<UserData>) => {
         setUserDataState(prev => ({ ...prev, ...data }));
     };
@@ -103,121 +74,112 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setUserDataState(prev => ({ ...prev, phoneNumber: phone }));
     };
 
-    const updateProfile = async (name: string, gender: string, dob: string) => {
-        setUserDataState(prev => ({ ...prev, fullName: name, gender, dob }));
-        if (user) {
-            await supabase.from('profiles').update({
-                full_name: name,
-                gender,
-                dob,
-            }).eq('id', user.id);
-        }
+    const updateProfile = async (name: string, gender: string, dob: string, phone?: string, experience?: string, farmSize?: string, bio?: string) => {
+        // Mock Update
+        setUserDataState(prev => ({
+            ...prev,
+            fullName: name,
+            gender,
+            dob,
+            phoneNumber: phone || prev.phoneNumber,
+            experience: experience || prev.experience,
+            farmSize: farmSize || prev.farmSize,
+            bio: bio || prev.bio
+        }));
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500));
     };
 
     const sendOtp = async (phone: string) => {
-        const { error } = await supabase.auth.signInWithOtp({
-            phone: phone,
-        });
-        return { error };
+        // Mock Send OTP
+        console.log(`Sending Mock OTP to ${phone}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return { error: null };
     };
 
     const verifyOtp = async (phone: string, token: string, userType: 'User' | 'Vendor') => {
-        const { data, error } = await supabase.auth.verifyOtp({
-            phone: phone,
-            token: token,
-            type: 'sms',
-        });
+        // Mock Verify OTP - Accept any OTP
+        console.log(`Verifying Mock OTP for ${phone} with token ${token}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        if (data.session) {
-            // Check if profile exists, if not create it
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', data.session.user.id)
-                .single();
+        // Default Vendor Credential Check
+        if (phone.includes('1111111111') && token === '111111') {
+            const mockUser: MockUser = {
+                id: 'vendor_def_001',
+                phone: phone
+            };
+            const mockSession: MockSession = {
+                user: mockUser,
+                access_token: 'mock_vendor_token'
+            };
 
-            if (!profile) {
-                const newProfile = {
-                    id: data.session.user.id,
-                    phone_number: phone,
-                    full_name: 'New ' + userType,
-                    user_type: userType,
-                };
+            setSession(mockSession);
+            setUser(mockUser);
 
-                const { error: insertError } = await supabase.from('profiles').insert(newProfile);
+            setUserDataState(prev => ({
+                ...prev,
+                phoneNumber: phone,
+                fullName: "Rajesh Kumar", // Matching VendorContext
+                userType: 'Vendor',
+                experience: "15 Years",
+                farmSize: "12 Acres",
+                bio: "Your one-stop shop for fresh, organic, and locally sourced produce."
+            }));
 
-                if (insertError) {
-                    await supabase.auth.signOut();
-                    return { session: null, error: insertError };
-                }
-
-                setUserDataState({
-                    phoneNumber: phone,
-                    fullName: 'New ' + userType,
-                    gender: 'Male',
-                    dob: '',
-                    userType: userType,
-                });
-
-                setSession(data.session);
-                setUser(data.user);
-            } else {
-                // STRICT ROLE CHECK
-                if (profile.user_type !== userType) {
-                    await supabase.auth.signOut();
-                    return {
-                        session: null,
-                        error: {
-                            message: `Access Denied. This number is registered as a "${profile.user_type}". Please go back and select "${profile.user_type}" to log in.`
-                        }
-                    };
-                }
-
-                setUserDataState({
-                    phoneNumber: profile.phone_number,
-                    fullName: profile.full_name,
-                    gender: profile.gender,
-                    dob: profile.dob,
-                    userType: profile.user_type,
-                });
-
-                setSession(data.session);
-                setUser(data.user);
-            }
+            return { session: mockSession, error: null };
         }
 
-        return { session: data.session, error };
+        if (token === '123456' || token.length > 0) { // Simple validation
+            const mockUser: MockUser = {
+                id: 'mock_user_id_' + Date.now(),
+                phone: phone
+            };
+            const mockSession: MockSession = {
+                user: mockUser,
+                access_token: 'mock_token'
+            };
+
+            setSession(mockSession);
+            setUser(mockUser);
+
+            setUserDataState(prev => ({
+                ...prev,
+                phoneNumber: phone,
+                userType: userType
+            }));
+
+            return { session: mockSession, error: null };
+        } else {
+            return { session: null, error: { message: 'Invalid OTP' } };
+        }
     };
 
     const signOut = async () => {
-        console.log("UserContext: signOut called - forcing local logout immediately");
-
-        // Immediately clear local state to update UI
         setSession(null);
         setUser(null);
+        // Reset user data partially if needed, but keeping name for demo is fine.
+        // Or reset to default:
+        /*
+        setUserDataState({
+             phoneNumber: '',
+             fullName: 'Guest User',
+             gender: '',
+             dob: '',
+             userType: 'User'
+        }); 
+        */
+    };
 
-        try {
-            // Perform network logout in background
-            const { error } = await supabase.auth.signOut();
-            console.log("UserContext: supabase.auth.signOut finished", error ? "with error" : "successfully");
-            if (error) console.error("Supabase signout error:", error);
-        } catch (error) {
-            console.error("Error signing out:", error);
-        }
+    const switchUserRole = async (newRole: 'User' | 'Vendor') => {
+        setUserDataState(prev => ({ ...prev, userType: newRole }));
+        return true;
     };
 
     return (
         <UserContext.Provider value={{
-            session,
-            user,
-            loading,
-            userData,
-            setUserData,
-            updatePhoneNumber,
-            updateProfile,
-            sendOtp,
-            verifyOtp,
-            signOut
+            session, user, loading, userData,
+            setUserData, updatePhoneNumber, updateProfile,
+            sendOtp, verifyOtp, signOut, switchUserRole
         }}>
             {children}
         </UserContext.Provider>
@@ -226,8 +188,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
 export function useUser() {
     const context = useContext(UserContext);
-    if (!context) {
-        throw new Error('useUser must be used within UserProvider');
-    }
+    if (!context) throw new Error('useUser must be used within UserProvider');
     return context;
 }

@@ -1,158 +1,119 @@
+
+
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-
-interface StockItem {
-    id: string;
-    name: string;
-    price: string;
-    quantity: number;
-    inStock: boolean;
-    image: any;
-    status: 'IN STOCK' | 'LOW STOCK' | 'OUT OF STOCK';
-}
+import { useVendor, VendorProduct } from '@/contexts/VendorContext';
 
 export default function VendorHomeScreen() {
     const insets = useSafeAreaInsets();
+    const router = require('expo-router').useRouter();
+    const { products, updateProduct, orders, dashboardStats } = useVendor();
+
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All Stock');
 
-    // Dummy Data
-    const [stockItems, setStockItems] = useState<StockItem[]>([
-        {
-            id: '1',
-            name: 'Sweet Tomatoes',
-            price: '$5.49/each',
-            quantity: 12,
-            inStock: true,
-            image: require('@/assets/images/3d-model-with-veg.png'), // Placeholder
-            status: 'IN STOCK'
-        },
-        {
-            id: '2',
-            name: 'Sweet Tomatoes',
-            price: '$5.49/each',
-            quantity: 12,
-            inStock: true,
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            status: 'LOW STOCK'
-        },
-        {
-            id: '3',
-            name: 'Sweet Tomatoes',
-            price: '$5.49/each',
-            quantity: 0,
-            inStock: false,
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            status: 'OUT OF STOCK'
+    const filters = ['All Stock', 'Vegetables', 'Fruits', 'Dairy', 'Bakery', 'Meat', 'Seafood', 'Out of Stock'];
+
+    // Derived State
+    const activeOrdersCount = orders.filter(o => o.status === 'Pending' || o.status === 'Accepted' || o.status === 'Ready').length;
+    const outOfStockCount = products.filter(p => p.stock === 0).length;
+
+    const filteredProducts = products.filter(p => {
+        if (activeFilter === 'All Stock') return true;
+        if (activeFilter === 'Out of Stock') return p.stock === 0;
+        if (activeFilter === 'Low Stock') return p.stock > 0 && p.stock < 10;
+        return p.category === activeFilter;
+    }).filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const handleStockToggle = (id: string, currentStatus: string) => {
+        // Toggle Logic: If Active/Low Stock -> Out of Stock. If Out of Stock -> Active (default stock 1)
+        if (currentStatus === 'Out of Stock') {
+            updateProduct(id, { status: 'Active', stock: 1 });
+        } else {
+            updateProduct(id, { status: 'Out of Stock', stock: 0 });
         }
-    ]);
-
-    const filters = ['All Stock', 'Low Stock', 'Out of Stock', 'Roots'];
-
-    const handleStockToggle = (id: string, value: boolean) => {
-        setStockItems(prev => prev.map(item => {
-            if (item.id === id) {
-                const newInStock = value;
-                let newStatus: StockItem['status'] = item.status;
-                let newQuantity = item.quantity;
-
-                if (!newInStock) {
-                    newStatus = 'OUT OF STOCK';
-                } else {
-                    // When turning ON, ensure at least quantity 1 if it was 0
-                    if (newQuantity === 0) newQuantity = 1;
-
-                    if (newQuantity < 5) newStatus = 'LOW STOCK';
-                    else newStatus = 'IN STOCK';
-                }
-
-                return { ...item, inStock: newInStock, status: newStatus, quantity: newQuantity };
-            }
-            return item;
-        }));
     };
 
-    const handleQuantityUpdate = (id: string, change: number) => {
-        setStockItems(prev => prev.map(item => {
-            if (item.id === id) {
-                const newQuantity = Math.max(0, item.quantity + change);
-                let newStatus: StockItem['status'] = 'IN STOCK';
-                let newInStock = item.inStock;
+    const handleQuantityUpdate = (id: string, currentStock: number, change: number) => {
+        const newStock = Math.max(0, currentStock + change);
+        let newStatus: VendorProduct['status'] = 'Active';
 
-                if (newQuantity === 0) {
-                    newStatus = 'OUT OF STOCK';
-                    newInStock = false;
-                } else if (newQuantity < 5) {
-                    newStatus = 'LOW STOCK';
-                    newInStock = true;
-                } else {
-                    newStatus = 'IN STOCK';
-                    newInStock = true;
-                }
+        if (newStock === 0) newStatus = 'Out of Stock';
+        else if (newStock < 10) newStatus = 'Active'; // Simplified status logic, assuming context handles granular if needed, or we map styling below
 
-                return { ...item, quantity: newQuantity, status: newStatus, inStock: newInStock };
-            }
-            return item;
-        }));
+        // Context interface uses 'Active' | 'Draft' | 'Out of Stock'. 
+        // We can infer logic here.
+        updateProduct(id, { stock: newStock, status: newStatus });
     };
 
-    const renderStockItem = (item: StockItem) => (
-        <View key={item.id} style={styles.stockCard}>
-            <Image
-                source={item.image}
-                style={styles.stockImage}
-                contentFit="cover"
-            />
-            <View style={styles.stockInfo}>
-                <View style={styles.stockHeader}>
-                    <Text style={styles.stockName}>{item.name}</Text>
-                    <Switch
-                        trackColor={{ false: '#E0E0E0', true: '#1F5E2E' }}
-                        thumbColor={'#FFFFFF'}
-                        ios_backgroundColor="#E0E0E0"
-                        onValueChange={(value) => handleStockToggle(item.id, value)}
-                        value={item.inStock}
-                        style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-                    />
-                </View>
-                <Text style={styles.stockPrice}>{item.price}</Text>
+    const getDisplayStatus = (p: VendorProduct) => {
+        if (p.stock === 0) return 'OUT OF STOCK';
+        if (p.stock < 10) return 'LOW STOCK';
+        return 'IN STOCK';
+    };
 
-                <View style={styles.stockControls}>
-                    <View style={styles.quantityControl}>
-                        <TouchableOpacity
-                            style={styles.qtyButton}
-                            onPress={() => handleQuantityUpdate(item.id, -1)}
-                        >
-                            <Text style={styles.qtyButtonText}>-</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.qtyText}>{item.quantity}</Text>
-                        <TouchableOpacity
-                            style={styles.qtyButton}
-                            onPress={() => handleQuantityUpdate(item.id, 1)}
-                        >
-                            <Text style={styles.qtyButtonText}>+</Text>
-                        </TouchableOpacity>
+    const renderStockItem = (item: VendorProduct) => {
+        const displayStatus = getDisplayStatus(item);
+        const isActive = displayStatus !== 'OUT OF STOCK';
+
+        return (
+            <View key={item.id} style={styles.stockCard}>
+                <Image
+                    source={item.image}
+                    style={styles.stockImage}
+                    contentFit="cover"
+                />
+                <View style={styles.stockInfo}>
+                    <View style={styles.stockHeader}>
+                        <Text style={styles.stockName}>{item.name}</Text>
+                        <Switch
+                            trackColor={{ false: '#E0E0E0', true: '#1F5E2E' }}
+                            thumbColor={'#FFFFFF'}
+                            ios_backgroundColor="#E0E0E0"
+                            onValueChange={() => handleStockToggle(item.id, item.status)}
+                            value={isActive}
+                            style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                        />
                     </View>
+                    <Text style={styles.stockPrice}>₹{item.price}/{item.unit}</Text>
 
-                    <View style={[
-                        styles.statusBadge,
-                        item.status === 'LOW STOCK' && styles.statusLow,
-                        item.status === 'OUT OF STOCK' && styles.statusOut
-                    ]}>
-                        <Text style={[
-                            styles.statusText,
-                            item.status === 'LOW STOCK' && styles.statusTextLow,
-                            item.status === 'OUT OF STOCK' && styles.statusTextOut
-                        ]}>{item.status}</Text>
+                    <View style={styles.stockControls}>
+                        <View style={styles.quantityControl}>
+                            <TouchableOpacity
+                                style={styles.qtyButton}
+                                onPress={() => handleQuantityUpdate(item.id, item.stock, -1)}
+                            >
+                                <Text style={styles.qtyButtonText}>-</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.qtyText}>{item.stock}</Text>
+                            <TouchableOpacity
+                                style={styles.qtyButton}
+                                onPress={() => handleQuantityUpdate(item.id, item.stock, 1)}
+                            >
+                                <Text style={styles.qtyButtonText}>+</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={[
+                            styles.statusBadge,
+                            displayStatus === 'LOW STOCK' && styles.statusLow,
+                            displayStatus === 'OUT OF STOCK' && styles.statusOut
+                        ]}>
+                            <Text style={[
+                                styles.statusText,
+                                displayStatus === 'LOW STOCK' && styles.statusTextLow,
+                                displayStatus === 'OUT OF STOCK' && styles.statusTextOut
+                            ]}>{displayStatus}</Text>
+                        </View>
                     </View>
                 </View>
             </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -163,9 +124,9 @@ export default function VendorHomeScreen() {
                 <View style={styles.headerTop}>
                     <View>
                         <Text style={styles.headerTitle}>Home</Text>
-                        <Text style={styles.headerSubtitle}>Today, Oct 24- 12 Low Stock</Text>
+                        <Text style={styles.headerSubtitle}>Today, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {activeOrdersCount} Active Orders</Text>
                     </View>
-                    <TouchableOpacity style={styles.notificationButton}>
+                    <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
                         <Ionicons name="notifications-outline" size={24} color="#1F5E2E" />
                     </TouchableOpacity>
                 </View>
@@ -211,24 +172,27 @@ export default function VendorHomeScreen() {
                 <View style={styles.statsRow}>
                     <View style={styles.statsCard}>
                         <Text style={styles.statsLabel}>Active Orders</Text>
-                        <Text style={styles.statsValue}>08</Text>
+                        <Text style={styles.statsValue}>{activeOrdersCount}</Text>
                     </View>
                     <View style={styles.statsCard}>
                         <Text style={styles.statsLabel}>Out of Stock</Text>
-                        <Text style={[styles.statsValue, { color: '#FF5252' }]}>03</Text>
+                        <Text style={[styles.statsValue, { color: '#FF5252' }]}>{outOfStockCount}</Text>
                     </View>
                 </View>
 
                 {/* Quick Stock Updates */}
                 <Text style={styles.sectionTitle}>Quick Stock Updates</Text>
                 <View style={styles.stockList}>
-                    {stockItems.map(renderStockItem)}
+                    {filteredProducts.map(renderStockItem)}
+                    {filteredProducts.length === 0 && (
+                        <Text style={{ color: '#999', textAlign: 'center', marginTop: 20 }}>No items found.</Text>
+                    )}
                 </View>
 
                 {/* Business Insights */}
                 <Text style={styles.sectionTitle}>Business Insights</Text>
                 <View style={styles.insightsCard}>
-                    <Text style={styles.insightsLabel}>Sales(₹)</Text>
+                    <Text style={styles.insightsLabel}>Sales(₹) - Total: {dashboardStats.totalSales}</Text>
 
                     {/* Dummy Chart Placeholder */}
                     <View style={styles.chartContainer}>

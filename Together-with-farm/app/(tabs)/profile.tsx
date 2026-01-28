@@ -10,7 +10,18 @@ import { useUser } from '@/contexts/UserContext';
 export default function ProfileScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { userData, signOut } = useUser();
+    const { userData, signOut, switchUserRole } = useUser();
+
+    const handleSwitchRole = async () => {
+        // Dev Only: Immediate switch for testing without dialogs that might be blocked
+        console.log("Switching to Vendor...");
+        const success = await switchUserRole('Vendor');
+        if (success) {
+            router.replace('/(vendor-tabs)');
+        } else {
+            alert("Failed to switch role. Check console.");
+        }
+    };
 
     const handleLogout = () => {
         console.log("Logout button pressed");
@@ -116,6 +127,13 @@ export default function ProfileScreen() {
                     {renderMenuItem('location-outline', 'Addresses', () => router.push('/addresses'))}
                     {renderMenuItem('card-outline', 'Payment Methods')}
                     {renderMenuItem('settings-outline', 'Settings', () => router.push('/settings'))}
+                    <TouchableOpacity style={styles.menuItem} onPress={handleSwitchRole} activeOpacity={0.7}>
+                        <View style={styles.menuIconContainer}>
+                            <Ionicons name="construct-outline" size={22} color="#E65100" />
+                        </View>
+                        <Text style={[styles.menuText, { color: '#E65100' }]}>Switch to Vendor (Dev)</Text>
+                        <Ionicons name="swap-horizontal-outline" size={20} color="#E65100" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Logout Button */}

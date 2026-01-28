@@ -1,22 +1,70 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, ImageBackground } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, ImageBackground, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useVendor } from '@/contexts/VendorContext';
+import { useMarket } from '@/contexts/MarketContext';
+import { useUser } from '@/contexts/UserContext';
+
+const CATEGORIES = ['Vegetables', 'Fruits', 'Dairy', 'Bakery', 'Meat', 'Seafood'];
 
 export default function AddProductVendorScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { addProduct: addVendorProduct } = useVendor();
+    const { addProduct: addMarketProduct } = useMarket();
+    const { user } = useUser();
 
     const [productName, setProductName] = useState('');
     const [productInfo, setProductInfo] = useState('');
     const [highlights, setHighlights] = useState('');
-    const [category, setCategory] = useState('Fresh Vegetables');
+    const [category, setCategory] = useState('Vegetables');
     const [price, setPrice] = useState('');
-    const [unit, setUnit] = useState('');
+    const [unit, setUnit] = useState('kg');
     const [quantity, setQuantity] = useState('');
     const [orderType, setOrderType] = useState<'Instant' | 'Pre-order'>('Instant');
+
+    const handleSave = () => {
+        if (!productName || !price || !quantity) {
+            Alert.alert("Missing Fields", "Please fill in all required fields.");
+            return;
+        }
+
+        const numericPrice = parseFloat(price);
+        const numericStock = parseInt(quantity);
+        const productImage = require('@/assets/images/3d-model-with-veg.png'); // Mock image
+
+        // 1. Add to Vendor Context (Private Management)
+        addVendorProduct({
+            name: productName,
+            description: productInfo,
+            category,
+            price: numericPrice,
+            unit: unit || 'kg',
+            stock: numericStock,
+            status: 'Active',
+            image: productImage
+        });
+
+        // 2. Add to Market Context (Public Listing) - bridging the mock data
+        addMarketProduct({
+            vendorId: user?.id || 'vendor_def_001', // Link to current user or default
+            name: productName,
+            type: category, // Map Category to Type
+            price: numericPrice,
+            unit: unit || 'kg',
+            image: productImage,
+            description: productInfo,
+            isFavorite: false,
+            tag: highlights || category, // Use highlights as tag or fallback to category
+            discount: ''
+        });
+
+        Alert.alert("Success", "Product added and listed in Market!");
+        router.back();
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -80,12 +128,21 @@ export default function AddProductVendorScreen() {
                     onChangeText={setHighlights}
                 />
 
-                {/* Category */}
+                {/* Category Selection */}
                 <Text style={styles.label}>Category</Text>
-                <TouchableOpacity style={styles.dropdown}>
-                    <Text style={styles.dropdownText}>{category}</Text>
-                    <Ionicons name="chevron-down-outline" size={20} color="#1A1A1A" />
-                </TouchableOpacity>
+                <View style={styles.categoryContainer}>
+                    {CATEGORIES.map((cat) => (
+                        <TouchableOpacity
+                            key={cat}
+                            style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
+                            onPress={() => setCategory(cat)}
+                        >
+                            <Text style={[styles.categoryText, category === cat && styles.categoryTextActive]}>
+                                {cat}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
 
                 {/* Price per Unit */}
                 <Text style={styles.label}>Price per Unit</Text>
@@ -100,7 +157,7 @@ export default function AddProductVendorScreen() {
                     />
                     <TextInput
                         style={[styles.input, { flex: 1 }]}
-                        placeholder="e.g, 400g"
+                        placeholder="e.g, kg"
                         placeholderTextColor="#9CA3AF"
                         value={unit}
                         onChangeText={setUnit}
@@ -108,7 +165,7 @@ export default function AddProductVendorScreen() {
                 </View>
 
                 {/* Available Quantity */}
-                <Text style={styles.label}>Available Quantity (Units/kg.)</Text>
+                <Text style={styles.label}>Available Quantity</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="e.g, 60"
@@ -141,7 +198,7 @@ export default function AddProductVendorScreen() {
                 </View>
 
                 {/* Submit Button */}
-                <TouchableOpacity style={styles.submitButton} activeOpacity={0.8}>
+                <TouchableOpacity style={styles.submitButton} activeOpacity={0.8} onPress={handleSave}>
                     <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
                     <Text style={styles.submitButtonText}>Submit for Approval</Text>
                 </TouchableOpacity>
@@ -225,6 +282,32 @@ const styles = StyleSheet.create({
         height: 100,
         paddingTop: 14,
         textAlignVertical: 'top',
+    },
+    categoryContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginBottom: 20,
+    },
+    categoryChip: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#FFFFFF',
+    },
+    categoryChipActive: {
+        backgroundColor: '#1F5E2E',
+        borderColor: '#1F5E2E',
+    },
+    categoryText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_500Medium',
+        color: '#4B5563',
+    },
+    categoryTextActive: {
+        color: '#FFFFFF',
     },
     dropdown: {
         height: 52,

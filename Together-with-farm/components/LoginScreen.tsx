@@ -72,16 +72,7 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
             setLoading(false);
 
             if (error) {
-                if (error.message.includes('Twilio') || error.message.includes('provider')) {
-                    alert(
-                        "SMS Setup Required\n\n" +
-                        "Supabase cannot send real SMS yet (Twilio is not configured).\n\n" +
-                        "SOLUTION: Go to Supabase Dashboard > Authentication > Providers > Phone > Phone Numbers for Testing.\n\n" +
-                        "Add your number and a fixed OTP (e.g., 123456) to log in immediately."
-                    );
-                } else {
-                    alert(`Error: ${error.message}`);
-                }
+                alert(`Error: ${error.message}`);
             } else {
                 setStep('otp');
             }

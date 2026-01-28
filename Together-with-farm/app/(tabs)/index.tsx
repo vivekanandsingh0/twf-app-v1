@@ -7,95 +7,39 @@ import {
   TextInput,
   TouchableOpacity,
   Dimensions,
-  Modal
+  Modal,
+  RefreshControl
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useMarket, MarketVendor } from '@/contexts/MarketContext';
 
 const CATEGORIES = ['All', 'Nutrition', 'Storage Tips', 'Recipes', 'Tips'];
 
-const SPOTLIGHT_FARMERS = [
-  {
-    id: 1,
-    name: 'Ram Kishen',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop',
-    bio: 'Specialist in organic root vegetables with over 20 years of experience in sustainable farming practices.',
-    tag: 'FEATURED VENDOR'
-  },
-  {
-    id: 2,
-    name: 'Sita Devi',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=2670&auto=format&fit=crop',
-    bio: 'Pioneer in hydroponic leafy greens, ensuring fresh and pesticide-free produce for the community.',
-    tag: 'TOP RATED'
-  },
-  {
-    id: 3,
-    name: 'Mohan Lal',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2670&auto=format&fit=crop',
-    bio: 'Expert in seasonal fruits, bringing the sweetest melons and berries directly from farm to table.',
-    tag: 'LOCAL HERO'
-  },
-  {
-    id: 4,
-    name: 'Gita Ben',
-    image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=2576&auto=format&fit=crop',
-    bio: 'Passionate about preserving heirloom tomato varieties and traditional farming methods.',
-    tag: 'ORGANIC CERTIFIED'
-  },
-  {
-    id: 5,
-    name: 'Raj Kumar',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=2574&auto=format&fit=crop',
-    bio: 'Innovative dairy farmer focusing on ethical animal husbandry and high-quality milk products.',
-    tag: 'DAIRY EXPERT'
-  },
-];
-
-const ARTICLES = [
-  {
-    id: 1,
-    title: 'How to Keep Fruits Fresh Longer',
-    category: 'Storage Tips',
-    time: '4 mins',
-    image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop',
-  },
-  {
-    id: 2,
-    title: 'Top 10 Rich Nutrition Foods',
-    category: 'Nutrition',
-    time: '6 mins',
-    image: 'https://images.unsplash.com/photo-1518843875459-f738682238a6?q=80&w=2642&auto=format&fit=crop',
-  },
-];
-
-const INSIGHTS = [
-  {
-    id: 1,
-    title: 'Farming Tips from Local Farmers in Patna',
-    tag: 'Trending',
-    time: '4 min read',
-    type: 'Farming Tips',
-    image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=2670&auto=format&fit=crop',
-  },
-  {
-    id: 2,
-    title: 'Sustainable Irrigation Methods',
-    tag: 'Tech',
-    time: '5 min read',
-    type: 'Agri-Tech',
-    image: 'https://images.unsplash.com/photo-1628188554224-12d7c04052fe?q=80&w=2487&auto=format&fit=crop',
-  },
-];
-
 export default function FeedScreen() {
+  const { vendors, articles } = useMarket();
   const [activeCategory, setActiveCategory] = useState('All');
-  const [selectedFarmer, setSelectedFarmer] = useState<typeof SPOTLIGHT_FARMERS[0] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  // Derived arrays
+  const spotlightFarmers = vendors.filter(v => v.tag); // Show all tagged vendors
+  const recentArticles = articles; // All articles for now
+
+  // Mock Insights - could also be in context or filtered articles
+  const insights = articles.filter(a => a.type === 'Agri-Tech' || a.tag === 'Trending');
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    // Simulate fetch
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1500);
+  }, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -123,6 +67,9 @@ export default function FeedScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1F5E2E']} />
+        }
       >
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -143,14 +90,14 @@ export default function FeedScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.spotlightContainer}
         >
-          {SPOTLIGHT_FARMERS.map((farmer) => (
+          {spotlightFarmers.map((farmer) => (
             <TouchableOpacity
               key={farmer.id}
               style={styles.spotlightItem}
-              onPress={() => setSelectedFarmer(farmer)}
+              onPress={() => router.push(`/farmer/${farmer.id}`)}
             >
-              <View style={[styles.spotlightImageContainer, selectedFarmer?.id === farmer.id && styles.activeSpotlight]}>
-                <Image source={{ uri: farmer.image }} style={styles.spotlightImage} contentFit="cover" />
+              <View style={[styles.spotlightImageContainer]}>
+                <Image source={farmer.image} style={styles.spotlightImage} contentFit="cover" />
               </View>
               {/* <Text style={styles.spotlightName} numberOfLines={1}>{farmer.name}</Text> */}
             </TouchableOpacity>
@@ -192,9 +139,9 @@ export default function FeedScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.articlesContainer}
         >
-          {ARTICLES.map((article) => (
+          {recentArticles.map((article) => (
             <View key={article.id} style={styles.articleCard}>
-              <Image source={{ uri: article.image }} style={styles.articleImage} contentFit="cover" />
+              <Image source={article.image} style={styles.articleImage} contentFit="cover" />
 
               <View style={styles.imageOverlay}>
                 <View style={styles.tagBadge}>
@@ -224,13 +171,13 @@ export default function FeedScreen() {
         </View>
 
         <View style={styles.insightsContainer}>
-          {INSIGHTS.map((item) => (
+          {insights.map((item) => (
             <View key={item.id} style={styles.insightCard}>
-              <Image source={{ uri: item.image }} style={styles.insightImage} contentFit="cover" />
+              <Image source={item.image} style={styles.insightImage} contentFit="cover" />
               <View style={styles.insightContent}>
                 <View style={styles.insightMetaRow}>
                   <View style={styles.trendingBadge}>
-                    <Text style={styles.trendingText}>{item.tag}</Text>
+                    <Text style={styles.trendingText}>{item.tag || 'New'}</Text>
                   </View>
                   <Text style={styles.insightTime}>{item.time}</Text>
                 </View>
@@ -238,7 +185,7 @@ export default function FeedScreen() {
                   {item.title}
                 </Text>
                 <TouchableOpacity style={styles.readMoreLink}>
-                  <Text style={styles.readMoreText}>{item.type}</Text>
+                  <Text style={styles.readMoreText}>{item.type || 'Insight'}</Text>
                   <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
                 </TouchableOpacity>
               </View>
@@ -250,39 +197,6 @@ export default function FeedScreen() {
         <View style={{ height: 100 }} />
 
       </ScrollView>
-
-      {/* Modal Overlay */}
-      {selectedFarmer && (
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            activeOpacity={1}
-            onPress={() => setSelectedFarmer(null)}
-          />
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader} />
-            <View style={styles.modalAvatarContainer}>
-              <Image source={{ uri: selectedFarmer.image }} style={styles.modalAvatar} contentFit="cover" />
-            </View>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Farmer's Spotlight</Text>
-              <View style={styles.modalTagBadge}>
-                <Text style={styles.modalTagText}>{selectedFarmer.tag}</Text>
-              </View>
-              <Text style={styles.modalBioName}>{selectedFarmer.name}</Text>
-              <Text style={styles.modalDescription}>
-                {selectedFarmer.bio}
-              </Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setSelectedFarmer(null)}
-              >
-                <Text style={styles.closeButtonText}>Close Story</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   );
 }

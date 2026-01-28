@@ -17,62 +17,53 @@ type Order = {
     image: string; // URL
 };
 
-// Mock Data
-const ACTIVE_ORDERS: Order[] = [
-    {
-        id: '1',
-        orderNumber: '#4521',
-        itemsSummary: 'Greek yogurt +3 more',
-        date: 'Delivered on Oct 10', // Screenshot says Delivered but in Active? Maybe active means "In Progress" in real app, but sticking to screenshot text/style
-        total: '$18.99',
-        status: 'Picked',
-        image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=60'
-    },
-    {
-        id: '2',
-        orderNumber: '#4521',
-        itemsSummary: 'Chicken breast +5 more',
-        date: 'Delivered on Oct 5',
-        total: '$18.99',
-        status: 'On the Way',
-        image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=500&auto=format&fit=crop&q=60'
-    }
-];
+import { useVendor, VendorOrder } from '@/contexts/VendorContext';
+import { useUser } from '@/contexts/UserContext';
 
-const PAST_ORDERS: Order[] = [
-    {
-        id: '3',
-        orderNumber: '#4521',
-        itemsSummary: 'Greek yogurt +3 more',
-        date: 'Delivered on Oct 10',
-        total: '$18.99',
-        status: 'Delivered',
-        image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=60'
-    },
-    {
-        id: '4',
-        orderNumber: '#4521',
-        itemsSummary: 'Chicken breast +5 more',
-        date: 'Delivered on Oct 5',
-        total: '$18.99',
-        status: 'Delivered',
-        image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=500&auto=format&fit=crop&q=60'
-    },
-    {
-        id: '5',
-        orderNumber: '#4521',
-        itemsSummary: 'Chicken breast +5 more',
-        date: 'Delivered on Oct 5',
-        total: '$18.99',
-        status: 'Delivered',
-        image: 'https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?w=500&auto=format&fit=crop&q=60' // Corn
-    }
-];
+// Helper to format date
+const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
 export default function OrdersScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'Active' | 'Past'>('Active');
+    const { orders: allOrders } = useVendor();
+    const { user, userData } = useUser();
+
+    // Filter orders for Current User
+    const myOrders = allOrders.filter(o =>
+        (o.userId === user?.id) ||
+        (o.userId === userData.phoneNumber) || // Case where phone is used as ID
+        (o.customerName === userData.fullName) // Fallback for name matching
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Split into Active vs Past
+    const activeOrders = myOrders.filter(o => ['Pending', 'Accepted', 'Ready', 'Shipped', 'Picked', 'On the Way'].includes(o.status));
+    const pastOrders = myOrders.filter(o => ['Delivered', 'Cancelled'].includes(o.status));
+
+    // Map to View Model
+    const mapToViewOrder = (vo: VendorOrder): Order => {
+        const itemCount = vo.items.reduce((sum, i) => sum + i.quantity, 0);
+        const itemSummary = vo.items.length > 0
+            ? `${vo.items[0].productName} ${itemCount > 1 ? `+${itemCount - 1} more` : ''}`
+            : 'No items';
+
+        return {
+            id: vo.id,
+            orderNumber: `#${vo.id.split('-')[1] || vo.id}`,
+            itemsSummary: itemSummary,
+            date: `${vo.status} on ${formatDate(vo.date)}`,
+            total: `$${vo.totalAmount}`,
+            status: vo.status as OrderStatus,
+            image: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=60" // Placeholder for list view
+        };
+    };
+
+    const displayActive = activeOrders.map(mapToViewOrder);
+    const displayPast = pastOrders.map(mapToViewOrder);
 
     const renderOrderCard = (order: Order, isPast: boolean) => (
         <TouchableOpacity
@@ -164,8 +155,8 @@ export default function OrdersScreen() {
 
             <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
                 {activeTab === 'Active'
-                    ? ACTIVE_ORDERS.map(o => renderOrderCard(o, false))
-                    : PAST_ORDERS.map(o => renderOrderCard(o, true))
+                    ? displayActive.map(o => renderOrderCard(o, false))
+                    : displayPast.map(o => renderOrderCard(o, true))
                 }
                 <View style={{ height: 40 }} />
             </ScrollView>

@@ -16,6 +16,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
 import { useCart } from '@/contexts/CartContext';
+import { useMarket, MarketProduct } from '@/contexts/MarketContext';
 import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
@@ -24,14 +25,14 @@ const { width } = Dimensions.get('window');
 
 const CATEGORIES = [
     {
-        id: 'fruits',
-        name: 'Fruits',
-        image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop', // Fruits
-    },
-    {
         id: 'vegetables',
         name: 'Veggies',
         image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?q=80&w=2568&auto=format&fit=crop', // Veggies
+    },
+    {
+        id: 'fruits',
+        name: 'Fruits',
+        image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop', // Fruits
     },
     {
         id: 'meats',
@@ -55,196 +56,35 @@ const CATEGORIES = [
     },
 ];
 
-const PRODUCTS = [
-    {
-        id: 1,
-        categoryId: 'vegetables',
-        title: 'Sweet Potatoes',
-        price: 1.79,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1596097635121-14b63b7a0c19?q=80&w=2574&auto=format&fit=crop', // Sweet potato
-        discount: 40,
-        tag: 'Organic',
-        isFavorite: true,
-    },
-    {
-        id: 2,
-        categoryId: 'vegetables',
-        title: 'Corn',
-        price: 5.49,
-        unit: 'each',
-        image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?q=80&w=2670&auto=format&fit=crop', // Corn
-        discount: 30,
-        tag: 'Fresh',
-        isFavorite: false,
-    },
-    {
-        id: 3,
-        categoryId: 'vegetables',
-        title: 'Parsley',
-        price: 4.29,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?q=80&w=2630&auto=format&fit=crop', // Parsley
-        discount: 30,
-        tag: 'Organic',
-        isFavorite: false,
-    },
-    {
-        id: 11,
-        categoryId: 'vegetables',
-        title: 'Tomatoes',
-        price: 2.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=2574&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Fresh',
-        isFavorite: true,
-    },
-    {
-        id: 4,
-        categoryId: 'fruits',
-        title: 'Bananas',
-        price: 0.99,
-        unit: 'bunch',
-        image: 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=2574&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh',
-        isFavorite: true,
-    },
-    {
-        id: 5,
-        categoryId: 'fruits',
-        title: 'Red Apples',
-        price: 2.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?q=80&w=2674&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Local',
-        isFavorite: false,
-    },
-    {
-        id: 12,
-        categoryId: 'fruits',
-        title: 'Strawberries',
-        price: 4.99,
-        unit: 'box',
-        image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?q=80&w=2670&auto=format&fit=crop',
-        discount: 15,
-        tag: 'Sweet',
-        isFavorite: true,
-    },
-    {
-        id: 13,
-        categoryId: 'fruits',
-        title: 'Watermelon',
-        price: 5.99,
-        unit: 'each',
-        image: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?q=80&w=2670&auto=format&fit=crop',
-        discount: 20,
-        tag: 'Seasonal',
-        isFavorite: false,
-    },
-    {
-        id: 6,
-        categoryId: 'meats',
-        title: 'Chicken Breast',
-        price: 6.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?q=80&w=2574&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh',
-        isFavorite: false,
-    },
-    {
-        id: 14,
-        categoryId: 'meats',
-        title: 'Ground Beef',
-        price: 5.49,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1613454320434-eca721df222a?q=80&w=2670&auto=format&fit=crop',
-        discount: 10,
-        tag: 'Organic',
-        isFavorite: false,
-    },
-    {
-        id: 7,
-        categoryId: 'seafood',
-        title: 'Salmon Fillet',
-        price: 12.99,
-        unit: 'each',
-        image: 'https://images.unsplash.com/photo-1601314167099-232775b3d6fd?q=80&w=2672&auto=format&fit=crop', // Corrected Salmon image
-        discount: 5,
-        tag: 'Wild Caught',
-        isFavorite: true,
-    },
-    {
-        id: 15,
-        categoryId: 'seafood',
-        title: 'Shrimp',
-        price: 14.99,
-        unit: 'lb',
-        image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?q=80&w=2670&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Frozen',
-        isFavorite: false,
-    },
-    {
-        id: 8,
-        categoryId: 'dairy',
-        title: 'Whole Milk',
-        price: 3.49,
-        unit: 'gal',
-        image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?q=80&w=2565&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh',
-        isFavorite: false,
-    },
-    {
-        id: 16,
-        categoryId: 'dairy',
-        title: 'Organic Eggs',
-        price: 4.99,
-        unit: 'doz',
-        image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?q=80&w=2670&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Free Range',
-        isFavorite: true,
-    },
-    {
-        id: 9,
-        categoryId: 'bakery',
-        title: 'Sourdough Bread',
-        price: 5.99,
-        unit: 'loaf',
-        image: 'https://images.unsplash.com/photo-1585476644321-b9762181d164?q=80&w=2670&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Fresh Baked',
-        isFavorite: false,
-    },
-    {
-        id: 17,
-        categoryId: 'bakery',
-        title: 'Croissants',
-        price: 3.99,
-        unit: '4pk',
-        image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=2526&auto=format&fit=crop',
-        discount: 0,
-        tag: 'Butter',
-        isFavorite: true,
-    },
-];
+const categoryFilters: Record<string, string[]> = {
+    vegetables: ['Roots', 'Leafy', 'Hydroponic', 'Organic', 'Fruit Veg', 'Daily'],
+    fruits: ['Fruit', 'Seasonal', 'Bestsellers'], // Assuming some mapping
+    meats: ['Meat', 'Poultry'],
+    seafood: ['Seafood', 'Fish'],
+    dairy: ['Dairy', 'Eggs'],
+    bakery: ['Bakery', 'Bread'],
+};
 
 export default function CategoryScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { toggleFavourite, isFavourite } = useFavourites();
     const { updateQuantity, getItemQuantity } = useCart();
+    const { products } = useMarket();
+
     const [selectedCategoryId, setSelectedCategoryId] = useState('vegetables');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const activeCategoryProducts = PRODUCTS.filter(
-        p => p.categoryId === selectedCategoryId && p.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const activeCategoryProducts = products.filter(p => {
+        const filters = categoryFilters[selectedCategoryId] || [];
+        // Check if product type matches one of the filters for the category
+        // OR if category is vegetables and we just dump everything that isn't other stuff (fallback)
+        // For simplicity, strict match on types defined in context
+        const matchesCategory = filters.includes(p.type) || filters.some(f => p.tag?.includes(f)) || (selectedCategoryId === 'vegetables' && !['Fruit', 'Meat', 'Dairy', 'Bakery'].includes(p.type));
+
+        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
 
     const renderCategoryItem = (item: typeof CATEGORIES[0]) => {
         const isActive = selectedCategoryId === item.id;
@@ -266,7 +106,7 @@ export default function CategoryScreen() {
         );
     };
 
-    const renderProductItem = ({ item }: { item: typeof PRODUCTS[0] }) => {
+    const renderProductItem = ({ item }: { item: MarketProduct }) => {
         const qty = getItemQuantity(item.id);
 
         return (
@@ -276,10 +116,10 @@ export default function CategoryScreen() {
                 activeOpacity={0.9}
             >
                 <View style={styles.productImageContainer}>
-                    <Image source={{ uri: item.image }} style={styles.productImage} contentFit="cover" />
-                    {item.discount > 0 && (
+                    <Image source={item.image} style={styles.productImage} contentFit="cover" />
+                    {item.discount && (
                         <View style={styles.discountBadge}>
-                            <Text style={styles.discountText}>-{item.discount}%</Text>
+                            <Text style={styles.discountText}>{item.discount}</Text>
                         </View>
                     )}
                     <TouchableOpacity
@@ -298,8 +138,8 @@ export default function CategoryScreen() {
                 </View>
 
                 <View style={styles.productInfo}>
-                    <Text style={styles.tagText}>{item.tag}</Text>
-                    <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.tagText}>{item.tag || item.type}</Text>
+                    <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
 
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
                         <Text style={styles.priceText}>${item.price}</Text>

@@ -5,16 +5,35 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
+import { useVendor, VendorOrder } from '@/contexts/VendorContext';
+
 export default function RateOrderScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { id } = useLocalSearchParams();
+    const { orders } = useVendor();
+
+    const orderId = String(id);
+    // Find the order. Note: The ID passed might be just the number suffix if we stripped it, 
+    // or the full ID. Let's try to match both.
+    const order = orders.find(o => o.id === orderId || o.id.endsWith(orderId));
 
     // State
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [productRating, setProductRating] = useState(0);
     const [driverRating, setDriverRating] = useState(0);
     const [review, setReview] = useState('');
+
+    if (!order) {
+        return (
+            <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text>Order not found</Text>
+                <TouchableOpacity onPress={() => router.back()}><Text style={{ color: 'green', marginTop: 10 }}>Go Back</Text></TouchableOpacity>
+            </View>
+        );
+    }
+
+    const itemsSummary = order.items.map(i => i.productName).join(', ');
 
     const handleSubmit = () => {
         if (productRating === 0 || driverRating === 0) {
@@ -24,6 +43,8 @@ export default function RateOrderScreen() {
         setIsSubmitted(true);
         Alert.alert("Success", "Your review has been submitted!");
     };
+
+    // ... handlers ...
 
     const handleEdit = () => {
         setIsSubmitted(false);
@@ -94,18 +115,18 @@ export default function RateOrderScreen() {
                             style={styles.productImage}
                         />
                         <View style={styles.badgeContainer}>
-                            <View style={styles.quantityBadge}><Text style={styles.quantityText}>3</Text></View>
+                            <View style={styles.quantityBadge}><Text style={styles.quantityText}>{order.items.length}</Text></View>
                         </View>
 
                         <View style={styles.orderInfo}>
                             <View style={styles.rowBetween}>
-                                <Text style={styles.orderNumber}>#{id || '4521'}</Text>
+                                <Text style={styles.orderNumber}>{order.id}</Text>
                                 <View style={styles.statusBadge}>
-                                    <Text style={styles.statusText}>Delivered</Text>
+                                    <Text style={styles.statusText}>{order.status}</Text>
                                 </View>
                             </View>
-                            <Text style={styles.itemSummary} numberOfLines={1}>Greek yogurt +3 more</Text>
-                            <Text style={styles.dateText}>Delivered on Oct 10</Text>
+                            <Text style={styles.itemSummary} numberOfLines={1}>{itemsSummary}</Text>
+                            <Text style={styles.dateText}>{new Date(order.date).toLocaleDateString()}</Text>
                         </View>
                     </View>
 
@@ -114,7 +135,7 @@ export default function RateOrderScreen() {
                     {/* Show Details only if editing/new, OR just always show summaries? Keeping summary always */}
                     <View style={styles.cardFooter}>
                         <Text style={styles.totalLabel}>Total</Text>
-                        <Text style={styles.totalValue}>$18.99</Text>
+                        <Text style={styles.totalValue}>${order.totalAmount}</Text>
                     </View>
 
                     {!isSubmitted && (

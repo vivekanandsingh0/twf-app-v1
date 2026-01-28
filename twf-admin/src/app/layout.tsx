@@ -25,9 +25,84 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)] flex`}
       >
-        {children}
+        {/* Premium Sidebar */}
+        <aside className="w-72 bg-white/80 backdrop-blur-md border-r border-slate-200/60 flex flex-col h-full z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300">
+          <div className="p-8 pb-6">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent tracking-tight">
+              TWF Admin
+            </h1>
+            <p className="text-slate-400 text-xs font-medium tracking-wider uppercase mt-1">Management Console</p>
+          </div>
+
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">
+            <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Main Menu</p>
+            <a href="/" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">📊</span>
+              Dashboard
+            </a>
+            <a href="/vendors" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">👩‍🌾</span>
+              Vendors
+            </a>
+            <a href="/products" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">📦</span>
+              Products
+            </a>
+            <a href="/orders" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">🛍️</span>
+              Orders
+            </a>
+
+            <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6 mb-2">System</p>
+            <a href="/users" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">👥</span>
+              Users
+            </a>
+            <a href="#" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium opacity-50 cursor-not-allowed">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center transition-colors">⚙️</span>
+              Settings
+            </a>
+          </nav>
+
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-200">A</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">Super Admin</p>
+                <p className="text-xs text-slate-500 truncate">admin@twf.com</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col h-full relative overflow-hidden bg-[#f8fafc]">
+          {/* Top Glass Header */}
+          <header className="h-16 bg-white/60 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 z-10 sticky top-0">
+            <div className="flex items-center gap-4 text-slate-400">
+              <span className="bg-white p-2 rounded-lg border border-slate-100 shadow-sm">🔍</span>
+              <input type="text" placeholder="Search anything..." className="bg-transparent border-none outline-none text-sm w-64 text-slate-600 placeholder:text-slate-400" />
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50 transition-all shadow-sm">
+                🔔
+              </button>
+              <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50 transition-all shadow-sm">
+                💬
+              </button>
+            </div>
+          </header>
+
+          {/* Scrollable Page Content */}
+          <div className="flex-1 overflow-y-auto scroll-smooth p-8 pb-32">
+            <div className="max-w-7xl mx-auto animate-fade-in-down">
+              {children}
+            </div>
+          </div>
+        </main>
       </body>
     </html>
   );
