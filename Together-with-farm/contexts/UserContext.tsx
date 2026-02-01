@@ -103,7 +103,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Default Vendor Credential Check
-        if (phone.includes('1111111111') && token === '111111') {
+        if (userType === 'Vendor' && phone.includes('1111111111') && token === '111111') {
             const mockUser: MockUser = {
                 id: 'vendor_def_001',
                 phone: phone
@@ -112,9 +112,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 user: mockUser,
                 access_token: 'mock_vendor_token'
             };
-
-            setSession(mockSession);
-            setUser(mockUser);
 
             setUserDataState(prev => ({
                 ...prev,
@@ -125,6 +122,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 farmSize: "12 Acres",
                 bio: "Your one-stop shop for fresh, organic, and locally sourced produce."
             }));
+
+            // Set session LAST
+            setSession(mockSession);
+            setUser(mockUser);
 
             return { session: mockSession, error: null };
         }
@@ -139,14 +140,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 access_token: 'mock_token'
             };
 
-            setSession(mockSession);
-            setUser(mockUser);
-
             setUserDataState(prev => ({
                 ...prev,
                 phoneNumber: phone,
                 userType: userType
             }));
+
+            // Set session LAST to ensure data is ready before consumers react to session=true
+            setSession(mockSession);
+            setUser(mockUser);
 
             return { session: mockSession, error: null };
         } else {
@@ -157,17 +159,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const signOut = async () => {
         setSession(null);
         setUser(null);
-        // Reset user data partially if needed, but keeping name for demo is fine.
-        // Or reset to default:
-        /*
+        // Reset user data to default state to prevents state leaks between sessions
         setUserDataState({
-             phoneNumber: '',
-             fullName: 'Guest User',
-             gender: '',
-             dob: '',
-             userType: 'User'
-        }); 
-        */
+            phoneNumber: '',
+            fullName: 'Vivekanand Singh', // Default or empty
+            gender: 'Male',
+            dob: '10 August 1999',
+            userType: 'User' // Critical: Reset to default User role
+        });
     };
 
     const switchUserRole = async (newRole: 'User' | 'Vendor') => {

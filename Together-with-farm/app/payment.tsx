@@ -86,8 +86,11 @@ export default function PaymentScreen() {
                 totalAmount: vendorData.total,
                 status: 'Pending',
                 date: new Date().toISOString(),
-                paymentStatus: selectedId === 'cod' ? 'COD' : 'Paid', // Simplified logic
-                deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}` : "Patna, Bihar" // Fallback
+                paymentStatus: selectedId === 'cod' ? 'COD' : 'Paid',
+                paymentMethod: LINKED_METHODS.find(m => m.id === selectedId)?.title || SAVED_METHODS.find(m => m.id === selectedId)?.title || 'Unknown',
+                customerPhone: userData?.phoneNumber || '+91 99999 99999',
+                shippingFee: 4.4, // Consistent with checkout
+                deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.pincode}` : "Patna, Bihar" // Enhanced address line
             };
 
             addOrder(newOrder); // This adds it to the Vendor Context (shared memory)

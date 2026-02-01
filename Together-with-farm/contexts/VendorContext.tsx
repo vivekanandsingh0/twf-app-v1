@@ -20,9 +20,14 @@ export interface VendorOrder {
     customerName: string;
     items: { productName: string; quantity: number; price: number }[];
     totalAmount: number;
+    discount?: number; // Added
+    tax?: number;      // Added
     status: 'Pending' | 'Accepted' | 'Ready' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Picked' | 'On the Way';
     date: string;
     paymentStatus: 'Paid' | 'COD';
+    customerPhone?: string; // Added to track customer contact
+    paymentMethod?: string; // Added to track payment method name
+    shippingFee?: number;   // Added
     deliveryAddress: string;
 }
 
@@ -210,6 +215,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 { productName: "Red Onion", quantity: 2, price: 35 }
             ],
             totalAmount: 195,
+            discount: 0,
+            tax: 5,
             status: 'Pending',
             date: new Date().toISOString(),
             paymentStatus: 'COD',
@@ -224,6 +231,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 { productName: "Whole Wheat Bread", quantity: 1, price: 45 }
             ],
             totalAmount: 165,
+            discount: 10,
+            tax: 0,
             status: 'Delivered',
             date: new Date(Date.now() - 86400000).toISOString(),
             paymentStatus: 'Paid',

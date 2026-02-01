@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useVendor, VendorOrder } from '@/contexts/VendorContext';
 
+import { printToFileAsync, printAsync } from 'expo-print';
+import { shareAsync } from 'expo-sharing';
+
 export default function VendorOrdersScreen() {
     const insets = useSafeAreaInsets();
     const router = require('expo-router').useRouter();
-    const { orders, updateOrderStatus } = useVendor();
+    const { orders, updateOrderStatus, profile } = useVendor();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
@@ -49,10 +52,178 @@ export default function VendorOrdersScreen() {
     const renderOrderCard = (order: VendorOrder) => {
         const uiStatus = getUIStatus(order.status);
 
+        const handleDownloadInvoice = async () => {
+            try {
+                const date = new Date(order.date);
+                const formattedDate = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                // CSS Barcode Generator (Simple visual simulation)
+                const barcodeHtml = `
+                    <div style="display: flex; height: 50px; justify-content: center; overflow: hidden;">
+                        ${Array.from({ length: 40 }).map(() => {
+                    const width = Math.random() > 0.5 ? 4 : 2;
+                    return `<div style="width: ${width}px; height: 100%; background: #000; margin-right: 2px;"></div>`;
+                }).join('')}
+                    </div>
+                    <div style="text-align: center; letter-spacing: 4px; font-family: monospace; font-size: 12px; margin-top: 4px;">${order.id}</div>
+                `;
+
+                const html = `
+                    <!DOCTYPE html>
+                    <html>
+                        <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+                            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+                            <style>
+                                body { font-family: 'Inter', sans-serif; color: #1F2937; line-height: 1.4; font-size: 12px; max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; }
+                                
+                                /* Shipping Label Styles */
+                                .shipping-label { border: 2px solid #000; padding: 20px; margin-bottom: 20px; position: relative; }
+                                .label-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+                                .label-section { margin-bottom: 15px; }
+                                .label-title { font-weight: 700; font-size: 10px; text-transform: uppercase; color: #666; margin-bottom: 4px; letter-spacing: 0.5px; }
+                                .big-text { font-size: 16px; font-weight: 700; color: #000; }
+                                .address-text { font-size: 14px; line-height: 1.4; }
+                                
+                                .cut-line { border-top: 2px dashed #999; margin: 30px 0; text-align: center; position: relative; }
+                                .cut-line::after { content: '✂ Cut Here'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; color: #999; font-size: 10px; }
+
+                                /* Invoice Styles (Compact) */
+                                .invoice-container { padding: 20px; border: 1px solid #ddd; }
+                                .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+                                .logo { font-size: 18px; font-weight: 700; color: #1F5E2E; text-transform: uppercase; }
+                                
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+                                th { text-align: left; padding: 8px; background-color: #f9f9f9; border-bottom: 1px solid #ddd; }
+                                td { padding: 8px; border-bottom: 1px solid #eee; }
+                                .right { text-align: right; }
+                                
+                                .summary-row { display: flex; justify-content: space-between; padding: 4px 0; }
+                                .total-row { font-weight: 700; font-size: 14px; border-top: 1px solid #000; margin-top: 8px; padding-top: 8px; }
+                            </style>
+                        </head>
+                        <body>
+                            <!-- SHIPPING LABEL -->
+                            <div class="shipping-label">
+                                <div class="label-header">
+                                    <div style="width: 60%;">${barcodeHtml}</div>
+                                    <div style="text-align: right;">
+                                        <div style="border: 2px solid #000; padding: 5px 10px; font-weight: bold; display: inline-block;">STANDARD</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 20px;">
+                                    <div style="flex: 1;">
+                                        <div class="label-section">
+                                            <div class="label-title">SHIP TO:</div>
+                                            <div class="big-text">${order.customerName}</div>
+                                            <div class="address-text">${order.deliveryAddress}</div>
+                                            <div style="margin-top: 5px;">Phone: +91 XXXXX XXXXX</div>
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1; border-left: 1px solid #ccc; padding-left: 20px;">
+                                        <div class="label-section">
+                                            <div class="label-title">SOLD BY:</div>
+                                            <div style="font-weight: 600;">${profile.businessName}</div>
+                                            <div>${profile.address}</div>
+                                        </div>
+                                        <div class="label-section">
+                                            <div class="label-title">ORDER DETAILS:</div>
+                                            <div>Order #: <strong>${order.id}</strong></div>
+                                            <div>Date: ${formattedDate}</div>
+                                            <div>Weight: 0.5 kg (Approx)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cut-line"></div>
+
+                            <!-- INVOICE / PACKING SLIP -->
+                            <div class="invoice-container">
+                                <div class="header-row">
+                                    <div>
+                                        <div class="logo">${profile.businessName}</div>
+                                        <div>Tax Invoice / Bill of Supply</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div>Invoice #: <strong>${order.id}</strong></div>
+                                        <div>Date: ${formattedDate}</div>
+                                    </div>
+                                </div>
+
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th class="right">Qty</th>
+                                            <th class="right">Price</th>
+                                            <th class="right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${order.items.map(item => `
+                                            <tr>
+                                                <td>${item.productName}</td>
+                                                <td class="right">${item.quantity}</td>
+                                                <td class="right">₹${item.price}</td>
+                                                <td class="right">₹${item.price * item.quantity}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+
+                                <div style="display: flex; justify-content: flex-end;">
+                                    <div style="width: 200px;">
+                                        <div class="summary-row"><span>Subtotal:</span> <span>₹${order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0)}</span></div>
+                                        <div class="summary-row"><span>Tax:</span> <span>₹${order.tax || 0}</span></div>
+                                        <div class="summary-row"><span>Discount:</span> <span>-₹${order.discount || 0}</span></div>
+                                        <div class="summary-row total-row"><span>Grand Total:</span> <span>₹${order.totalAmount}</span></div>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-top: 20px; font-size: 10px; color: #666; text-align: center;">
+                                    Returns Policy: Returns accepted within 7 days of delivery for damaged items only.
+                                </div>
+                            </div>
+                        </body>
+                    </html>
+                `;
+
+                if (Platform.OS === 'web') {
+                    // Custom Web Printing Implementation to ensure isolation
+                    const printWindow = window.open('', '', 'width=800,height=600');
+                    if (printWindow) {
+                        printWindow.document.write(html);
+                        printWindow.document.close();
+                        printWindow.focus();
+                        // Wait for images/styles to load (though we are inline css) then print
+                        setTimeout(() => {
+                            printWindow.print();
+                            printWindow.close();
+                        }, 500);
+                    } else {
+                        // Fallback if popup blocked
+                        await printAsync({ html });
+                    }
+                } else {
+                    const { uri } = await printToFileAsync({ html, base64: false });
+                    const filename = `Label_${order.id}.pdf`;
+                    await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: `Label #${order.id}` });
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Could not generate label");
+            }
+        };
+
         return (
             <View key={order.id} style={styles.card}>
                 {/* Header Row */}
-                <View style={styles.cardHeader}>
+                <TouchableOpacity
+                    style={styles.cardHeader}
+                    onPress={() => router.push({ pathname: '/vendor-order-details', params: { id: order.id } })}
+                >
                     <View style={styles.userInfo}>
                         <Image
                             source={require('@/assets/images/3d-model-with-veg.png')} // Placeholder for user avatar
@@ -61,13 +232,13 @@ export default function VendorOrdersScreen() {
                         />
                         <View>
                             <Text style={styles.userName}>{order.customerName}</Text>
-                            <Text style={styles.orderId}>{order.id}</Text>
+                            <Text style={styles.orderId}>{order.id} <Ionicons name="chevron-forward" size={12} color="#999" /></Text>
                         </View>
                     </View>
                     <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
                         {uiStatus}
                     </Text>
-                </View>
+                </TouchableOpacity>
 
                 {/* Order Details Box */}
                 <View style={styles.detailsBox}>
@@ -101,7 +272,7 @@ export default function VendorOrdersScreen() {
                             {order.status === 'Accepted' ? (
                                 <TouchableOpacity
                                     style={[styles.primaryButton, { flex: 1 }]}
-                                    onPress={() => updateOrderStatus(order.id, 'Shipped')} // Or 'Ready' then Shipped? Let's go straight to On the Way for simplicity or Ready
+                                    onPress={() => updateOrderStatus(order.id, 'Shipped')}
                                 >
                                     <Ionicons name="cube-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                                     <Text style={styles.primaryButtonText}>Mark as Dispatched</Text>
@@ -116,8 +287,9 @@ export default function VendorOrdersScreen() {
                                 </TouchableOpacity>
                             )}
 
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="call-outline" size={20} color="#1A1A1A" />
+                            {/* Download Invoice Button */}
+                            <TouchableOpacity style={styles.iconButton} onPress={handleDownloadInvoice}>
+                                <Ionicons name="document-text-outline" size={20} color="#1F5E2E" />
                             </TouchableOpacity>
                         </>
                     )}
@@ -131,10 +303,20 @@ export default function VendorOrdersScreen() {
                                 <Ionicons name="checkmark-done-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                                 <Text style={styles.primaryButtonText}>Verify Delivery</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="call-outline" size={20} color="#1A1A1A" />
+
+                            {/* Download Invoice Button */}
+                            <TouchableOpacity style={styles.iconButton} onPress={handleDownloadInvoice}>
+                                <Ionicons name="document-text-outline" size={20} color="#1F5E2E" />
                             </TouchableOpacity>
                         </>
+                    )}
+
+                    {/* Add for Delivered/Cancelled too if needed, e.g. for past lookup */}
+                    {(order.status === 'Delivered' || order.status === 'Cancelled') && (
+                        <TouchableOpacity style={[styles.iconButton, { width: '100%', flexDirection: 'row', gap: 8 }]} onPress={handleDownloadInvoice}>
+                            <Ionicons name="document-text-outline" size={20} color="#1F5E2E" />
+                            <Text style={{ fontFamily: 'DMSans_700Bold', color: '#1F5E2E' }}>Download Invoice</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
             </View>

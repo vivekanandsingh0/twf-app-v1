@@ -192,23 +192,61 @@ export default function VendorHomeScreen() {
                 {/* Business Insights */}
                 <Text style={styles.sectionTitle}>Business Insights</Text>
                 <View style={styles.insightsCard}>
-                    <Text style={styles.insightsLabel}>Sales(₹) - Total: {dashboardStats.totalSales}</Text>
+                    <Text style={styles.insightsLabel}>Sales Overview</Text>
+                    <Text style={styles.totalSalesText}>Total Revenue: ₹{dashboardStats.totalSales}</Text>
 
-                    {/* Dummy Chart Placeholder */}
+                    {/* Dynamic Bar Chart */}
                     <View style={styles.chartContainer}>
-                        <View style={styles.chartLine} />
-                        <View style={styles.chartLine} />
-                        <View style={styles.chartLine} />
-                        <View style={styles.chartLine} />
+                        {(() => {
+                            // 1. Get last 7 days
+                            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            const last7Days = Array.from({ length: 7 }, (_, i) => {
+                                const d = new Date();
+                                d.setDate(d.getDate() - (6 - i));
+                                return d;
+                            });
 
-                        <View style={styles.chartLabels}>
-                            <Text style={styles.chartLabelText}>40k</Text>
-                            <Text style={styles.chartLabelText}>30k</Text>
-                            <Text style={styles.chartLabelText}>20k</Text>
-                            <Text style={styles.chartLabelText}>10k</Text>
-                        </View>
+                            // 2. Aggregate Sales
+                            const data = last7Days.map(date => {
+                                const dayStr = date.toISOString().split('T')[0];
+                                const dayTotal = orders
+                                    .filter(o => o.date.startsWith(dayStr) && o.status !== 'Cancelled')
+                                    .reduce((sum, o) => sum + o.totalAmount, 0);
+                                return {
+                                    dayName: days[date.getDay()],
+                                    amount: dayTotal
+                                };
+                            });
+
+                            // 3. Find Max for Scaling
+                            const maxAmount = Math.max(...data.map(d => d.amount), 100); // Default to 100 to avoid div by 0
+
+                            return (
+                                <View style={styles.chartRow}>
+                                    {data.map((item, index) => {
+                                        const heightPercent = (item.amount / maxAmount) * 100;
+                                        // Ensure minimal visible height for 0 values or just show flat
+                                        const barHeight = heightPercent > 0 ? `${heightPercent}%` : '2%';
+
+                                        return (
+                                            <View key={index} style={styles.barWrapper}>
+                                                <View style={styles.barContainer}>
+                                                    <View
+                                                        style={[
+                                                            styles.barFill,
+                                                            { height: barHeight as any },
+                                                            item.amount > 0 ? styles.barActive : styles.barInactive
+                                                        ]}
+                                                    />
+                                                </View>
+                                                <Text style={styles.barLabel}>{item.dayName}</Text>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            );
+                        })()}
                     </View>
-
                 </View>
 
             </ScrollView>
@@ -432,24 +470,48 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     chartContainer: {
-        flex: 1,
+        marginTop: 10,
+        height: 180,
+    },
+    totalSalesText: {
+        fontSize: 24,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1F5E2E',
+        marginBottom: 20,
+    },
+    chartRow: {
+        flexDirection: 'row',
         justifyContent: 'space-between',
-    },
-    chartLine: {
-        height: 1,
-        backgroundColor: '#F0F0F0',
-        width: '100%',
-        marginLeft: 30,
-    },
-    chartLabels: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
+        alignItems: 'flex-end',
         height: '100%',
-        justifyContent: 'space-between',
+        paddingBottom: 20,
     },
-    chartLabelText: {
-        fontSize: 12,
+    barWrapper: {
+        alignItems: 'center',
+        flex: 1,
+    },
+    barContainer: {
+        height: '100%', // 100% of chartRow height
+        width: 12,
+        backgroundColor: '#F0F0F0',
+        borderRadius: 6,
+        justifyContent: 'flex-end',
+        overflow: 'hidden',
+    },
+    barFill: {
+        width: '100%',
+        borderRadius: 6,
+    },
+    barActive: {
+        backgroundColor: '#1F5E2E',
+    },
+    barInactive: {
+        backgroundColor: '#E0E0E0',
+    },
+    barLabel: {
+        marginTop: 8,
+        fontSize: 10,
         color: '#999',
+        fontFamily: 'DMSans_500Medium',
     },
 });

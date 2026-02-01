@@ -130,7 +130,7 @@ export default function VendorProfileScreen() {
                 {/* Performance Section */}
                 <Text style={styles.sectionTitle}>Performance</Text>
                 <View style={styles.menuGroup}>
-                    {renderMenuItem('grid-outline', 'Business Dashboard')}
+                    {renderMenuItem('grid-outline', 'Business Dashboard', () => router.push('/business-dashboard'))}
                 </View>
 
                 {/* More Section */}

@@ -87,6 +87,7 @@ function AppContent() {
                     <Stack.Screen name="add-product-vendor" options={{ headerShown: false }} />
                     <Stack.Screen name="vendor-payouts" options={{ headerShown: false }} />
                     <Stack.Screen name="notifications" options={{ headerShown: false }} />
+                    <Stack.Screen name="vendor-order-details" options={{ headerShown: false }} />
                     <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
@@ -96,6 +97,8 @@ function AppContent() {
                     <Stack.Screen name="settings" options={{ headerShown: false }} />
                     <Stack.Screen name="cart" options={{ headerShown: false }} />
                     <Stack.Screen name="checkout" options={{ headerShown: false }} />
+                    <Stack.Screen name="confirm-address" options={{ headerShown: false }} />
+                    <Stack.Screen name="business-dashboard" options={{ headerShown: false }} />
                     <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                   </Stack>
                   <StatusBar style="auto" />

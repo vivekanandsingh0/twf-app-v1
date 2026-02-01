@@ -44,7 +44,7 @@ export default function CheckoutScreen() {
             );
             return;
         }
-        router.push('/payment');
+        router.push('/confirm-address');
     };
 
     return (
