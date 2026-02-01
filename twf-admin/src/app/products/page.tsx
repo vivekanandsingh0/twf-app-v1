@@ -5,7 +5,7 @@ export const revalidate = 0;
 export default async function ProductsValid() {
     const { data: products, error } = await supabase
         .from('products')
-        .select('*, farmers(name)')
+        .select('*, farmers(name), vendor:profiles!vendor_id(full_name)')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -29,7 +29,7 @@ export default async function ProductsValid() {
                     <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-700 font-semibold">
                         <tr>
                             <th className="px-6 py-4">Product Name</th>
-                            <th className="px-6 py-4">Farmer</th>
+                            <th className="px-6 py-4">Vendor</th>
                             <th className="px-6 py-4">Price / Unit</th>
                             <th className="px-6 py-4">Stock</th>
                             <th className="px-6 py-4">Category</th>
@@ -51,8 +51,12 @@ export default async function ProductsValid() {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    {/* @ts-ignore relationship join */}
-                                    {product.farmers?.name || 'Unknown'}
+                                    <div className="flex flex-col">
+                                        {/* @ts-ignore relationship join */}
+                                        <span className="font-bold text-gray-900">{product.vendor?.full_name || 'System'}</span>
+                                        {/* @ts-ignore relationship join */}
+                                        <span className="text-xs text-gray-400">{product.farmers?.name || 'Farm Source'}</span>
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 text-gray-900 font-medium">
                                     {product.price.toFixed(2)} <span className="text-gray-400 font-normal">{product.unit}</span>

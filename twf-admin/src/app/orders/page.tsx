@@ -5,7 +5,7 @@ export const revalidate = 0;
 export default async function OrdersPage() {
     const { data: orders, error } = await supabase
         .from('orders')
-        .select('*, profiles(full_name), addresses(address, city)')
+        .select('*, customer:profiles!user_id(full_name), vendor:profiles!vendor_id(full_name), addresses(address, city)')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -35,9 +35,12 @@ export default async function OrdersPage() {
                         <tr>
                             <th className="px-6 py-4">Order ID</th>
                             <th className="px-6 py-4">Customer</th>
+                            <th className="px-6 py-4">Vendor</th>
+                            <th className="px-6 py-4">Phone</th>
+                            <th className="px-6 py-4">Address</th>
                             <th className="px-6 py-4">Total</th>
+                            <th className="px-6 py-4">Payment</th>
                             <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Location</th>
                             <th className="px-6 py-4">Date</th>
                             <th className="px-6 py-4 text-right">Action</th>
                         </tr>
@@ -50,26 +53,46 @@ export default async function OrdersPage() {
                                 </td>
                                 <td className="px-6 py-4 font-medium text-gray-900">
                                     {/* @ts-ignore relationship */}
-                                    {order.profiles?.full_name || 'Unknown User'}
+                                    {order.customer?.full_name || 'Unknown User'}
+                                </td>
+                                <td className="px-6 py-4 text-xs font-semibold text-emerald-700 bg-emerald-50/50">
+                                    {/* @ts-ignore relationship */}
+                                    {order.vendor?.full_name || 'System / Unassigned'}
+                                </td>
+                                <td className="px-6 py-4 text-xs text-gray-600">
+                                    {/* @ts-ignore new schema field */}
+                                    {order.customer_phone || order.customer?.phone_number || 'N/A'}
+                                </td>
+                                <td className="px-6 py-4 text-xs text-gray-500 max-w-[150px] truncate" title={order.delivery_address || order.addresses?.address}>
+                                    {/* @ts-ignore new schema field */}
+                                    {order.delivery_address || order.addresses?.city || 'N/A'}
                                 </td>
                                 <td className="px-6 py-4 text-gray-900 font-bold">
                                     ${order.total_amount?.toFixed(2)}
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-semibold text-gray-700">
+                                            {/* @ts-ignore new schema field */}
+                                            {order.payment_method || 'N/A'}
+                                        </span>
+                                        <span className={`text-[10px] font-bold uppercase ${order.payment_status === 'Paid' ? 'text-green-600' : 'text-orange-600'}`}>
+                                            {/* @ts-ignore new schema field */}
+                                            {order.payment_status || 'COD'}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}>
                                         {order.status}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4">
-                                    {/* @ts-ignore relationship */}
-                                    {order.addresses?.city || 'N/A'}
-                                </td>
                                 <td className="px-6 py-4 text-xs font-mono">
                                     {new Date(order.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <button className="text-gray-900 hover:text-green-700 font-medium text-xs border border-gray-200 px-3 py-1 rounded hover:bg-gray-50 transition-colors">
-                                        Manage
+                                        View Details
                                     </button>
                                 </td>
                             </tr>

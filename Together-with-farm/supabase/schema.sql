@@ -110,7 +110,8 @@ CREATE TABLE IF NOT EXISTS public.products (
   image_url TEXT,
   farmer_id UUID REFERENCES public.farmers(id) ON DELETE SET NULL,
   stock INTEGER DEFAULT 100,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
+  vendor_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -129,7 +130,13 @@ CREATE TABLE IF NOT EXISTS public.orders (
   status TEXT CHECK (status IN ('Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled')) DEFAULT 'Pending',
   total_amount NUMERIC DEFAULT 0,
   address_id UUID REFERENCES public.addresses(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
+  customer_phone TEXT,
+  payment_method TEXT,
+  shipping_fee NUMERIC DEFAULT 0,
+  payment_status TEXT CHECK (payment_status IN ('Paid', 'COD')) DEFAULT 'COD',
+  delivery_address TEXT,
+  vendor_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
