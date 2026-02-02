@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/db";
+import Link from "next/link";
 
 // Force dynamic rendering
 export const revalidate = 0;
@@ -6,18 +7,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function VendorsPage() {
     // Fetch profiles that are Vendors
-    const { data: vendors, error: vendorError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_type', 'Vendor')
-        .order('created_at', { ascending: false });
+    const { data: vendors, error: vendorError } = await db.vendors.getAll();
 
     // Fetch Pending Requests
-    const { data: requests, error: reqError } = await supabase
-        .from('vendor_profile_requests')
-        .select('*, profiles:vendor_id(full_name)')
-        .eq('status', 'Pending')
-        .order('created_at', { ascending: false });
+    const { data: requests, error: reqError } = await db.vendors.getRequests();
 
     if (vendorError) return <div className="p-8 text-red-500 bg-red-50 rounded-xl border border-red-100">Error loading vendors: {vendorError.message}</div>;
 
@@ -122,12 +115,12 @@ export default async function VendorsPage() {
                         </div>
 
                         <div className="flex gap-2 mt-auto">
-                            <button className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                            <Link href={`/vendors/${vendor.id}`} className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors text-center flex items-center justify-center">
                                 View Profile
-                            </button>
-                            <button className="flex-1 py-2.5 text-xs font-bold text-white bg-slate-900 rounded-lg hover:bg-black transition-colors shadow-lg shadow-slate-200">
+                            </Link>
+                            <Link href={`/vendors/${vendor.id}/manage`} className="flex-1 py-2.5 text-xs font-bold text-white bg-slate-900 rounded-lg hover:bg-black transition-colors shadow-lg shadow-slate-200 text-center flex items-center justify-center">
                                 Manage
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 ))}

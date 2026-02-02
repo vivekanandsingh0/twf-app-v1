@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Platform, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ export default function VendorProfileScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { signOut, switchUserRole, userData } = useUser();
-    const { profile } = useVendor();
+    const { profile, toggleShopStatus } = useVendor();
     const [requestStatus, setRequestStatus] = React.useState<{ status: string; note?: string } | null>(null);
 
     // Mock status check (No Supabase)
@@ -106,8 +106,8 @@ export default function VendorProfileScreen() {
                         contentFit="cover"
                     />
                     <View style={styles.profileInfo}>
-                        <Text style={styles.profileName}>{userData?.fullName || profile.ownerName}</Text>
-                        <Text style={styles.profilePhone}>{userData?.phoneNumber || profile.phone}</Text>
+                        <Text style={styles.profileName}>{profile.ownerName || userData?.fullName || 'Guest'}</Text>
+                        <Text style={styles.profilePhone}>{profile.phone || userData?.phoneNumber || ''}</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.editButton}
@@ -115,6 +115,31 @@ export default function VendorProfileScreen() {
                     >
                         <Ionicons name="create-outline" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
+                </View>
+
+                {/* Shop Status Section */}
+                <View style={styles.menuGroup}>
+                    <View style={styles.menuItem}>
+                        <View style={[styles.menuIconContainer, { backgroundColor: profile.shopStatus === 'Active' ? '#E8F5E9' : '#FFEBEE', borderRadius: 8, width: 32, height: 32, justifyContent: 'center', margin: 0, marginRight: 16 }]}>
+                            <Ionicons name={profile.shopStatus === 'Active' ? "radio-button-on" : "radio-button-off"} size={18} color={profile.shopStatus === 'Active' ? "#1F5E2E" : "#D32F2F"} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.menuLabel}>Online Status</Text>
+                            <Text style={{ fontSize: 12, color: profile.shopStatus === 'Active' ? '#1F5E2E' : '#D32F2F', marginTop: 2 }}>
+                                {profile.shopStatus === 'Active' ? 'Shop is Live & Visible' :
+                                    profile.shopStatus === 'Inactive' ? 'Shop is Currently Hidden' :
+                                        `Shop is ${profile.shopStatus}`}
+                            </Text>
+                        </View>
+                        <Switch
+                            trackColor={{ false: "#767577", true: "#81b0ff" }} // Fallbacks
+                            thumbColor={profile.shopStatus === 'Active' ? "#1F5E2E" : "#f4f3f4"}
+                            ios_backgroundColor="#3e3e3e"
+                            onValueChange={toggleShopStatus}
+                            value={profile.shopStatus === 'Active'}
+                            disabled={profile.shopStatus !== 'Active' && profile.shopStatus !== 'Inactive'}
+                        />
+                    </View>
                 </View>
 
                 {/* Manage Business Section */}
@@ -136,7 +161,7 @@ export default function VendorProfileScreen() {
                 {/* More Section */}
                 <Text style={styles.sectionTitle}>More</Text>
                 <View style={styles.menuGroup}>
-                    {renderMenuItem('card-outline', 'Payout Methods')}
+                    {renderMenuItem('card-outline', 'Payout Methods', () => router.push('/vendor-payment-methods'))}
                     <View style={styles.divider} />
                     {renderMenuItem('headset-outline', 'Support')}
                     <View style={styles.divider} />

@@ -99,6 +99,7 @@ function AppContent() {
                     <Stack.Screen name="checkout" options={{ headerShown: false }} />
                     <Stack.Screen name="confirm-address" options={{ headerShown: false }} />
                     <Stack.Screen name="business-dashboard" options={{ headerShown: false }} />
+                    <Stack.Screen name="vendor-payment-methods" options={{ headerShown: false }} />
                     <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                   </Stack>
                   <StatusBar style="auto" />

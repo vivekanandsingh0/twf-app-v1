@@ -1,12 +1,10 @@
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/db";
+import Link from 'next/link';
 
 export const revalidate = 0;
 
 export default async function OrdersPage() {
-    const { data: orders, error } = await supabase
-        .from('orders')
-        .select('*, customer:profiles!user_id(full_name), vendor:profiles!vendor_id(full_name), addresses(address, city)')
-        .order('created_at', { ascending: false });
+    const { data: orders, error } = await db.orders.getAll();
 
     if (error) {
         return <div className="text-red-500">Error loading orders: {error.message}</div>;
@@ -91,9 +89,9 @@ export default async function OrdersPage() {
                                     {new Date(order.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    <button className="text-gray-900 hover:text-green-700 font-medium text-xs border border-gray-200 px-3 py-1 rounded hover:bg-gray-50 transition-colors">
+                                    <Link href={`/orders/${order.id}`} className="text-gray-900 hover:text-green-700 font-medium text-xs border border-gray-200 px-3 py-1 rounded hover:bg-gray-50 transition-colors">
                                         View Details
-                                    </button>
+                                    </Link>
                                 </td>
                             </tr>
                         ))}

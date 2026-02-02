@@ -1,14 +1,11 @@
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/db";
 
 // Force dynamic rendering to ensure fresh data
 export const revalidate = 0;
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
-    const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const { data: profiles, error } = await db.users.getAll();
 
     if (error) {
         return <div className="text-red-500">Error loading users: {error.message}</div>;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useUser } from '@/contexts/UserContext';
+import { useVendor } from '@/contexts/VendorContext';
 import {
     StyleSheet,
     Text,
@@ -19,16 +20,28 @@ import { Image } from 'expo-image';
 export default function VendorProfileEditScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { userData, updateProfile, user } = useUser();
+    const { user } = useUser();
+    const { profile, updateProfile: updateVendorProfile } = useVendor();
 
-    // Local State
-    const [fullName, setFullName] = useState(userData.fullName);
-    const [phone, setPhone] = useState(userData.phoneNumber);
-    const [gender, setGender] = useState(userData.gender);
-    const [dob, setDob] = useState(userData.dob);
-    const [experience, setExperience] = useState(userData.experience || '');
-    const [farmSize, setFarmSize] = useState(userData.farmSize || '');
-    const [ourStory, setOurStory] = useState(userData.bio || '');
+    // Local State initialized from Vendor Profile (Source of Truth)
+    const [fullName, setFullName] = useState(profile.ownerName || '');
+    const [phone, setPhone] = useState(profile.phone || '');
+    const [gender, setGender] = useState(profile.gender || '');
+    const [dob, setDob] = useState(profile.dob || '');
+    const [experience, setExperience] = useState(profile.experience || '');
+    const [farmSize, setFarmSize] = useState(profile.farmSize || '');
+    const [ourStory, setOurStory] = useState(profile.bio || '');
+
+    // Update local state when profile loads (if it was empty initially)
+    React.useEffect(() => {
+        if (profile.ownerName) setFullName(profile.ownerName);
+        if (profile.phone) setPhone(profile.phone);
+        if (profile.gender) setGender(profile.gender);
+        if (profile.dob) setDob(profile.dob);
+        if (profile.experience) setExperience(profile.experience);
+        if (profile.farmSize) setFarmSize(profile.farmSize);
+        if (profile.bio) setOurStory(profile.bio);
+    }, [profile]);
 
     const handleSave = async () => {
         if (!user) {
@@ -37,32 +50,19 @@ export default function VendorProfileEditScreen() {
         }
 
         try {
-            if (userData.userType === 'Vendor') {
-                const requestedData = {
-                    full_name: fullName,
-                    gender: gender,
-                    dob: dob,
-                    phone_number: phone,
-                    experience: experience,
-                    farm_size: farmSize,
-                    bio: ourStory
-                };
+            // Update via Vendor Context (Syncs to Admin Backend)
+            await updateVendorProfile({
+                ownerName: fullName,
+                phone: phone,
+                gender: gender,
+                dob: dob,
+                experience: experience,
+                farmSize: farmSize,
+                bio: ourStory
+            });
 
-                // Mock Vendor Request logic (simulation)
-                console.log("Mock Vendor Profile Request Submitted:", requestedData);
-
-                // For mock, we can just update the profile directly as well to show changes
-                await updateProfile(fullName, gender, dob, phone, experience, farmSize, ourStory);
-
-                alert('Submitted Update!');
-                router.back();
-
-            } else {
-                // Regular User Update (Direct)
-                await updateProfile(fullName, gender, dob, phone, experience, farmSize, ourStory);
-                alert('Profile Updated!');
-                router.back();
-            }
+            alert('Profile Updated Successfully!');
+            router.back();
         } catch (error: any) {
             console.error(error);
             alert('Error: ' + error.message);
@@ -136,7 +136,7 @@ export default function VendorProfileEditScreen() {
                         <Text style={styles.cancelText}>Cancel</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                        <Text style={styles.saveText}>{userData.userType === 'Vendor' ? 'Submit' : 'Save'}</Text>
+                        <Text style={styles.saveText}>Save</Text>
                     </TouchableOpacity>
                 </View>
 

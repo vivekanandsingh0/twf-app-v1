@@ -29,7 +29,7 @@ export default function ProductDetailsScreen() {
     const { updateQuantity, getItemQuantity } = useCart();
     const { products, vendors } = useMarket();
 
-    const productId = Number(id);
+    const productId = Array.isArray(id) ? id[0] : id; // Handle string | string[]
     const product = products.find(p => p.id === productId);
 
     // Find vendor

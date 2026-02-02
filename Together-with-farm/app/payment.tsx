@@ -44,7 +44,7 @@ export default function PaymentScreen() {
 
     const handlePayment = () => {
         // 1. Identify items in cart
-        const cartItemIds = Object.keys(quantities).map(Number).filter(id => quantities[id] > 0);
+        const cartItemIds = Object.keys(quantities).filter(id => quantities[id] > 0);
 
         if (cartItemIds.length === 0) {
             Alert.alert("Empty Cart", "Your cart is empty.");

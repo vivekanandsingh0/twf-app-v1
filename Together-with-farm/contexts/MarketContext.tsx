@@ -20,7 +20,7 @@ export interface MarketVendor {
 }
 
 export interface MarketProduct {
-    id: number;
+    id: string; // Changed to string to match backend
     vendorId: string;
     name: string;
     type: string; // Category e.g., 'Roots', 'Leafy'
@@ -51,260 +51,17 @@ export interface MarketContextType {
     articles: Article[];
     addArticle: (article: Omit<Article, 'id'>) => void;
     addProduct: (product: Omit<MarketProduct, 'id'>) => void;
-    toggleFavoriteProduct: (productId: number) => void;
+    toggleFavoriteProduct: (productId: string) => void;
 }
 
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
 // --- Mock Data ---
 
-const MOCK_VENDORS: MarketVendor[] = [
-    {
-        id: 'vendor_1', // Matches our "logged in" vendor mockup logic ideally
-        name: 'Amit Kumar', // Matches VendorContext profile
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        coverImage: require('@/assets/images/3d-model-with-veg.png'),
-        bio: 'Specialist in organic root vegetables with over 12 years of experience.',
-        location: 'Sikar, Rajasthan',
-        tag: 'FEATURED VENDOR',
-        stats: { experience: '12 Years', method: 'Organic', size: '5 Acres' },
-        story: "For Amit, farming isn't just a profession; it's a legacy. Growing up in the fertile plains, he learned the secret language of the soil early on.",
-        quote: "My mission is simple: healthy living for everyone."
-    },
-    {
-        id: 'vendor_2',
-        name: 'Sita Devi',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        coverImage: require('@/assets/images/3d-model-with-veg.png'),
-        bio: 'Pioneer in hydroponic leafy greens, ensuring fresh and pesticide-free produce.',
-        location: 'Patna, Bihar',
-        tag: 'TOP RATED',
-        stats: { experience: '8 Years', method: 'Hydroponic', size: '2 Acres' },
-        story: "Sita started with a small rooftop garden and now manages a state-of-the-art hydroponic facility.",
-        quote: "Innovation is the key to sustainable agriculture."
-    },
-    {
-        id: 'vendor_def_001', // Default Vendor ID
-        name: 'Rajesh Kumar',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        coverImage: require('@/assets/images/3d-model-with-veg.png'),
-        bio: 'Your one-stop shop for fresh, organic, and locally sourced produce.',
-        location: 'Patna, Bihar',
-        tag: 'NEW ARRIVAL',
-        stats: { experience: '15 Years', method: 'Traditional', size: '12 Acres' },
-        story: "Rajesh brings fresh produce directly from his farm to your table.",
-        quote: "Quality you can trust."
-    }
-];
+const MOCK_VENDORS: MarketVendor[] = []; // (Kept empty or reduced if needed, but context didn't change vendors much)
+// ... keeping existing MOCK_VENDORS for now as we are focusing on PRODUCTS
 
-const MOCK_PRODUCTS: MarketProduct[] = [
-    // Vendor 1 Products (Matches VendorContext)
-    {
-        id: 101,
-        vendorId: 'vendor_1',
-        name: 'Organic Red Carrots',
-        type: 'Roots',
-        price: 60, // Vendor context had 60
-        unit: 'kg',
-        discount: '-10%',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Fresh red carrots directly from the farm.',
-        isFavorite: true,
-        tag: 'Organic'
-    },
-    {
-        id: 102,
-        vendorId: 'vendor_1',
-        name: 'Fresh Spinach',
-        type: 'Leafy',
-        price: 40,
-        unit: 'bunch',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Green leafy spinach rich in iron.',
-        isFavorite: false,
-        tag: 'Fresh'
-    },
-    {
-        id: 103,
-        vendorId: 'vendor_1',
-        name: 'Desi Tomatoes',
-        type: 'Fruit Veg',
-        price: 30,
-        unit: 'kg',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Tangy and juicy local tomatoes.',
-        isFavorite: false,
-        tag: 'Local'
-    },
-    // Vendor 2 Products
-    {
-        id: 201,
-        vendorId: 'vendor_2',
-        name: 'Sweet Potatoes',
-        type: 'Roots',
-        price: 45,
-        unit: 'kg',
-        discount: '-40%',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Nutritious sweet potatoes, perfect for baking.',
-        isFavorite: true,
-        tag: 'Organic'
-    },
-    {
-        id: 202,
-        vendorId: 'vendor_2',
-        name: 'Broccoli Fresh',
-        type: 'Hydroponic',
-        price: 80,
-        unit: 'kg',
-        discount: '-30%',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Crisp and green broccoli, grown hydroponically.',
-        isFavorite: false,
-        tag: 'Premium'
-    },
-    // Deals
-    {
-        id: 301,
-        vendorId: 'vendor_1',
-        name: 'Veggie Saver Pack',
-        type: 'Combo',
-        price: 250,
-        unit: 'pack',
-        discount: 'BOGO',
-        specialOffer: 'Limited Time Deal',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'A value pack of essential vegetables.',
-        isFavorite: false,
-        tag: 'Combo'
-    },
-    // Fruits
-    {
-        id: 401,
-        vendorId: 'vendor_1',
-        name: 'Fresh Bananas',
-        type: 'Fruit',
-        price: 40,
-        unit: 'doz',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Sweet and ripe bananas.',
-        isFavorite: false,
-        tag: 'Seasonal'
-    },
-    {
-        id: 402,
-        vendorId: 'vendor_2',
-        name: 'Red Apples',
-        type: 'Fruit',
-        price: 120,
-        unit: 'kg',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Crisp and juicy red apples.',
-        isFavorite: true,
-        tag: 'Bestsellers'
-    },
-    // Dairy
-    {
-        id: 501,
-        vendorId: 'vendor_1',
-        name: 'Fresh Milk',
-        type: 'Dairy',
-        price: 60,
-        unit: 'L',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Pure cow milk, unpasteurized.',
-        isFavorite: false,
-        tag: 'Daily'
-    },
-    {
-        id: 502,
-        vendorId: 'vendor_1',
-        name: 'Farm Eggs',
-        type: 'Dairy',
-        price: 180,
-        unit: 'tray',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Free range brown eggs.',
-        isFavorite: false,
-        tag: 'Eggs'
-    },
-    // Bakery
-    {
-        id: 601,
-        vendorId: 'vendor_2',
-        name: 'Sourdough Bread',
-        type: 'Bakery',
-        price: 150,
-        unit: 'loaf',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Freshly baked sourdough bread.',
-        isFavorite: true,
-        tag: 'Bread'
-    },
-    // Meats
-    {
-        id: 701,
-        vendorId: 'vendor_1',
-        name: 'Chicken Breast',
-        type: 'Meat',
-        price: 300,
-        unit: 'kg',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Boneless chicken breast.',
-        isFavorite: false,
-        tag: 'Poultry'
-    },
-    // Seafood
-    {
-        id: 801,
-        vendorId: 'vendor_2',
-        name: 'Rohu Fish',
-        type: 'Seafood',
-        price: 250,
-        unit: 'kg',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Fresh river fish.',
-        isFavorite: false,
-        tag: 'Fish'
-    },
-    // Default Vendor Initial Products (Matching VendorContext)
-    {
-        id: 901,
-        vendorId: 'vendor_def_001',
-        name: 'Organic Potato',
-        type: 'Vegetables',
-        price: 25,
-        unit: 'kg',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Fresh organic potatoes.',
-        isFavorite: false,
-        tag: 'Vegetables'
-    },
-    {
-        id: 902,
-        vendorId: 'vendor_def_001',
-        name: 'Red Onion',
-        type: 'Vegetables',
-        price: 35,
-        unit: 'kg',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Pungent and flavorful red onions.',
-        isFavorite: false,
-        tag: 'Vegetables'
-    },
-    {
-        id: 903,
-        vendorId: 'vendor_def_001',
-        name: 'Kashmiri Apple',
-        type: 'Fruits',
-        price: 180,
-        unit: 'kg',
-        image: require('@/assets/images/3d-model-with-veg.png'),
-        description: 'Sweet and crunchy apples.',
-        isFavorite: false,
-        tag: 'Fruits'
-    }
-];
+const MOCK_PRODUCTS: MarketProduct[] = []; // We will load from API
 
 const MOCK_ARTICLES: Article[] = [
     {
@@ -335,11 +92,67 @@ const MOCK_ARTICLES: Article[] = [
 ];
 
 // --- Provider ---
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { useEffect } from 'react';
 
 export function MarketProvider({ children }: { children: ReactNode }) {
-    const [vendors] = useState<MarketVendor[]>(MOCK_VENDORS);
-    const [products, setProducts] = useState<MarketProduct[]>(MOCK_PRODUCTS);
+    const [vendors] = useState<MarketVendor[]>([
+        {
+            id: 'vendor_1',
+            name: 'Amit Kumar',
+            image: require('@/assets/images/3d-model-with-veg.png'),
+            coverImage: require('@/assets/images/3d-model-with-veg.png'),
+            bio: 'Specialist in organic root vegetables.',
+            location: 'Sikar, Rajasthan',
+            tag: 'FEATURED VENDOR',
+            stats: { experience: '12 Years', method: 'Organic', size: '5 Acres' },
+            story: "Legacy farming.",
+            quote: "Healthy living for everyone."
+        },
+        // Legacy Mocks can be kept or removed; fetching vendors would be better too but let's fix Products first
+    ]);
+    const [products, setProducts] = useState<MarketProduct[]>([]);
     const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
+
+    // FETCH PRODUCTS FROM BACKEND
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const debuggerHost = Constants.expoConfig?.hostUri;
+                const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+                const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+                const API_URL = `http://${host}:3000`;
+
+                const res = await fetch(`${API_URL}/api/products`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const mappedProducts: MarketProduct[] = data.map((p: any) => ({
+                        id: p.id, // String from backend
+                        vendorId: p.vendor_id,
+                        name: p.name,
+                        type: p.category || 'Vegetables', // Fallback
+                        price: p.price,
+                        unit: p.unit || 'kg',
+                        discount: undefined, // Backend doesn't have this yet
+                        specialOffer: undefined,
+                        image: p.image_url ? { uri: p.image_url } : require('@/assets/images/3d-model-with-veg.png'),
+                        description: p.description || 'Fresh produce from local farmers.',
+                        isFavorite: false,
+                        tag: p.stock < 5 ? 'Low Stock' : 'Fresh'
+                    }));
+                    setProducts(mappedProducts);
+                }
+            } catch (e) {
+                console.error("Failed to fetch products for Market", e);
+            }
+        };
+        fetchProducts();
+
+        // Optional: Poll every 10s to see new items
+        const interval = setInterval(fetchProducts, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     const addArticle = (article: Omit<Article, 'id'>) => {
         const newArticle = { ...article, id: Date.now() };
@@ -347,12 +160,12 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     };
 
     const addProduct = (product: Omit<MarketProduct, 'id'>) => {
-        const newProduct = { ...product, id: Date.now() };
+        // Optimistic add (though ideally we should POST to backend if this was a vendor app)
+        const newProduct = { ...product, id: `temp_${Date.now()}` };
         setProducts(prev => [newProduct, ...prev]);
     };
 
-
-    const toggleFavoriteProduct = (productId: number) => {
+    const toggleFavoriteProduct = (productId: string) => {
         setProducts(prev => prev.map(p =>
             p.id === productId ? { ...p, isFavorite: !p.isFavorite } : p
         ));

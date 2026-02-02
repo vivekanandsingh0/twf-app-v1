@@ -1,12 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/db";
 
 export const revalidate = 0;
 
 export default async function ProductsValid() {
-    const { data: products, error } = await supabase
-        .from('products')
-        .select('*, farmers(name), vendor:profiles!vendor_id(full_name)')
-        .order('created_at', { ascending: false });
+    const { data: products, error } = await db.products.getAll();
 
     if (error) {
         return <div className="text-red-500">Error loading products: {error.message}</div>;

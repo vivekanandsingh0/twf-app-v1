@@ -1,9 +1,12 @@
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/db";
 
 export default async function Home() {
-  const { count: productsCount } = await supabase.from('products').select('*', { count: 'exact', head: true });
-  const { count: farmersCount } = await supabase.from('farmers').select('*', { count: 'exact', head: true });
-  const { count: profilesCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+  const stats = await db.dashboard.getStats();
+
+  // Fallback counts using the mock service
+  const productsCount = stats.products;
+  const farmersCount = stats.farmers;
+  const profilesCount = stats.users;
 
   return (
     <div>

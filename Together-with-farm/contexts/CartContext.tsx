@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface CartContextType {
-    quantities: Record<number, number>;
-    updateQuantity: (id: number, delta: number) => void;
-    getItemQuantity: (id: number) => number;
+    quantities: Record<string, number>;
+    updateQuantity: (id: string, delta: number) => void;
+    getItemQuantity: (id: string) => number;
     totalCartItems: number;
     clearCart: () => void;
 }
@@ -11,9 +11,9 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    const [quantities, setQuantities] = useState<Record<number, number>>({});
+    const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-    const updateQuantity = (id: number, delta: number) => {
+    const updateQuantity = (id: string, delta: number) => {
         setQuantities(prev => {
             const current = prev[id] || 0;
             const next = Math.max(0, current + delta);
@@ -25,7 +25,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
     };
 
-    const getItemQuantity = (id: number) => quantities[id] || 0;
+    const getItemQuantity = (id: string) => quantities[id] || 0;
 
     const totalCartItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
 

@@ -1,17 +1,17 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface FavouritesContextType {
-    favourites: Set<number>;
-    toggleFavourite: (id: number) => void;
-    isFavourite: (id: number) => boolean;
+    favourites: Set<string>;
+    toggleFavourite: (id: string) => void;
+    isFavourite: (id: string) => boolean;
 }
 
 const FavouritesContext = createContext<FavouritesContextType | undefined>(undefined);
 
 export function FavouritesProvider({ children }: { children: ReactNode }) {
-    const [favourites, setFavourites] = useState<Set<number>>(new Set());
+    const [favourites, setFavourites] = useState<Set<string>>(new Set());
 
-    const toggleFavourite = (id: number) => {
+    const toggleFavourite = (id: string) => {
         setFavourites(prev => {
             const newSet = new Set(prev);
             if (newSet.has(id)) {
@@ -23,7 +23,7 @@ export function FavouritesProvider({ children }: { children: ReactNode }) {
         });
     };
 
-    const isFavourite = (id: number) => favourites.has(id);
+    const isFavourite = (id: string) => favourites.has(id);
 
     return (
         <FavouritesContext.Provider value={{ favourites, toggleFavourite, isFavourite }}>

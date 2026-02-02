@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Helper Interface
@@ -48,7 +50,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const [userData, setUserDataState] = useState<UserData>({
         phoneNumber: '',
-        fullName: 'Vivekanand Singh',
+        fullName: '',
         gender: 'Male',
         dob: '10 August 1999',
         userType: 'User',
@@ -130,9 +132,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
             return { session: mockSession, error: null };
         }
 
-        if (token === '123456' || token.length > 0) { // Simple validation
+        if (token === '123456' || token.length > 0) {
             const mockUser: MockUser = {
-                id: 'mock_user_id_' + Date.now(),
+                id: 'user_' + phone.replace(/\D/g, ''),
                 phone: phone
             };
             const mockSession: MockSession = {
@@ -140,13 +142,49 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 access_token: 'mock_token'
             };
 
+            // SYNC WITH ADMIN BACKEND
+            try {
+                // Dynamically determine Host IP (Works for Emulator & Physical Devices)
+                const debuggerHost = Constants.expoConfig?.hostUri;
+                const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+                const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+                const API_URL = `http://${host}:3000`;
+
+                console.log(`Syncing User with Admin Backend at: ${API_URL}/api/profiles`);
+
+                // Add Timeout to fail fast if unreachable
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const response = await fetch(`${API_URL}/api/profiles`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: mockUser.id,
+                        phone_number: phone,
+                        user_type: userType,
+                        full_name: 'Anonymous',
+                        created_at: new Date().toISOString()
+                    }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Server responded with ${response.status}: ${text}`);
+                }
+                console.log("Sync User Success!");
+            } catch (e: any) {
+                console.error("Failed to sync with local backend:", e.message || e);
+            }
+
             setUserDataState(prev => ({
                 ...prev,
                 phoneNumber: phone,
                 userType: userType
             }));
 
-            // Set session LAST to ensure data is ready before consumers react to session=true
             setSession(mockSession);
             setUser(mockUser);
 
@@ -162,7 +200,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // Reset user data to default state to prevents state leaks between sessions
         setUserDataState({
             phoneNumber: '',
-            fullName: 'Vivekanand Singh', // Default or empty
+            fullName: '', // Default or empty
             gender: 'Male',
             dob: '10 August 1999',
             userType: 'User' // Critical: Reset to default User role

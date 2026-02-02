@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { View, Text, Platform } from 'react-native';
+import Constants from 'expo-constants';
+import { useUser } from './UserContext';
+
 
 // --- Interfaces ---
 
@@ -49,7 +53,16 @@ export interface VendorProfile {
     bio: string;
     experience: string;
     farmSize: string;
+    gender?: string; // Matching screenshot: Gender
+    dob?: string;    // Matching screenshot: DOB
     logo?: any;
+    shopStatus?: string; // Active, Inactive, Suspended, etc.
+    bankDetails?: {
+        accountHolderName: string;
+        bankName: string;
+        accountNumber: string;
+        ifscCode: string;
+    };
 }
 
 // --- Context Type ---
@@ -71,12 +84,9 @@ interface VendorContextType {
     addProduct: (product: Omit<VendorProduct, 'id'>) => void;
     updateProduct: (id: string, updates: Partial<VendorProduct>) => void;
     deleteProduct: (id: string) => void;
-
     updateOrderStatus: (orderId: string, status: VendorOrder['status']) => void;
-
-    // New: Allow creating orders from User App
-    addOrder: (order: VendorOrder) => void;
-
+    addOrder: (order: VendorOrder) => void; // Exposed to Payment Screen
+    toggleShopStatus: () => Promise<void>;
     updateProfile: (updates: Partial<VendorProfile>) => void;
 }
 
@@ -85,125 +95,131 @@ const VendorContext = createContext<VendorContextType | undefined>(undefined);
 // --- Provider ---
 
 export function VendorProvider({ children }: { children: ReactNode }) {
+    const { user } = useUser();
     // --- Mock Data ---
 
     const [profile, setProfile] = useState<VendorProfile>({
-        businessName: "Nature's Basket",
-        ownerName: "Rajesh Kumar",
-        phone: "+91 11111 11111",
-        email: "rajesh@naturesbasket.com",
-        address: "Plot 45, Green Valley, Patna",
-        bio: "Your one-stop shop for fresh, organic, and locally sourced produce. We bring the farm directly to your table.",
-        experience: "15 Years",
-        farmSize: "12 Acres"
+        businessName: "",
+        ownerName: "",
+        phone: "",
+        email: "",
+        address: "",
+        bio: "",
+        experience: "",
+        farmSize: "",
+        gender: "",
+        dob: "",
+        shopStatus: "Active"
     });
 
-    const [products, setProducts] = useState<VendorProduct[]>([
-        // Vegetables
-        {
-            id: 'v1',
-            name: 'Organic Potato',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 25,
-            unit: 'kg',
-            stock: 500,
-            category: 'Vegetables',
-            description: 'Fresh organic potatoes, perfect for daily cooking.',
-            status: 'Active'
-        },
-        {
-            id: 'v2',
-            name: 'Red Onion',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 35,
-            unit: 'kg',
-            stock: 300,
-            category: 'Vegetables',
-            description: 'Pungent and flavorful red onions.',
-            status: 'Active'
-        },
-        // Fruits
-        {
-            id: 'f1',
-            name: 'Kashmiri Apple',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 180,
-            unit: 'kg',
-            stock: 100,
-            category: 'Fruits',
-            description: 'Sweet and crunchy apples from Kashmir.',
-            status: 'Active'
-        },
-        {
-            id: 'f2',
-            name: 'Robusta Banana',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 40,
-            unit: 'doz',
-            stock: 50,
-            category: 'Fruits',
-            description: 'Ripe and energy-boosting bananas.',
-            status: 'Active'
-        },
-        // Dairy
-        {
-            id: 'd1',
-            name: 'Cow Milk',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 60,
-            unit: 'L',
-            stock: 50,
-            category: 'Dairy',
-            description: 'Fresh, unpasteurized cow milk.',
-            status: 'Active'
-        },
-        {
-            id: 'd2',
-            name: 'Fresh Paneer',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 320,
-            unit: 'kg',
-            stock: 20,
-            category: 'Dairy',
-            description: 'Soft and creamy homemade paneer.',
-            status: 'Active'
-        },
-        // Bakery
-        {
-            id: 'b1',
-            name: 'Whole Wheat Bread',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 45,
-            unit: 'pack',
-            stock: 25,
-            category: 'Bakery',
-            description: 'Healthy whole wheat bread, baked fresh daily.',
-            status: 'Active'
-        },
-        // Meat & Seafood
-        {
-            id: 'm1',
-            name: 'Chicken Curry Cut',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 220,
-            unit: 'kg',
-            stock: 40,
-            category: 'Meat',
-            description: 'Fresh chicken, skinless, curry cut.',
-            status: 'Active'
-        },
-        {
-            id: 's1',
-            name: 'Rohu Fish',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            price: 280,
-            unit: 'kg',
-            stock: 0,
-            category: 'Seafood',
-            description: 'Freshwater Rohu fish, cleaned and cut.',
-            status: 'Out of Stock'
+    // Fetch Profile on Mount
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (!user) return;
+            try {
+                const debuggerHost = Constants.expoConfig?.hostUri;
+                const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+                const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+                const API_URL = `http://${host}:3000`;
+
+                const vendorId = user.id;
+
+                const res = await fetch(`${API_URL}/api/profiles/${vendorId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    // Merge fetched data into profile state
+                    // Map backend fields to app fields if names differ
+                    setProfile(prev => ({
+                        ...prev,
+                        businessName: data.businessName || data.business_name || prev.businessName,
+                        ownerName: data.ownerName || data.full_name || prev.ownerName,
+                        phone: data.phone || data.phone_number || prev.phone,
+                        email: data.email || prev.email,
+                        address: data.address || prev.address,
+                        bio: data.bio || prev.bio,
+                        experience: data.experience || prev.experience,
+                        farmSize: data.farmSize || data.farm_size || prev.farmSize,
+                        gender: data.gender || prev.gender,
+                        dob: data.dob || prev.dob,
+                        shopStatus: data.shop_status || 'Active',
+                        bankDetails: data.bank_details ? {
+                            accountHolderName: data.bank_details.account_holder_name || '',
+                            bankName: data.bank_details.bank_name || '',
+                            accountNumber: data.bank_details.account_number || '',
+                            ifscCode: data.bank_details.ifsc_code || ''
+                        } : undefined
+                    }));
+                }
+            } catch (e) {
+                console.log("Failed to fetch profile (using offline data)", e);
+            }
+        };
+        fetchProfile();
+    }, [user]);
+
+    const toggleShopStatus = async () => {
+        if (profile.shopStatus !== 'Active' && profile.shopStatus !== 'Inactive') {
+            alert(`Your shop is ${profile.shopStatus}. Please contact support.`);
+            return;
         }
-    ]);
+
+        const newStatus = profile.shopStatus === 'Active' ? 'Inactive' : 'Active';
+
+        // Optimistic Update
+        setProfile(prev => ({ ...prev, shopStatus: newStatus }));
+
+        try {
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            await fetch(`${API_URL}/api/profiles/${user?.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ shop_status: newStatus })
+            });
+        } catch (e) {
+            console.error("Failed to update status", e);
+            // Revert? (Optional: for now let's hope it works)
+        }
+    };
+
+    const [products, setProducts] = useState<VendorProduct[]>([]);
+
+    // FETCH PRODUCTS (Real Sync)
+    useEffect(() => {
+        const fetchProducts = async () => {
+            if (!user) return;
+            try {
+                const debuggerHost = Constants.expoConfig?.hostUri;
+                const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+                const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+                const API_URL = `http://${host}:3000`;
+
+                console.log(`Fetching Products for Vendor: ${user.id}`);
+                const res = await fetch(`${API_URL}/api/products?vendor_id=${user.id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setProducts(data.map((p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        image: p.image_url || require('@/assets/images/3d-model-with-veg.png'), // Fallback image
+                        image_url: p.image_url,
+                        price: p.price,
+                        unit: p.unit,
+                        stock: p.stock,
+                        category: p.category,
+                        description: p.description || '',
+                        status: p.stock > 0 ? 'Active' : 'Out of Stock'
+                    })));
+                }
+            } catch (e) {
+                console.error("Failed to fetch products", e);
+            }
+        };
+        fetchProducts();
+    }, [user]);
 
     const [orders, setOrders] = useState<VendorOrder[]>([
         {
@@ -240,9 +256,24 @@ export function VendorProvider({ children }: { children: ReactNode }) {
         }
     ]);
 
-    const [transactions, setTransactions] = useState<VendorTransaction[]>([
-        { id: 'TXN-101', type: 'Credit', amount: 165, date: '2025-01-27', description: 'Payout for ORD-102', status: 'Completed' }
-    ]);
+    const [transactions, setTransactions] = useState<VendorTransaction[]>([]);
+
+    // Sync Transactions with Orders (Mock Payout Logic)
+    useEffect(() => {
+        // Automatically generate "Payouts" for delivered orders
+        const payouts = orders
+            .filter(o => o.status === 'Delivered')
+            .map(o => ({
+                id: `TXN-${o.id}`,
+                type: 'Credit' as const,
+                amount: Number(o.totalAmount || 0), // Ensure Number
+                date: o.date ? o.date.split('T')[0] : new Date().toISOString().split('T')[0],
+                description: `Payout for ${o.id}`,
+                status: 'Completed' as const
+            }))
+            .filter(p => p.amount > 0); // Filter out zero/invalid amounts
+        setTransactions(payouts);
+    }, [orders]);
 
     // --- Stats Logic ---
     const totalSales = transactions.filter(t => t.type === 'Credit').reduce((acc, curr) => acc + curr.amount, 0);
@@ -251,27 +282,232 @@ export function VendorProvider({ children }: { children: ReactNode }) {
 
     // --- Actions ---
 
-    const addProduct = (product: Omit<VendorProduct, 'id'>) => {
-        const newProduct = { ...product, id: Math.random().toString(36).substr(2, 9) };
-        setProducts(prev => [newProduct, ...prev]);
+
+
+    // Poll Orders from Admin Backend
+    useEffect(() => {
+        const pollOrders = async () => {
+            try {
+                const debuggerHost = Constants.expoConfig?.hostUri;
+                const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+                const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+                const API_URL = `http://${host}:3000`;
+
+                // Use AbortController for safety
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const res = await fetch(`${API_URL}/api/orders`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const allOrders = await res.json();
+                    // Map backend structure to App structure if needed
+                    // Backend: snake_case (customer_phone), App: camelCase (customerPhone)
+                    // Ideally we should unify, but for now let's map essential status updates
+
+                    // Helper to map DB order to App Order
+                    const mappedOrders = allOrders.map((dbOrder: any) => ({
+                        id: dbOrder.id,
+                        userId: dbOrder.user_id,
+                        customerName: dbOrder.customerName || dbOrder.customer?.full_name || 'Unknown',
+                        items: dbOrder.items || [],
+                        totalAmount: Number(dbOrder.total_amount || 0), // Force Number
+                        status: dbOrder.status,
+                        date: dbOrder.created_at,
+                        paymentStatus: dbOrder.payment_status,
+                        customerPhone: dbOrder.customer_phone,
+                        paymentMethod: dbOrder.payment_method,
+                        shippingFee: Number(dbOrder.shipping_fee || 0),
+                        deliveryAddress: dbOrder.delivery_address || ''
+                    }));
+
+                    // Update state with smart merge to prevent reverting optimistic updates
+                    setOrders(prevOrders => {
+                        const statusRank: Record<string, number> = {
+                            'Pending': 0,
+                            'Accepted': 1,
+                            'Preparing': 2,
+                            'Ready': 3,
+                            'Shipped': 4,
+                            'On the Way': 4,
+                            'Delivered': 5,
+                            'Cancelled': 6,
+                            'Returned': 6,
+                            'Undelivered': 6
+                        };
+
+                        return mappedOrders.map((remoteOrder: any) => {
+                            const localOrder = prevOrders.find(o => o.id === remoteOrder.id);
+
+                            // If we have a local version, check if local is "ahead"
+                            if (localOrder) {
+                                const localRank = statusRank[localOrder.status] || 0;
+                                const remoteRank = statusRank[remoteOrder.status] || 0;
+
+                                // If local status is more advanced than remote (e.g. Local=Accepted(1) > Remote=Pending(0)), 
+                                // keep local status. This happens when polling catches us before backend write finishes.
+                                if (localRank > remoteRank) {
+                                    return { ...remoteOrder, status: localOrder.status };
+                                    // Keep other fields from remote (in case backend updated something else), but preserve our status
+                                }
+                            }
+                            return remoteOrder;
+                        });
+                    });
+                }
+            } catch (e) {
+                // Silent fail on poll
+            }
+        };
+
+        const interval = setInterval(pollOrders, 5000); // 5 seconds poll
+        return () => clearInterval(interval);
+    }, []);
+
+    // --- Product Actions ---
+
+    const addProduct = async (productData: Omit<VendorProduct, 'id'>) => {
+        // Optimistic Update
+        const tempId = `temp_${Date.now()}`;
+        const newProduct: VendorProduct = { ...productData, id: tempId, status: productData.stock > 0 ? 'Active' : 'Out of Stock' };
+        setProducts(prev => [...prev, newProduct]);
+
+        if (!user) return;
+
+        try {
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            const res = await fetch(`${API_URL}/api/products`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...productData,
+                    vendor_id: user.id
+                })
+            });
+
+            if (res.ok) {
+                const savedProduct = await res.json();
+                // Replace temp ID with real ID
+                setProducts(prev => prev.map(p => p.id === tempId ? { ...p, id: savedProduct.id } : p));
+            }
+        } catch (e) {
+            console.error("Failed to add product to backend", e);
+        }
     };
 
-    const updateProduct = (id: string, updates: Partial<VendorProduct>) => {
+    const updateProduct = async (id: string, updates: Partial<VendorProduct>) => {
+        // Optimistic
         setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+
+        try {
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            await fetch(`${API_URL}/api/products/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
+        } catch (e) {
+            console.error("Failed to update product", e);
+        }
     };
 
-    const deleteProduct = (id: string) => {
+    const deleteProduct = async (id: string) => {
+        // Optimistic
         setProducts(prev => prev.filter(p => p.id !== id));
+
+        try {
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            await fetch(`${API_URL}/api/products/${id}`, {
+                method: 'DELETE'
+            });
+        } catch (e) {
+            console.error("Failed to delete product", e);
+        }
     };
 
-    const addOrder = (order: VendorOrder) => {
+    const addOrder = async (order: VendorOrder) => {
+        // Optimistic UI
         setOrders(prev => [order, ...prev]);
+
+        // SYNC WITH ADMIN BACKEND
+        try {
+            // Dynamically determine Host IP
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            console.log(`Syncing Order with Admin Backend at: ${API_URL}/api/orders`);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            await fetch(`${API_URL}/api/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...order,
+                    customer_phone: order.customerPhone,
+                    payment_method: order.paymentMethod,
+                    shipping_fee: order.shippingFee,
+                    payment_status: order.paymentStatus,
+                    delivery_address: order.deliveryAddress,
+                    vendor_id: user?.id, // Use actual Vendor ID
+                    user_id: order.userId,
+                    total_amount: order.totalAmount, // Ensure backend gets snake_case
+                    items: order.items
+                }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            console.log("Sync Order Success!");
+        } catch (e: any) {
+            console.error("Failed to sync order with local backend:", e.message || e);
+        }
     };
 
-    const updateOrderStatus = (orderId: string, status: VendorOrder['status']) => {
+    const updateOrderStatus = async (orderId: string, status: VendorOrder['status']) => {
+        // Optimistic Update
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
 
-        // Mock financial update logic
+        // SYNC WITH BACKEND
+        try {
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            const updates: any = { status };
+            if (status === 'Delivered') {
+                updates.payment_status = 'Paid';
+                // Optimistically update local order payment status too
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, paymentStatus: 'Paid' } : o));
+            }
+
+            await fetch(`${API_URL}/api/orders/${orderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
+            console.log(`Order ${orderId} status synced to ${status}`);
+        } catch (e) {
+            console.error("Failed to sync order status", e);
+        }
+
+        // Mock financial update logic (for delivered)
         if (status === 'Delivered') {
             const order = orders.find(o => o.id === orderId);
             if (order && order.paymentStatus === 'Paid') {
@@ -288,8 +524,44 @@ export function VendorProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const updateProfile = (updates: Partial<VendorProfile>) => {
+    const updateProfile = async (updates: Partial<VendorProfile>) => {
         setProfile(prev => ({ ...prev, ...updates }));
+        if (!user) return;
+
+        // SYNC WITH ADMIN BACKEND
+        try {
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            const vendorId = user.id;
+            console.log(`Syncing Profile Update with Admin: ${API_URL}/api/profiles/${vendorId}`);
+
+            await fetch(`${API_URL}/api/profiles/${vendorId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...updates,
+                    // Map critical fields to snake_case for backend compatibility
+                    full_name: updates.ownerName,
+                    phone_number: updates.phone,
+                    business_name: updates.businessName,
+                    farm_size: updates.farmSize,
+                    gender: updates.gender,
+                    dob: updates.dob,
+                    bank_details: updates.bankDetails ? {
+                        account_holder_name: updates.bankDetails.accountHolderName,
+                        bank_name: updates.bankDetails.bankName,
+                        account_number: updates.bankDetails.accountNumber,
+                        ifsc_code: updates.bankDetails.ifscCode
+                    } : undefined
+                })
+            });
+            console.log("Profile Sync Success!");
+        } catch (e: any) {
+            console.error("Failed to sync profile:", e.message || e);
+        }
     };
 
     return (
@@ -302,8 +574,9 @@ export function VendorProvider({ children }: { children: ReactNode }) {
             addProduct,
             updateProduct,
             deleteProduct,
-            addOrder,
             updateOrderStatus,
+            addOrder,
+            toggleShopStatus,
             updateProfile
         }}>
             {children}

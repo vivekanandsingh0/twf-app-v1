@@ -9,15 +9,27 @@ import { useVendor, VendorTransaction } from '@/contexts/VendorContext';
 export default function PayoutsScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { transactions, dashboardStats } = useVendor();
+    const { transactions, orders, dashboardStats } = useVendor();
 
-    // Derived Stats
+    // 1. Available Balance (Completed/Delivered Orders)
     const availableBalance = transactions
-        .filter(t => t.type === 'Credit' && t.status === 'Processing')
+        .filter(t => t.type === 'Credit' && t.status === 'Completed')
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const payouts = transactions.filter(t => t.description.includes('Settlement') || t.description.includes('Payout'));
-    // Simplified logic: treat settlements as payouts
+    // 2. Processing Balance (Active Orders not yet Delivered)
+    const processingBalance = orders
+        .filter(o => ['Pending', 'Accepted', 'Preparing', 'Ready', 'Shipped', 'On the Way'].includes(o.status))
+        .reduce((sum, o) => sum + o.totalAmount, 0);
+
+    // 3. Monthly Revenue (Completed Sales this Month)
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyRevenue = transactions
+        .filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        })
+        .reduce((sum, t) => sum + t.amount, 0);
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -46,8 +58,10 @@ export default function PayoutsScreen() {
                     <View>
                         <Text style={styles.balanceLabel}>AVAILABLE BALANCE</Text>
                         <Text style={styles.balanceValue}>₹{availableBalance.toFixed(2)}</Text>
-                        <Text style={styles.payoutSchedule}>NEXT SCHEDULED PAYOUT</Text>
-                        <Text style={styles.payoutDate}>Oct 24, 2026</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#D97706' }} />
+                            <Text style={styles.payoutSchedule}>Processing: ₹{processingBalance.toFixed(2)}</Text>
+                        </View>
                     </View>
                     <TouchableOpacity style={styles.requestButton}>
                         <Text style={styles.requestButtonText}>Request Payout</Text>
@@ -57,66 +71,54 @@ export default function PayoutsScreen() {
                 {/* Monthly Performance */}
                 <Text style={styles.sectionTitle}>Monthly Performance</Text>
                 <View style={styles.performanceCard}>
-                    <Text style={styles.performanceLabel}>Avg. Monthly Revenue</Text>
-                    <Text style={styles.performanceValue}>₹{dashboardStats.totalSales}</Text>
+                    <Text style={styles.performanceLabel}>This Month's Revenue</Text>
+                    <Text style={styles.performanceValue}>₹{monthlyRevenue.toFixed(2)}</Text>
 
                     {/* Dummy Chart Mockup */}
                     <View style={styles.chartContainer}>
-                        {/* Placeholder for chart lines/bars */}
-                        {/* Just simple visual representation */}
-                        <View style={{ flex: 1 }}></View>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 10 }}>
+                            {/* Simple Bar Chart Visualization */}
+                            <View style={{ width: 30, height: '40%', backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                            <View style={{ width: 30, height: '60%', backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                            <View style={{ width: 30, height: '85%', backgroundColor: '#1F5E2E', borderRadius: 4 }} />
+                            <View style={{ width: 30, height: '55%', backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                            <View style={{ width: 30, height: '70%', backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                        </View>
 
                         <View style={styles.chartLabels}>
-                            <Text style={styles.chartLabel}>January</Text>
-                            <Text style={[styles.chartLabel, styles.activeChartLabel]}>February</Text>
-                            <Text style={styles.chartLabel}>March</Text>
-                            <Text style={styles.chartLabel}>April</Text>
+                            <Text style={styles.chartLabel}>Jan</Text>
+                            <Text style={styles.chartLabel}>Feb</Text>
+                            <Text style={[styles.chartLabel, styles.activeChartLabel]}>Mar</Text>
+                            <Text style={styles.chartLabel}>Apr</Text>
                             <Text style={styles.chartLabel}>May</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* Recent Payouts */}
-                <Text style={styles.sectionTitle}>Recent Payouts</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.payoutsScroll}>
-                    {/* Mock Payouts or Filtered Transactions */}
-                    <View style={styles.payoutCard}>
-                        <View style={styles.payoutHeader}>
-                            <Text style={styles.payoutStatusPaid}>PAID</Text>
-                            <Text style={styles.payoutDateSmall}>Oct 12</Text>
-                        </View>
-                        <Text style={styles.payoutAmount}>₹{dashboardStats.totalSales}</Text>
-                        <Text style={styles.payoutMethod}>Bank Transfer-1467</Text>
-                    </View>
-                    <View style={[styles.payoutCard, { marginLeft: 16 }]}>
-                        <View style={styles.payoutHeader}>
-                            <Text style={styles.payoutStatusProcessing}>PROCESSING</Text>
-                            <Text style={styles.payoutDateSmall}>Aug 12</Text>
-                        </View>
-                        <Text style={styles.payoutAmount}>₹2500.00</Text>
-                        <Text style={styles.payoutMethod}>Bank Transfer-1467</Text>
-                    </View>
-                </ScrollView>
-
-                {/* Transaction History */}
+                {/* Recent Transactions */}
                 <Text style={styles.sectionTitle}>Transaction History</Text>
                 <View style={styles.transactionList}>
-                    {transactions.map((tx) => (
-                        <View key={tx.id} style={styles.transactionCard}>
-                            <View style={styles.transactionIcon}>
-                                <Ionicons name="cube" size={20} color="#1F5E2E" />
-                            </View>
-                            <View style={styles.transactionInfo}>
-                                <Text style={styles.transactionId}>#{tx.id}</Text>
-                                <Text style={styles.transactionMeta}>{tx.description}~{new Date(tx.date).toLocaleDateString()}</Text>
-                            </View>
-                            <View style={styles.transactionAmountContainer}>
-                                <Text style={styles.transactionAmount}>+{tx.amount}</Text>
-                                <Text style={styles.netEarned}>{tx.status}</Text>
-                            </View>
+                    {transactions.length === 0 ? (
+                        <View style={{ padding: 20, alignItems: 'center' }}>
+                            <Text style={{ color: '#999', fontFamily: 'DMSans_400Regular' }}>No completed transactions yet.</Text>
                         </View>
-                    ))}
-                    {transactions.length === 0 && <Text style={{ color: '#999' }}>No recent transactions</Text>}
+                    ) : (
+                        transactions.slice(0, 10).map((tx) => (
+                            <View key={tx.id} style={styles.transactionCard}>
+                                <View style={styles.transactionIcon}>
+                                    <Ionicons name="cube-outline" size={20} color="#1F5E2E" />
+                                </View>
+                                <View style={styles.transactionInfo}>
+                                    <Text style={styles.transactionId}>{tx.id}</Text>
+                                    <Text style={styles.transactionMeta}>{tx.description}</Text>
+                                </View>
+                                <View style={styles.transactionAmountContainer}>
+                                    <Text style={styles.transactionAmount}>+₹{tx.amount}</Text>
+                                    <Text style={styles.netEarned}>{new Date(tx.date).toLocaleDateString()}</Text>
+                                </View>
+                            </View>
+                        ))
+                    )}
                 </View>
 
                 <View style={{ height: 40 }} />
