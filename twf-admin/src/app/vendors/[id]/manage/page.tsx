@@ -26,8 +26,9 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
     const vendorProducts = allProducts?.filter((p: any) => String(p.vendor_id) === String(id)) || [];
 
     // 4. Calculate Stats
+    // STRICT ALIGNMENT: Total Sales = Delivered Orders Only (Realized Revenue), matching App logic.
     const totalSales = vendorOrders
-        .filter((o: any) => o.status === 'Delivered' || o.payment_status === 'Paid')
+        .filter((o: any) => o.status === 'Delivered')
         .reduce((sum: number, o: any) => sum + (Number(o.total_amount) || 0), 0);
 
     const pendingOrders = vendorOrders.filter((o: any) => o.status === 'Pending').length;

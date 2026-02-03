@@ -39,7 +39,7 @@ export default function PaymentScreen() {
     const { quantities, clearCart } = useCart();
     const { addOrder } = useVendor();
     const { products: marketProducts } = useMarket();
-    const { userData } = useUser();
+    const { userData, user } = useUser();
     const { selectedAddress } = useAddresses();
 
     const handlePayment = () => {
@@ -68,7 +68,8 @@ export default function PaymentScreen() {
                 ordersByVendor[vendorId].items.push({
                     productName: product.name,
                     quantity: qty,
-                    price: product.price
+                    price: product.price,
+                    image: product.image // Pass image for display in history
                 });
                 ordersByVendor[vendorId].total += itemTotal;
             }
@@ -78,9 +79,12 @@ export default function PaymentScreen() {
         Object.keys(ordersByVendor).forEach(vendorId => {
             const vendorData = ordersByVendor[vendorId];
 
+            // Use stable User ID if available, else fallback
+            const finalUserId = user?.id || (userData.phoneNumber ? `user_${userData.phoneNumber.replace(/\D/g, '')}` : 'guest_user');
+
             const newOrder: VendorOrder = {
                 id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                userId: userData && userData.userType === 'User' ? 'mock_user_id_' + Date.now() : 'guest_user', // Mock User ID matching context if possible, or just unique
+                userId: finalUserId,
                 customerName: userData ? userData.fullName : "Guest User",
                 items: vendorData.items,
                 totalAmount: vendorData.total,

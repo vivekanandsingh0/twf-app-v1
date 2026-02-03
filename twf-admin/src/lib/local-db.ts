@@ -103,5 +103,60 @@ export const localDb = {
                 users: db.profiles.length
             };
         }
+    },
+    notifications: {
+        getAll: async () => {
+            const db = await readDb();
+            // initialize if missing
+            if (!db.notifications) {
+                db.notifications = [];
+                await writeDb(db);
+            }
+            return db.notifications;
+        },
+        create: async (notification: any) => {
+            const db = await readDb();
+            if (!db.notifications) db.notifications = [];
+            db.notifications.unshift(notification);
+            await writeDb(db);
+            return notification;
+        },
+        delete: async (id: string) => {
+            const db = await readDb();
+            if (!db.notifications) return false;
+            db.notifications = db.notifications.filter((n: any) => n.id !== id);
+            await writeDb(db);
+            return true;
+        }
+    },
+    tickets: {
+        getAll: async () => {
+            const db = await readDb();
+            if (!db.tickets) {
+                db.tickets = [];
+                await writeDb(db);
+            }
+            return db.tickets;
+        },
+        create: async (ticket: any) => {
+            const db = await readDb();
+            if (!db.tickets) db.tickets = [];
+            db.tickets.unshift(ticket);
+            await writeDb(db);
+            return ticket;
+        },
+        update: async (id: string, updates: any) => {
+            const db = await readDb();
+            if (!db.tickets) return null;
+            const index = db.tickets.findIndex((t: any) => t.id === id);
+            if (index === -1) return null;
+            db.tickets[index] = { ...db.tickets[index], ...updates };
+            await writeDb(db);
+            return db.tickets[index];
+        },
+        getById: async (id: string) => {
+            const db = await readDb();
+            return db.tickets?.find((t: any) => t.id === id);
+        }
     }
 };

@@ -87,7 +87,7 @@
       "category": "Fruits",
       "price": 111,
       "unit": "kg",
-      "stock": 10,
+      "stock": 7,
       "status": "Active",
       "image": {
         "uri": "/assets/?unstable_path=.%2Fassets%2Fimages/3d-model-with-veg.png",
@@ -112,8 +112,187 @@
   ],
   "orders": [
     {
+      "id": "ORD-1770097192358-735",
+      "status": "Delivered",
+      "created_at": "2026-02-03T05:39:52.455Z",
+      "userId": "user_911111111111",
+      "customerName": "",
+      "items": [
+        {
+          "productName": "test",
+          "quantity": 1,
+          "price": 111,
+          "image": {
+            "uri": "/assets/?unstable_path=.%2Fassets%2Fimages/3d-model-with-veg.png",
+            "width": 1024,
+            "height": 1024
+          }
+        }
+      ],
+      "totalAmount": 111,
+      "date": "2026-02-03T05:39:52.358Z",
+      "paymentStatus": "Paid",
+      "paymentMethod": "PhonePe",
+      "customerPhone": "+911111111111",
+      "shippingFee": 4.4,
+      "deliveryAddress": "123, Green Str., Patna, 800001",
+      "customer_phone": "+911111111111",
+      "payment_method": "PhonePe",
+      "shipping_fee": 4.4,
+      "payment_status": "Paid",
+      "delivery_address": "123, Green Str., Patna, 800001",
+      "vendor_id": "user_911111111111",
+      "user_id": "user_911111111111",
+      "total_amount": 111
+    },
+    {
+      "id": "ORD-1770096973544-948",
+      "status": "Delivered",
+      "created_at": "2026-02-03T05:36:13.712Z",
+      "userId": "user_911111111111",
+      "customerName": "",
+      "items": [
+        {
+          "productName": "test",
+          "quantity": 1,
+          "price": 111
+        }
+      ],
+      "totalAmount": 111,
+      "date": "2026-02-03T05:36:13.544Z",
+      "paymentStatus": "Paid",
+      "paymentMethod": "PhonePe",
+      "customerPhone": "+911111111111",
+      "shippingFee": 4.4,
+      "deliveryAddress": "123, Green Str., Patna, 800001",
+      "customer_phone": "+911111111111",
+      "payment_method": "PhonePe",
+      "shipping_fee": 4.4,
+      "payment_status": "Paid",
+      "delivery_address": "123, Green Str., Patna, 800001",
+      "vendor_id": "user_911111111111",
+      "user_id": "user_911111111111",
+      "total_amount": 111
+    },
+    {
+      "id": "ORD-1770096733160-114",
+      "status": "Delivered",
+      "created_at": "2026-02-03T05:32:13.320Z",
+      "userId": "user_911111111111",
+      "customerName": "",
+      "items": [
+        {
+          "productName": "test",
+          "quantity": 1,
+          "price": 111
+        }
+      ],
+      "totalAmount": 111,
+      "date": "2026-02-03T05:32:13.160Z",
+      "paymentStatus": "Paid",
+      "paymentMethod": "PhonePe",
+      "customerPhone": "+911111111111",
+      "shippingFee": 4.4,
+      "deliveryAddress": "123, Green Str., Patna, 800001",
+      "customer_phone": "+911111111111",
+      "payment_method": "PhonePe",
+      "shipping_fee": 4.4,
+      "payment_status": "Paid",
+      "delivery_address": "123, Green Str., Patna, 800001",
+      "vendor_id": "user_911111111111",
+      "user_id": "user_911111111111",
+      "total_amount": 111
+    },
+    {
+      "id": "ORD-1770096435660-932",
+      "status": "Delivered",
+      "created_at": "2026-02-03T05:27:15.759Z",
+      "userId": "user_911111111111",
+      "customerName": "",
+      "items": [
+        {
+          "productName": "test",
+          "quantity": 1,
+          "price": 111
+        }
+      ],
+      "totalAmount": 111,
+      "date": "2026-02-03T05:27:15.660Z",
+      "paymentStatus": "Paid",
+      "paymentMethod": "PhonePe",
+      "customerPhone": "+911111111111",
+      "shippingFee": 4.4,
+      "deliveryAddress": "123, Green Str., Patna, 800001",
+      "customer_phone": "+911111111111",
+      "payment_method": "PhonePe",
+      "shipping_fee": 4.4,
+      "payment_status": "Paid",
+      "delivery_address": "123, Green Str., Patna, 800001",
+      "vendor_id": "user_911111111111",
+      "user_id": "user_911111111111",
+      "total_amount": 111
+    },
+    {
+      "id": "ORD-1770095974643-158",
+      "status": "Delivered",
+      "created_at": "2026-02-03T05:19:34.719Z",
+      "userId": "user_911111111111",
+      "customerName": "",
+      "items": [
+        {
+          "productName": "test",
+          "quantity": 1,
+          "price": 111
+        }
+      ],
+      "totalAmount": 111,
+      "date": "2026-02-03T05:19:34.643Z",
+      "paymentStatus": "Paid",
+      "paymentMethod": "PhonePe",
+      "customerPhone": "+911111111111",
+      "shippingFee": 4.4,
+      "deliveryAddress": "123, Green Str., Patna, 800001",
+      "customer_phone": "+911111111111",
+      "payment_method": "PhonePe",
+      "shipping_fee": 4.4,
+      "payment_status": "Paid",
+      "delivery_address": "123, Green Str., Patna, 800001",
+      "vendor_id": "user_911111111111",
+      "user_id": "user_911111111111",
+      "total_amount": 111
+    },
+    {
+      "id": "ORD-1770095491275-961",
+      "status": "Delivered",
+      "created_at": "2026-02-03T05:11:31.333Z",
+      "userId": "mock_user_id_1770095491275",
+      "customerName": "",
+      "items": [
+        {
+          "productName": "test",
+          "quantity": 1,
+          "price": 111
+        }
+      ],
+      "totalAmount": 111,
+      "date": "2026-02-03T05:11:31.275Z",
+      "paymentStatus": "Paid",
+      "paymentMethod": "PhonePe",
+      "customerPhone": "+911111111111",
+      "shippingFee": 4.4,
+      "deliveryAddress": "123, Green Str., Patna, 800001",
+      "customer_phone": "+911111111111",
+      "payment_method": "PhonePe",
+      "shipping_fee": 4.4,
+      "payment_status": "Paid",
+      "delivery_address": "123, Green Str., Patna, 800001",
+      "vendor_id": "user_911111111111",
+      "user_id": "mock_user_id_1770095491275",
+      "total_amount": 111
+    },
+    {
       "id": "ORD-1770033820369-439",
-      "status": "Pending",
+      "status": "Delivered",
       "created_at": "2026-02-02T12:03:40.419Z",
       "userId": "mock_user_id_1770033820369",
       "customerName": "",
@@ -265,5 +444,51 @@
       "created_at": "2025-01-30T10:00:00Z"
     }
   ],
-  "vendor_requests": []
+  "vendor_requests": [],
+  "notifications": [
+    {
+      "id": "notif_1770092671538",
+      "title": "offer title",
+      "body": "get 20% off with cde SHDH-HDGD_13",
+      "type": "promo",
+      "targetType": "AllVendors",
+      "createdAt": "2026-02-03T04:24:31.539Z",
+      "read": false
+    },
+    {
+      "id": "notif_1770092637720",
+      "title": "title alert",
+      "body": "message alert body",
+      "type": "alert",
+      "targetType": "AllVendors",
+      "createdAt": "2026-02-03T04:23:57.720Z",
+      "read": false
+    },
+    {
+      "id": "notif_1770092600291",
+      "title": "test info",
+      "body": "message body test info",
+      "type": "info",
+      "targetType": "AllVendors",
+      "createdAt": "2026-02-03T04:23:20.291Z",
+      "read": false
+    }
+  ],
+  "tickets": [
+    {
+      "id": "TICKET-1770100549157",
+      "userId": "user_911111111111",
+      "subject": "HI",
+      "status": "Open",
+      "created_at": "2026-02-03T06:35:49.157Z",
+      "last_updated": "2026-02-03T06:35:49.157Z",
+      "messages": [
+        {
+          "sender": "User",
+          "text": "SDSD",
+          "timestamp": "2026-02-03T06:35:49.157Z"
+        }
+      ]
+    }
+  ]
 }

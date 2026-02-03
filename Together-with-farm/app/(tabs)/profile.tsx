@@ -126,6 +126,7 @@ export default function ProfileScreen() {
                 <View style={styles.menuGroup}>
                     {renderMenuItem('location-outline', 'Addresses', () => router.push('/addresses'))}
                     {renderMenuItem('card-outline', 'Payment Methods')}
+                    {renderMenuItem('help-circle-outline', 'Help & Support', () => router.push('/support'))}
                     {renderMenuItem('settings-outline', 'Settings', () => router.push('/settings'))}
                     <TouchableOpacity style={styles.menuItem} onPress={handleSwitchRole} activeOpacity={0.7}>
                         <View style={styles.menuIconContainer}>

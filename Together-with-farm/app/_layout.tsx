@@ -17,6 +17,7 @@ import { UserProvider, useUser } from '@/contexts/UserContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { VendorProvider } from '@/contexts/VendorContext';
 import { MarketProvider } from '@/contexts/MarketContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -80,30 +81,33 @@ function AppContent() {
           <FavouritesProvider>
             <MarketProvider>
               <VendorProvider>
-                <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                  <Stack>
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="(vendor-tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="add-product-vendor" options={{ headerShown: false }} />
-                    <Stack.Screen name="vendor-payouts" options={{ headerShown: false }} />
-                    <Stack.Screen name="notifications" options={{ headerShown: false }} />
-                    <Stack.Screen name="vendor-order-details" options={{ headerShown: false }} />
-                    <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
-                    <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
-                    <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
-                    <Stack.Screen name="edit-profile-vendor" options={{ headerShown: false }} />
-                    <Stack.Screen name="favourites" options={{ headerShown: false }} />
-                    <Stack.Screen name="addresses" options={{ headerShown: false }} />
-                    <Stack.Screen name="settings" options={{ headerShown: false }} />
-                    <Stack.Screen name="cart" options={{ headerShown: false }} />
-                    <Stack.Screen name="checkout" options={{ headerShown: false }} />
-                    <Stack.Screen name="confirm-address" options={{ headerShown: false }} />
-                    <Stack.Screen name="business-dashboard" options={{ headerShown: false }} />
-                    <Stack.Screen name="vendor-payment-methods" options={{ headerShown: false }} />
-                    <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-                  </Stack>
-                  <StatusBar style="auto" />
-                </ThemeProvider>
+                <NotificationProvider>
+                  <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <Stack>
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="(vendor-tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="add-product-vendor" options={{ headerShown: false }} />
+                      <Stack.Screen name="vendor-payouts" options={{ headerShown: false }} />
+                      <Stack.Screen name="notifications" options={{ headerShown: false }} />
+                      <Stack.Screen name="vendor-order-details" options={{ headerShown: false }} />
+                      <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
+                      <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
+                      <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
+                      <Stack.Screen name="edit-profile-vendor" options={{ headerShown: false }} />
+                      <Stack.Screen name="favourites" options={{ headerShown: false }} />
+                      <Stack.Screen name="addresses" options={{ headerShown: false }} />
+                      <Stack.Screen name="settings" options={{ headerShown: false }} />
+                      <Stack.Screen name="cart" options={{ headerShown: false }} />
+                      <Stack.Screen name="checkout" options={{ headerShown: false }} />
+                      <Stack.Screen name="confirm-address" options={{ headerShown: false }} />
+                      <Stack.Screen name="business-dashboard" options={{ headerShown: false }} />
+                      <Stack.Screen name="vendor-payment-methods" options={{ headerShown: false }} />
+                      <Stack.Screen name="support" options={{ headerShown: false }} />
+                      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                    </Stack>
+                    <StatusBar style="auto" />
+                  </ThemeProvider>
+                </NotificationProvider>
               </VendorProvider>
             </MarketProvider>
           </FavouritesProvider>

@@ -5,18 +5,54 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
+import { useVendor } from '@/contexts/VendorContext';
+
 export default function OrderDetailScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { id } = useLocalSearchParams();
+    const { orders } = useVendor();
 
-    // Mock Status Steps
+    // Find Order
+    const order = orders.find(o => o.id.includes(id as string));
+
+    if (!order) {
+        return (
+            <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+                <Stack.Screen options={{ headerShown: false }} />
+                <Text style={{ fontSize: 18, color: '#666' }}>Order not found</Text>
+                <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20, padding: 10 }}>
+                    <Text style={{ color: '#1F5E2E', fontWeight: 'bold' }}>Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    // Dynamic Steps based on status
+    const allStatuses = ['Pending', 'Accepted', 'Ready', 'Shipped', 'Delivered'];
+    // Map status to step index
+    const getStatusIndex = (status: string) => {
+        if (status === 'Pending') return 0;
+        if (status === 'Accepted' || status === 'Preparing') return 1;
+        if (status === 'Ready' || status === 'Shipped') return 2;
+        if (status === 'On the Way') return 2;
+        if (status === 'Delivered') return 3;
+        return 0;
+    };
+
+    const currentStepIndex = getStatusIndex(order.status);
+
     const steps = [
-        { label: 'Confirmed', done: true },
-        { label: 'Packed', done: true },
-        { label: 'On the way', done: true },
-        { label: 'Delivered', done: false },
+        { label: 'Confirmed', done: currentStepIndex >= 0 },
+        { label: 'Packed', done: currentStepIndex >= 1 },
+        { label: 'On the way', done: currentStepIndex >= 2 },
+        { label: 'Delivered', done: currentStepIndex >= 3 },
     ];
+
+    const firstItem = order.items && order.items.length > 0 ? order.items[0] : null;
+    const firstImage = firstItem?.image
+        ? firstItem.image
+        : { uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60' };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -28,7 +64,7 @@ export default function OrderDetailScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>#{id || '4521'}</Text>
+                <Text style={styles.headerTitle}>#{id}</Text>
                 <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/notifications')}>
                     <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                     <View style={styles.badge}><Text style={styles.badgeText}>2</Text></View>
@@ -38,7 +74,7 @@ export default function OrderDetailScreen() {
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
                 {/* Status Header */}
-                <Text style={styles.arrivingText}>Arriving Today, 5:30-6:30 PM</Text>
+                <Text style={styles.arrivingText}>{order.status === 'Delivered' ? 'Delivered' : `Arriving Today, 5:30-6:30 PM`}</Text>
 
                 {/* Timeline */}
                 <View style={styles.timelineContainer}>
@@ -53,41 +89,46 @@ export default function OrderDetailScreen() {
                     ))}
                 </View>
 
-                {/* Track Delivery Map */}
-                <Text style={styles.sectionTitle}>Track Delivery</Text>
-                <View style={styles.mapContainer}>
-                    <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&auto=format&fit=crop&q=60' }}
-                        style={styles.mapImage}
-                    />
-                    <View style={styles.mapOverlay}>
-                        <Text style={styles.overlayText}>Arriving in 20 minutes</Text>
-                    </View>
-                </View>
+                {/* Track Delivery Map - Only show if active */}
+                {order.status !== 'Delivered' && order.status !== 'Cancelled' && (
+                    <>
+                        <Text style={styles.sectionTitle}>Track Delivery</Text>
+                        <View style={styles.mapContainer}>
+                            <Image
+                                source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&auto=format&fit=crop&q=60' }}
+                                style={styles.mapImage}
+                            />
+                            <View style={styles.mapOverlay}>
+                                <Text style={styles.overlayText}>{order.status}</Text>
+                            </View>
+                        </View>
 
-                <TouchableOpacity style={styles.trackOrderBtn}>
-                    <Text style={styles.trackOrderBtnText}>Track Order</Text>
-                </TouchableOpacity>
+                        <TouchableOpacity style={styles.trackOrderBtn}>
+                            <Text style={styles.trackOrderBtnText}>Track Order</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
 
                 {/* Order Items */}
                 <Text style={styles.sectionTitle}>Order Items</Text>
-                <View style={styles.itemCard}>
-                    <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=500&auto=format&fit=crop&q=60' }}
-                        style={styles.itemImage}
-                    />
-                    <View style={styles.itemInfo}>
-                        <View style={styles.rowBetween}>
-                            <Text style={styles.itemOrderNum}>#{id || '4521'}</Text>
-                            <View style={styles.statusChip}><Text style={styles.statusChipText}>On the Way</Text></View>
+                {order.items.map((item, idx) => (
+                    <View key={idx} style={styles.itemCard}>
+                        <Image
+                            source={item.image || { uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60' }}
+                            style={styles.itemImage}
+                        />
+                        <View style={styles.itemInfo}>
+                            <View style={styles.rowBetween}>
+                                <Text style={styles.itemOrderNum}>{item.productName}</Text>
+                                {/* <View style={styles.statusChip}><Text style={styles.statusChipText}>{order.status}</Text></View> */}
+                            </View>
+                            <Text style={styles.itemDesc}>Quantity: {item.quantity} • ${item.price}</Text>
                         </View>
-                        <Text style={styles.itemDesc}>Chicken breast +5 {"\n"}more</Text>
-                        <TouchableOpacity><Text style={styles.viewMore}>View more</Text></TouchableOpacity>
+                        <View style={styles.badgeContainer}>
+                            <View style={styles.quantityBadge}><Text style={styles.quantityText}>{item.quantity}</Text></View>
+                        </View>
                     </View>
-                    <View style={styles.badgeContainer}>
-                        <View style={styles.quantityBadge}><Text style={styles.quantityText}>3</Text></View>
-                    </View>
-                </View>
+                ))}
 
                 {/* Delivery Address */}
                 <Text style={styles.sectionTitle}>Delivery Address</Text>
@@ -96,8 +137,8 @@ export default function OrderDetailScreen() {
                         <Ionicons name="location-outline" size={24} color="#1A1A1A" />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.addressType}>Home</Text>
-                        <Text style={styles.addressText}>Kankarbagh Colony, Near Hanuman Nagar, road no.1 left, Near Nalanda</Text>
+                        <Text style={styles.addressType}>Delivery Location</Text>
+                        <Text style={styles.addressText}>{order.deliveryAddress || 'Address not provided'}</Text>
                     </View>
                 </View>
 
@@ -106,19 +147,19 @@ export default function OrderDetailScreen() {
                 <View style={styles.paymentCard}>
                     <View style={styles.paymentRow}>
                         <Text style={styles.paymentLabel}>Order ID</Text>
-                        <Text style={styles.paymentValue}>#6537352823</Text>
+                        <Text style={styles.paymentValue}>#{order.id}</Text>
                     </View>
                     <View style={styles.paymentRow}>
-                        <Text style={styles.paymentLabel}>Expected Delivery</Text>
-                        <Text style={styles.paymentValue}>Arriving in 25 mins</Text>
+                        <Text style={styles.paymentLabel}>Status</Text>
+                        <Text style={styles.paymentValue}>{order.status}</Text>
                     </View>
                     <View style={styles.paymentRow}>
-                        <Text style={styles.paymentLabel}>Payment</Text>
-                        <Text style={styles.paymentValue}>PhonePe</Text>
+                        <Text style={styles.paymentLabel}>Payment Method</Text>
+                        <Text style={styles.paymentValue}>{order.paymentMethod || 'Online'}</Text>
                     </View>
                     <View style={[styles.paymentRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
                         <Text style={styles.paymentLabel}>Total</Text>
-                        <Text style={styles.paymentTotal}>$18.99</Text>
+                        <Text style={styles.paymentTotal}>${order.totalAmount}</Text>
                     </View>
                 </View>
 
@@ -126,7 +167,6 @@ export default function OrderDetailScreen() {
                 <Text style={styles.sectionTitle}>Your Driver</Text>
                 <View style={styles.driverCard}>
                     <View style={styles.driverInfo}>
-                        {/* Avatar placeholder */}
                         <View style={styles.driverAvatar}>
                             <Text style={{ fontWeight: 'bold', color: '#555' }}>AK</Text>
                         </View>

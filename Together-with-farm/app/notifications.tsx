@@ -4,84 +4,52 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 
-const FILTERS = ['All 2', 'Order', 'Promo', 'Delivery', 'Update Instructions'];
+import { useNotifications } from '@/contexts/NotificationContext';
 
-const NOTIFICATIONS = [
-    {
-        id: 1,
-        title: 'Your Order #4526 is on the way.',
-        description: 'Expected delivery 5:30-6:30 pm',
-        time: '5min ago',
-        type: 'order',
-        icon: 'cube-outline',
-        highlight: true,
-        section: 'Today',
-        bg: '#D3D3D3' // Light Grey for unread/highlight
-    },
-    {
-        id: 2,
-        title: '20% Off on fresh Veggies Today',
-        description: 'Save on all greens until midnight',
-        time: '5min ago',
-        type: 'promo',
-        icon: 'gift-outline',
-        highlight: true,
-        section: 'Today',
-        bg: '#D3D3D3',
-        voucherCode: 'FRESH20',
-        validity: 'Valid until 11:59 Today',
-        promoDetails: 'Save on all greens until midnight. Offers apply automatically when checkout'
-    },
-    {
-        id: 3,
-        title: 'How was your delivery?',
-        description: 'Tap to rate your driver',
-        time: 'Yesterday',
-        type: 'feedback',
-        icon: 'help-circle-outline',
-        highlight: false,
-        section: 'Yesterday',
-        bg: '#fff'
-    },
-    {
-        id: 4,
-        title: 'Your order was delivered successfully',
-        description: 'Thank you for shopping with TWF',
-        time: 'Yesterday',
-        type: 'success',
-        icon: 'checkmark-circle-outline',
-        highlight: false,
-        section: 'Yesterday',
-        bg: '#fff'
-    },
-];
+const FILTERS = ['All', 'Promo', 'Order', 'Alert', 'Success'];
 
 export default function NotificationsScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const [activeFilter, setActiveFilter] = useState('All 2');
-    const [selectedPromo, setSelectedPromo] = useState<typeof NOTIFICATIONS[0] | null>(null);
+    const { notifications, unreadCount, refreshNotifications } = useNotifications();
+    const [activeFilter, setActiveFilter] = useState('All');
+    const [selectedPromo, setSelectedPromo] = useState<any>(null);
 
-    const handleNotificationPress = (item: typeof NOTIFICATIONS[0]) => {
+    const handleNotificationPress = (item: any) => {
         if (item.type === 'promo') {
             setSelectedPromo(item);
         }
     };
 
-    const renderNotificationItem = (item: typeof NOTIFICATIONS[0]) => (
+    const handleCopyCode = async () => {
+        if (selectedPromo?.voucherCode) {
+            await Clipboard.setStringAsync(selectedPromo.voucherCode);
+            alert(`Code ${selectedPromo.voucherCode} copied to clipboard!`);
+            setSelectedPromo(null);
+        }
+    };
+
+    const filteredNotifications = notifications.filter(n => {
+        if (activeFilter === 'All') return true;
+        // Map filter labels to notification types if needed, or simple equality
+        return n.type.toLowerCase() === activeFilter.toLowerCase();
+    });
+
+    const renderNotificationItem = (item: any) => (
         <TouchableOpacity
             key={item.id}
             style={[
                 styles.notificationCard,
-                { backgroundColor: item.highlight ? '#EDEDED' : '#fff' },
+                { backgroundColor: item.highlight ? '#F0FDF4' : '#fff' },
                 item.highlight ? styles.activeCard : null
             ]}
             onPress={() => handleNotificationPress(item)}
         >
             <View style={[styles.iconContainer, item.type === 'success' ? { backgroundColor: '#000' } : { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#000' }]}>
                 <Ionicons
-                    name={item.icon as any}
+                    name={item.icon}
                     size={24}
                     color={item.type === 'success' ? '#fff' : '#000'}
                 />
@@ -89,6 +57,11 @@ export default function NotificationsScreen() {
             <View style={styles.textContainer}>
                 <Text style={styles.notifTitle}>{item.title}</Text>
                 <Text style={styles.notifDesc}>{item.description}</Text>
+                {item.voucherCode && (
+                    <Text style={{ fontSize: 11, color: '#1F5E2E', fontFamily: 'DMSans_700Bold', marginTop: 2 }}>
+                        Use Code: {item.voucherCode}
+                    </Text>
+                )}
                 <Text style={styles.notifTime}>{item.time}</Text>
             </View>
             {item.highlight && <View style={styles.greenDot} />}
@@ -106,11 +79,16 @@ export default function NotificationsScreen() {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
                 <View style={styles.headerRight}>
+                    <TouchableOpacity style={styles.iconButton} onPress={refreshNotifications}>
+                        <Ionicons name="refresh-outline" size={24} color="#1A1A1A" />
+                    </TouchableOpacity>
                     <TouchableOpacity style={styles.iconButton}>
                         <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                        <View style={styles.notificationBadge}>
-                            <Text style={styles.badgeText}>2</Text>
-                        </View>
+                        {unreadCount > 0 && (
+                            <View style={styles.notificationBadge}>
+                                <Text style={styles.badgeText}>{unreadCount}</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -139,13 +117,30 @@ export default function NotificationsScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-                {/* Today Section */}
-                <Text style={styles.sectionHeader}>Today</Text>
-                {NOTIFICATIONS.filter(n => n.section === 'Today').map(renderNotificationItem)}
+                {filteredNotifications.length === 0 ? (
+                    <View style={{ padding: 40, alignItems: 'center' }}>
+                        <Ionicons name="chatbubble-ellipses-outline" size={48} color="#ddd" />
+                        <Text style={{ marginTop: 16, color: '#999', fontFamily: 'DMSans_500Medium' }}>No notifications yet</Text>
+                    </View>
+                ) : (
+                    <>
+                        {/* Today Section */}
+                        {filteredNotifications.some(n => n.section === 'Today') && (
+                            <>
+                                <Text style={styles.sectionHeader}>Today</Text>
+                                {filteredNotifications.filter(n => n.section === 'Today').map(renderNotificationItem)}
+                            </>
+                        )}
 
-                {/* Yesterday Section */}
-                <Text style={styles.sectionHeader}>Yesterday</Text>
-                {NOTIFICATIONS.filter(n => n.section === 'Yesterday').map(renderNotificationItem)}
+                        {/* Yesterday Section */}
+                        {filteredNotifications.some(n => n.section === 'Yesterday') && (
+                            <>
+                                <Text style={styles.sectionHeader}>Yesterday</Text>
+                                {filteredNotifications.filter(n => n.section === 'Yesterday').map(renderNotificationItem)}
+                            </>
+                        )}
+                    </>
+                )}
             </ScrollView>
 
             {/* Voucher Modal */}
@@ -177,9 +172,10 @@ export default function NotificationsScreen() {
                             <Text style={styles.validityText}>{selectedPromo?.validity}</Text>
                         </View>
 
-                        <TouchableOpacity style={styles.redeemButton} onPress={() => setSelectedPromo(null)}>
-                            <Text style={styles.redeemText}>Redeem Now</Text>
+                        <TouchableOpacity style={styles.redeemButton} onPress={handleCopyCode}>
+                            <Text style={styles.redeemText}>Copy Code</Text>
                         </TouchableOpacity>
+
                     </View>
                 </View>
             </Modal>

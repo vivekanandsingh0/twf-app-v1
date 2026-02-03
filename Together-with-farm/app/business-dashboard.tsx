@@ -66,6 +66,9 @@ export default function BusinessDashboardScreen() {
     const validOrdersCount = filteredOrders.filter(o => o.status !== 'Cancelled').length;
     const avgOrderValue = validOrdersCount > 0 ? (totalSales / validOrdersCount).toFixed(0) : 0;
 
+    const pendingCount = filteredOrders.filter(o => o.status === 'Pending').length;
+    const processingCount = filteredOrders.filter(o => ['Accepted', 'Preparing', 'Ready', 'Shipped', 'On the Way', 'Picked'].includes(o.status)).length;
+    const deliveredCount = filteredOrders.filter(o => o.status === 'Delivered').length;
     const cancelledCount = filteredOrders.filter(o => o.status === 'Cancelled').length;
 
     // Category Performance
@@ -108,7 +111,6 @@ export default function BusinessDashboardScreen() {
         return Object.values(prodMap).sort((a, b) => b.sales - a.sales).slice(0, 5);
     }, [filteredOrders]);
 
-
     // --- Render Helpers ---
 
     const renderMetricCard = (title: string, value: string | number, subtext: string, icon: any, color: string) => (
@@ -121,7 +123,6 @@ export default function BusinessDashboardScreen() {
             </View>
             <Text style={styles.metricValue}>{value}</Text>
             <Text style={styles.metricTitle}>{title}</Text>
-            {/* <Text style={styles.metricSubtext}>{subtext}</Text> */}
         </View>
     );
 
@@ -159,12 +160,16 @@ export default function BusinessDashboardScreen() {
                 {/* Metrics Grid */}
                 <View style={styles.metricsGrid}>
                     <View style={styles.gridRow}>
-                        {renderMetricCard('Total Sales', `₹${totalSales.toLocaleString()}`, '+12% from last week', 'cash-outline', '#1F5E2E')}
-                        {renderMetricCard('Total Orders', totalOrdersCount, '+5% from last week', 'cart-outline', '#2979FF')}
+                        {renderMetricCard('Total Sales', `₹${totalSales.toLocaleString()}`, '', 'cash-outline', '#1F5E2E')}
+                        {renderMetricCard('Total Orders', totalOrdersCount, '', 'cart-outline', '#2979FF')}
                     </View>
                     <View style={styles.gridRow}>
-                        {renderMetricCard('Avg. Order Value', `₹${avgOrderValue}`, 'Stagnant', 'pricetag-outline', '#F57C00')}
-                        {renderMetricCard('Cancelled', cancelledCount, '2 orders returned', 'alert-circle-outline', '#D32F2F')}
+                        {renderMetricCard('Pending', pendingCount, 'Action Needed', 'time-outline', '#FBC02D')}
+                        {renderMetricCard('In Progress', processingCount, 'Processing', 'bicycle-outline', '#1976D2')}
+                    </View>
+                    <View style={styles.gridRow}>
+                        {renderMetricCard('Delivered', deliveredCount, 'Completed', 'checkmark-circle-outline', '#388E3C')}
+                        {renderMetricCard('Cancelled', cancelledCount, 'Returned', 'alert-circle-outline', '#D32F2F')}
                     </View>
                 </View>
 

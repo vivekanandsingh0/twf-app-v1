@@ -21,8 +21,9 @@ export interface VendorProduct {
 export interface VendorOrder {
     id: string;
     userId: string; // Link to User
+    customerId?: string; // Optional link to User
     customerName: string;
-    items: { productName: string; quantity: number; price: number }[];
+    items: { productName: string; quantity: number; price: number; image?: any }[]; // Added image
     totalAmount: number;
     discount?: number; // Added
     tax?: number;      // Added
@@ -348,9 +349,17 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                                 // If local status is more advanced than remote (e.g. Local=Accepted(1) > Remote=Pending(0)), 
                                 // keep local status. This happens when polling catches us before backend write finishes.
                                 if (localRank > remoteRank) {
-                                    return { ...remoteOrder, status: localOrder.status };
-                                    // Keep other fields from remote (in case backend updated something else), but preserve our status
+                                    return {
+                                        ...remoteOrder,
+                                        status: localOrder.status,
+                                        items: localOrder.items
+                                    };
                                 }
+
+                                return {
+                                    ...remoteOrder,
+                                    items: localOrder.items && localOrder.items.length > 0 ? localOrder.items : remoteOrder.items
+                                };
                             }
                             return remoteOrder;
                         });
@@ -497,14 +506,22 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, paymentStatus: 'Paid' } : o));
             }
 
-            await fetch(`${API_URL}/api/orders/${orderId}`, {
+            const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates)
             });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Server responded with ${res.status}: ${errText}`);
+            }
             console.log(`Order ${orderId} status synced to ${status}`);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to sync order status", e);
+            alert(`Failed to update order status: ${e.message}`);
+            // Revert optimistic update
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Pending' } : o)); // Ideally revert to previous status
         }
 
         // Mock financial update logic (for delivered)

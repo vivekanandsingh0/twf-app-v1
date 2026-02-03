@@ -19,7 +19,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         console.log(`Admin API: Updating Order ${id}`, body);
 
         // 1. Get current order state
-        const { data: allOrders } = await localDb.orders.getAll();
+        const allOrders = await localDb.orders.getAll();
         const currentOrder = allOrders.find((o: any) => o.id === id);
 
         if (!currentOrder) {
@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             const vendorId = currentOrder.vendor_id;
 
             if (items.length > 0 && vendorId) {
-                const { data: allProducts } = await localDb.products.getAll();
+                const allProducts = await localDb.products.getAll();
                 // Filter products for this vendor to optimize/ensure correctness
                 const vendorProducts = allProducts.filter((p: any) => String(p.vendor_id) === String(vendorId));
 
@@ -57,6 +57,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         // 3. Update the order
         const updated = await localDb.orders.update(id, body);
+
+        if (!updated) {
+            console.error(`Admin API: Order ${id} not found in database for update.`);
+            return NextResponse.json({ error: 'Order not found or update failed' }, { status: 404, headers });
+        }
+
+        console.log(`Admin API: Order ${id} successfully updated to ${body.status}`);
         return NextResponse.json(updated, { headers });
     } catch (e) {
         console.error("Admin API Error:", e);

@@ -14,7 +14,8 @@ type Order = {
     date: string;
     total: string;
     status: OrderStatus;
-    image: string; // URL
+    image: any; // Changed from string to any to support require/uri
+    totalQuantity: number;
 };
 
 import { useVendor, VendorOrder } from '@/contexts/VendorContext';
@@ -47,8 +48,13 @@ export default function OrdersScreen() {
     // Map to View Model
     const mapToViewOrder = (vo: VendorOrder): Order => {
         const itemCount = vo.items.reduce((sum, i) => sum + i.quantity, 0);
+        // Use image from first item if available, else fallback
+        const firstItemImage = vo.items.length > 0 && vo.items[0].image
+            ? vo.items[0].image
+            : { uri: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60" }; // Basket of veggies fallback
+
         const itemSummary = vo.items.length > 0
-            ? `${vo.items[0].productName} ${itemCount > 1 ? `+${itemCount - 1} more` : ''}`
+            ? vo.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')
             : 'No items';
 
         return {
@@ -58,7 +64,8 @@ export default function OrdersScreen() {
             date: `${vo.status} on ${formatDate(vo.date)}`,
             total: `$${vo.totalAmount}`,
             status: vo.status as OrderStatus,
-            image: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=60" // Placeholder for list view
+            image: firstItemImage,
+            totalQuantity: itemCount
         };
     };
 
@@ -80,10 +87,9 @@ export default function OrdersScreen() {
             }}
         >
             <View style={styles.cardHeader}>
-                <Image source={{ uri: order.image }} style={styles.productImage} />
+                <Image source={order.image} style={styles.productImage} />
                 <View style={styles.badgeContainer}>
-                    <View style={styles.quantityBadge}><Text style={styles.quantityText}>3</Text></View>
-                    {/* Actually quantity in screenshot is overlay on image? Check screenshot. Yes, top right of image */}
+                    <View style={styles.quantityBadge}><Text style={styles.quantityText}>{order.totalQuantity}</Text></View>
                 </View>
 
                 <View style={styles.orderInfo}>
