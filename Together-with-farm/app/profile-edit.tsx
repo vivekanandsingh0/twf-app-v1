@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/contexts/UserContext';
 
 export default function ProfileEditScreen() {
@@ -25,10 +26,33 @@ export default function ProfileEditScreen() {
     const [phone, setPhone] = useState(userData.phoneNumber || '+91 23456 7890');
     const [gender, setGender] = useState(userData.gender);
     const [dob, setDob] = useState(userData.dob);
+    const [profileImage, setProfileImage] = useState(userData.profileImage || '');
+
+    const pickImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const asset = result.assets[0];
+                const base64Img = asset.base64
+                    ? `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`
+                    : asset.uri;
+                setProfileImage(base64Img);
+            }
+        } catch (e) {
+            Alert.alert("Error", "Failed to pick image");
+        }
+    };
 
     const handleSave = () => {
-        // Update all profile fields including phone number to DB
-        updateProfile(fullName, gender, dob, phone);
+        // Update all profile fields including phone number and image to DB
+        updateProfile(fullName, gender, dob, phone, undefined, undefined, undefined, profileImage);
 
         // Show success message
         if (Platform.OS === 'web') {
@@ -61,13 +85,15 @@ export default function ProfileEditScreen() {
             <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}>
                 {/* Avatar Section */}
                 <View style={styles.avatarContainer}>
-                    <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop' }}
-                        style={styles.avatar}
-                        contentFit="cover"
-                    />
-                    <TouchableOpacity style={styles.cameraButton}>
-                        <Ionicons name="camera-outline" size={20} color="#1A1A1A" />
+                    <TouchableOpacity onPress={pickImage}>
+                        <Image
+                            source={profileImage ? { uri: profileImage } : { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop' }}
+                            style={styles.avatar}
+                            contentFit="cover"
+                        />
+                        <View style={styles.cameraButton}>
+                            <Ionicons name="camera-outline" size={20} color="#1A1A1A" />
+                        </View>
                     </TouchableOpacity>
                 </View>
 

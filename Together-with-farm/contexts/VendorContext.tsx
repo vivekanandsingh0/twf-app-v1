@@ -57,6 +57,7 @@ export interface VendorProfile {
     gender?: string; // Matching screenshot: Gender
     dob?: string;    // Matching screenshot: DOB
     logo?: any;
+    profileImage?: string; // Base64 or URL
     shopStatus?: string; // Active, Inactive, Suspended, etc.
     bankDetails?: {
         accountHolderName: string;
@@ -110,7 +111,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
         farmSize: "",
         gender: "",
         dob: "",
-        shopStatus: "Active"
+        shopStatus: "Active",
+        profileImage: ""
     });
 
     // Fetch Profile on Mount
@@ -143,6 +145,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         gender: data.gender || prev.gender,
                         dob: data.dob || prev.dob,
                         shopStatus: data.shop_status || 'Active',
+                        profileImage: data.profile_image || prev.profileImage,
                         bankDetails: data.bank_details ? {
                             accountHolderName: data.bank_details.account_holder_name || '',
                             bankName: data.bank_details.bank_name || '',
@@ -567,6 +570,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                     farm_size: updates.farmSize,
                     gender: updates.gender,
                     dob: updates.dob,
+                    profile_image: updates.profileImage, // Sync Image!
                     bank_details: updates.bankDetails ? {
                         account_holder_name: updates.bankDetails.accountHolderName,
                         bank_name: updates.bankDetails.bankName,

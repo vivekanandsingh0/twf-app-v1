@@ -15,24 +15,18 @@ export interface Address {
 }
 
 // Keep initial addresses empty as we will fetch from DB
-const INITIAL_ADDRESSES: Address[] = [
-    {
-        id: '1',
-        type: 'Home',
-        icon: 'home-outline',
-        address: '123, Green Str.',
-        city: 'Patna',
-        pincode: '800001'
-    },
-    {
-        id: '2',
-        type: 'Work',
-        icon: 'briefcase-outline',
-        address: 'Tech Park, Sector 5',
-        city: 'Patna',
-        pincode: '800013'
-    }
-];
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+const getApiUrl = () => {
+    const debuggerHost = Constants.expoConfig?.hostUri;
+    const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+    const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+    return `http://${host}:3000`;
+};
+
+// Keep initial addresses empty as we will fetch from DB
+const INITIAL_ADDRESSES: Address[] = [];
 
 interface AddressContextType {
     addresses: Address[];
@@ -60,37 +54,67 @@ export function AddressProvider({ children }: { children: ReactNode }) {
             fetchAddresses();
         } else {
             // Keep mock addresses even if logged out for demo purposes, or reset
-            // setAddresses([]); 
-            // setSelectedAddress(null);
+            setAddresses([]);
+            setSelectedAddress(null);
         }
     }, [user]);
 
     const fetchAddresses = async () => {
-        // Mock Fetch
+        if (!user) return;
         setLoading(true);
-        // Simulate delay
-        setTimeout(() => {
-            // In a real mock, we might load from somewhere else, but INITIAL_ADDRESSES is fine
-            if (addresses.length === 0) setAddresses(INITIAL_ADDRESSES);
-            if (!selectedAddress && addresses.length > 0) setSelectedAddress(addresses[0]);
+        try {
+            const API_URL = getApiUrl();
+            const res = await fetch(`${API_URL}/api/profiles/${user.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.addresses && Array.isArray(data.addresses)) {
+                    setAddresses(data.addresses);
+                    if (!selectedAddress && data.addresses.length > 0) {
+                        setSelectedAddress(data.addresses[0]);
+                    }
+                } else {
+                    setAddresses([]);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch addresses:", e);
+        } finally {
             setLoading(false);
-        }, 500);
+        }
+    };
+
+    const syncAddressesToBackend = async (newAddresses: Address[]) => {
+        if (!user) return;
+        try {
+            const API_URL = getApiUrl();
+            await fetch(`${API_URL}/api/profiles/${user.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    addresses: newAddresses
+                })
+            });
+        } catch (e) {
+            console.error("Failed to sync addresses:", e);
+        }
     };
 
     const addAddress = async (addressData: Omit<Address, 'id'>) => {
-        // Mock Add
         try {
             const newAddress: Address = {
                 ...addressData,
                 id: Date.now().toString(),
                 icon: getIconForType(addressData.type)
             };
-            setAddresses(prev => [newAddress, ...prev]);
+            const updatedAddresses = [newAddress, ...addresses];
+            setAddresses(updatedAddresses);
 
             // If this is the first address, select it
             if (addresses.length === 0) {
                 setSelectedAddress(newAddress);
             }
+
+            await syncAddressesToBackend(updatedAddresses);
         } catch (error: any) {
             console.error('Error adding address:', error);
             Alert.alert('Error', 'Failed to save address: ' + error.message);
@@ -98,17 +122,18 @@ export function AddressProvider({ children }: { children: ReactNode }) {
     };
 
     const updateAddress = async (id: string, updatedData: Partial<Address>) => {
-        // Mock Update
         try {
-            setAddresses(prev => prev.map(addr =>
+            const updatedAddresses = addresses.map(addr =>
                 addr.id === id ? { ...addr, ...updatedData, icon: updatedData.type ? getIconForType(updatedData.type) : addr.icon } : addr
-            ));
+            );
+            setAddresses(updatedAddresses);
 
             // If updating currently selected address, update it too
             if (selectedAddress?.id === id) {
                 setSelectedAddress(prev => prev ? { ...prev, ...updatedData, icon: updatedData.type ? getIconForType(updatedData.type) : prev.icon } : null);
             }
 
+            await syncAddressesToBackend(updatedAddresses);
         } catch (error: any) {
             console.error('Error updating address:', error);
             Alert.alert('Error', 'Failed to update address');
@@ -116,7 +141,6 @@ export function AddressProvider({ children }: { children: ReactNode }) {
     };
 
     const deleteAddress = async (id: string) => {
-        // Mock Delete
         try {
             const newAddresses = addresses.filter(addr => addr.id !== id);
             setAddresses(newAddresses);
@@ -125,6 +149,8 @@ export function AddressProvider({ children }: { children: ReactNode }) {
             if (selectedAddress?.id === id) {
                 setSelectedAddress(newAddresses.length > 0 ? newAddresses[0] : null);
             }
+
+            await syncAddressesToBackend(newAddresses);
         } catch (error: any) {
             console.error('Error deleting address:', error);
             Alert.alert('Error', 'Failed to delete address');

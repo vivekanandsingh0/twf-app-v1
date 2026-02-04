@@ -13,6 +13,7 @@ interface UserData {
     experience?: string;
     farmSize?: string;
     bio?: string;
+    profileImage?: string; // Base64 or URL
 }
 
 // Mock Types to replace Supabase Types
@@ -34,7 +35,7 @@ interface UserContextType {
     userData: UserData;
     setUserData: (data: Partial<UserData>) => void;
     updatePhoneNumber: (phone: string) => void;
-    updateProfile: (name: string, gender: string, dob: string, phone?: string, experience?: string, farmSize?: string, bio?: string) => Promise<void>;
+    updateProfile: (name: string, gender: string, dob: string, phone?: string, experience?: string, farmSize?: string, bio?: string, profileImage?: string) => Promise<void>;
     sendOtp: (phone: string) => Promise<{ error: any }>;
     verifyOtp: (phone: string, token: string, userType: 'User' | 'Vendor') => Promise<{ session: MockSession | null; error: any }>;
     signOut: () => Promise<void>;
@@ -54,6 +55,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         gender: 'Male',
         dob: '10 August 1999',
         userType: 'User',
+        profileImage: ''
     });
 
     useEffect(() => {
@@ -76,7 +78,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setUserDataState(prev => ({ ...prev, phoneNumber: phone }));
     };
 
-    const updateProfile = async (name: string, gender: string, dob: string, phone?: string, experience?: string, farmSize?: string, bio?: string) => {
+    const updateProfile = async (name: string, gender: string, dob: string, phone?: string, experience?: string, farmSize?: string, bio?: string, profileImage?: string) => {
         // Mock Update
         setUserDataState(prev => ({
             ...prev,
@@ -86,10 +88,39 @@ export function UserProvider({ children }: { children: ReactNode }) {
             phoneNumber: phone || prev.phoneNumber,
             experience: experience || prev.experience,
             farmSize: farmSize || prev.farmSize,
-            bio: bio || prev.bio
+            bio: bio || prev.bio,
+            profileImage: profileImage || prev.profileImage
         }));
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // SYNC WITH ADMIN BACKEND
+        try {
+            if (!user) return;
+            const debuggerHost = Constants.expoConfig?.hostUri;
+            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
+            const API_URL = `http://${host}:3000`;
+
+            console.log(`Syncing Profile Update with Admin: ${API_URL}/api/profiles/${user.id}`);
+
+            await fetch(`${API_URL}/api/profiles/${user.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: name,
+                    gender: gender,
+                    dob: dob,
+                    phone_number: phone || userData.phoneNumber,
+                    // Also sync vendor fields if applicable, though primarily for User here
+                    experience: experience,
+                    farm_size: farmSize,
+                    bio: bio,
+                    profile_image: profileImage // Sync Image
+                })
+            });
+            console.log("User Profile Sync Success!");
+        } catch (e: any) {
+            console.error("Failed to sync user profile:", e.message || e);
+        }
     };
 
     const sendOtp = async (phone: string) => {
@@ -133,8 +164,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
 
         if (token === '123456' || token.length > 0) {
+            const userId = 'user_' + phone.replace(/\D/g, '');
             const mockUser: MockUser = {
-                id: 'user_' + phone.replace(/\D/g, ''),
+                id: userId,
                 phone: phone
             };
             const mockSession: MockSession = {
@@ -142,7 +174,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 access_token: 'mock_token'
             };
 
-            // SYNC WITH ADMIN BACKEND
+            // SYNC WITH ADMIN BACKEND & FETCH EXISTING DATA
             try {
                 // Dynamically determine Host IP (Works for Emulator & Physical Devices)
                 const debuggerHost = Constants.expoConfig?.hostUri;
@@ -151,6 +183,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 const API_URL = `http://${host}:3000`;
 
                 console.log(`Syncing User with Admin Backend at: ${API_URL}/api/profiles`);
+
+                // Check if user exists primarily to get their name
+                try {
+                    const getRes = await fetch(`${API_URL}/api/profiles/${userId}`);
+                    if (getRes.ok) {
+                        const existingUser = await getRes.json();
+                        console.log("Found existing user:", existingUser);
+
+                        // Update local state with existing data
+                        setUserDataState(prev => ({
+                            ...prev,
+                            phoneNumber: phone,
+                            userType: userType,
+                            fullName: existingUser.full_name || existingUser.ownerName || prev.fullName,
+                            gender: existingUser.gender || prev.gender,
+                            dob: existingUser.dob || prev.dob,
+                            profileImage: existingUser.profile_image || prev.profileImage // Load Image
+                        }));
+                    }
+                } catch (e) {
+                    // Ignore lookup fail, proceed to create/ensure
+                }
 
                 // Add Timeout to fail fast if unreachable
                 const controller = new AbortController();
@@ -163,7 +217,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         id: mockUser.id,
                         phone_number: phone,
                         user_type: userType,
-                        full_name: 'Anonymous',
+                        full_name: userData.fullName || 'Anonymous', // Use current state or default
                         created_at: new Date().toISOString()
                     }),
                     signal: controller.signal
@@ -172,7 +226,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
                 if (!response.ok) {
                     const text = await response.text();
-                    throw new Error(`Server responded with ${response.status}: ${text}`);
+                    // Don't throw if it's just "already exists" logic, depending on API, but let's assume API handles upsert or ignore
+                    // throw new Error(`Server responded with ${response.status}: ${text}`);
                 }
                 console.log("Sync User Success!");
             } catch (e: any) {

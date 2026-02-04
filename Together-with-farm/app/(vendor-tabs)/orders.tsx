@@ -338,9 +338,6 @@ export default function VendorOrdersScreen() {
                 </View>
 
                 <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
-                    <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{orders.filter(o => o.status === 'Pending').length}</Text>
-                    </View>
                     <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
             </View>

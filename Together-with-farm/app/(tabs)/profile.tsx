@@ -100,7 +100,7 @@ export default function ProfileScreen() {
                 {/* User Profile Card */}
                 <View style={styles.profileCard}>
                     <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop' }}
+                        source={userData.profileImage ? { uri: userData.profileImage } : { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop' }}
                         style={styles.avatar}
                         contentFit="cover"
                     />

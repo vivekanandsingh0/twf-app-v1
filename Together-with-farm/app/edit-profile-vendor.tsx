@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function VendorProfileEditScreen() {
     const router = useRouter();
@@ -31,6 +32,7 @@ export default function VendorProfileEditScreen() {
     const [experience, setExperience] = useState(profile.experience || '');
     const [farmSize, setFarmSize] = useState(profile.farmSize || '');
     const [ourStory, setOurStory] = useState(profile.bio || '');
+    const [profileImage, setProfileImage] = useState(profile.profileImage || '');
 
     // Update local state when profile loads (if it was empty initially)
     React.useEffect(() => {
@@ -41,7 +43,32 @@ export default function VendorProfileEditScreen() {
         if (profile.experience) setExperience(profile.experience);
         if (profile.farmSize) setFarmSize(profile.farmSize);
         if (profile.bio) setOurStory(profile.bio);
+        if (profile.profileImage) setProfileImage(profile.profileImage);
     }, [profile]);
+
+    const pickImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                // Ensure we have the base64 string
+                const asset = result.assets[0];
+                const base64Img = asset.base64
+                    ? `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`
+                    : asset.uri; // Fallback to URI if base64 missing (unexpected with option true)
+
+                setProfileImage(base64Img);
+            }
+        } catch (e) {
+            Alert.alert("Error", "Failed to pick image");
+        }
+    };
 
     const handleSave = async () => {
         if (!user) {
@@ -58,7 +85,8 @@ export default function VendorProfileEditScreen() {
                 dob: dob,
                 experience: experience,
                 farmSize: farmSize,
-                bio: ourStory
+                bio: ourStory,
+                profileImage: profileImage
             });
 
             alert('Profile Updated Successfully!');
@@ -85,12 +113,16 @@ export default function VendorProfileEditScreen() {
             <ScrollView contentContainerStyle={styles.content}>
                 {/* Avatar Placeholder */}
                 <View style={styles.avatarContainer}>
-                    <View style={styles.avatarWrapper}>
-                        <Image source={require('@/assets/images/3d-model-with-veg.png')} style={styles.avatar} contentFit="cover" />
+                    <TouchableOpacity onPress={pickImage} style={styles.avatarWrapper}>
+                        <Image
+                            source={profileImage ? { uri: profileImage } : require('@/assets/images/3d-model-with-veg.png')}
+                            style={styles.avatar}
+                            contentFit="cover"
+                        />
                         <View style={styles.cameraButton}>
                             <Ionicons name="camera-outline" size={20} color="#1A1A1A" />
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Form */}

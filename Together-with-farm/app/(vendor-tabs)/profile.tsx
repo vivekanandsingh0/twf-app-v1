@@ -63,10 +63,7 @@ export default function VendorProfileScreen() {
                     <TouchableOpacity style={styles.iconButton}>
                         <Ionicons name="gift-outline" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.iconButton, { marginLeft: 8 }]}>
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>2</Text>
-                        </View>
+                    <TouchableOpacity style={[styles.iconButton, { marginLeft: 8 }]} onPress={() => router.push('/notifications')}>
                         <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                 </View>
@@ -101,7 +98,7 @@ export default function VendorProfileScreen() {
                 {/* Profile Card */}
                 <View style={styles.profileCard}>
                     <Image
-                        source={require('@/assets/images/3d-model-with-veg.png')} // Using existing asset as placeholder
+                        source={profile.profileImage ? { uri: profile.profileImage } : require('@/assets/images/3d-model-with-veg.png')}
                         style={styles.profileImage}
                         contentFit="cover"
                     />
@@ -148,8 +145,7 @@ export default function VendorProfileScreen() {
                     {renderMenuItem('cube-outline', 'Orders', () => router.push('/(vendor-tabs)/orders'))}
                     <View style={styles.divider} />
                     {renderMenuItem('cash-outline', 'Payouts', () => router.push('/vendor-payouts'))}
-                    <View style={styles.divider} />
-                    {renderMenuItem('pricetag-outline', 'Sales')}
+
                 </View>
 
                 {/* Performance Section */}

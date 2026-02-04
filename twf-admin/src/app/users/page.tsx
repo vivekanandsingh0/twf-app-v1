@@ -38,8 +38,12 @@ export default async function CustomersPage() {
                             <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 font-medium text-gray-900">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm">
-                                            {user.full_name?.charAt(0) || 'U'}
+                                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm overflow-hidden relative">
+                                            {user.profile_image ? (
+                                                <img src={user.profile_image} alt={user.full_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span>{user.full_name?.charAt(0) || 'U'}</span>
+                                            )}
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-base">{user.full_name || 'Anonymous User'}</span>
@@ -54,7 +58,7 @@ export default async function CustomersPage() {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-xs text-gray-500">
-                                    {new Date(user.created_at).toLocaleDateString()}
+                                    <span suppressHydrationWarning>{user.created_at ? new Date(user.created_at).toISOString().split('T')[0] : 'N/A'}</span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex justify-end gap-2">

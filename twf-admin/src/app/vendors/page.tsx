@@ -94,9 +94,13 @@ export default async function VendorsPage() {
                         </div>
 
                         <div className="flex flex-col items-center text-center mb-6 pt-4">
-                            <div className="w-20 h-20 rounded-2xl bg-slate-50 mb-4 flex items-center justify-center text-2xl shadow-inner relative group-hover:scale-105 transition-transform duration-300">
+                            <div className="w-20 h-20 rounded-2xl bg-slate-50 mb-4 flex items-center justify-center text-2xl shadow-inner relative group-hover:scale-105 transition-transform duration-300 overflow-hidden">
                                 <span className="absolute inset-0 bg-gradient-to-tr from-emerald-50 to-transparent opacity-50 rounded-2xl"></span>
-                                {vendor.full_name?.charAt(0) || 'V'}
+                                {vendor.profile_image ? (
+                                    <img src={vendor.profile_image} alt={vendor.full_name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span>{vendor.full_name?.charAt(0) || 'V'}</span>
+                                )}
                             </div>
                             <h3 className="text-lg font-bold text-slate-900 line-clamp-1 w-full px-2">{vendor.full_name || 'Unnamed Vendor'}</h3>
                             <p className="text-slate-400 text-xs font-medium mt-1">{vendor.phone_number}</p>

@@ -1,15 +1,17 @@
 
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Switch } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Switch, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { Svg, Path, Circle, Text as SvgText } from 'react-native-svg';
 import { useVendor, VendorProduct } from '@/contexts/VendorContext';
 
 export default function VendorHomeScreen() {
     const insets = useSafeAreaInsets();
+    const { width: screenWidth } = useWindowDimensions();
     const router = require('expo-router').useRouter();
     const { products, updateProduct, orders, dashboardStats } = useVendor();
 
@@ -195,54 +197,84 @@ export default function VendorHomeScreen() {
                     <Text style={styles.insightsLabel}>Sales Overview</Text>
                     <Text style={styles.totalSalesText}>Total Revenue: ₹{dashboardStats.totalSales}</Text>
 
-                    {/* Dynamic Bar Chart */}
                     <View style={styles.chartContainer}>
                         {(() => {
-                            // 1. Get last 7 days
                             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+                            // 1. Get last 7 days
                             const last7Days = Array.from({ length: 7 }, (_, i) => {
                                 const d = new Date();
                                 d.setDate(d.getDate() - (6 - i));
                                 return d;
                             });
 
-                            // 2. Aggregate Sales
-                            const data = last7Days.map(date => {
+                            // 2. Aggregate Data
+                            const dailyAmounts = last7Days.map(date => {
                                 const dayStr = date.toISOString().split('T')[0];
-                                const dayTotal = orders
+                                return orders
                                     .filter(o => o.date.startsWith(dayStr) && o.status !== 'Cancelled')
                                     .reduce((sum, o) => sum + o.totalAmount, 0);
-                                return {
-                                    dayName: days[date.getDay()],
-                                    amount: dayTotal
-                                };
                             });
 
-                            // 3. Find Max for Scaling
-                            const maxAmount = Math.max(...data.map(d => d.amount), 100); // Default to 100 to avoid div by 0
+                            const labels = last7Days.map(d => days[d.getDay()]);
+
+                            // 3. Custom Chart Logic
+                            const chartHeight = 150;
+                            const chartWidth = screenWidth - 80; // Card padding
+                            const maxVal = Math.max(...dailyAmounts, 100); // Avoid div by 0
+
+                            // Calculate Points
+                            const points = dailyAmounts.map((val, index) => {
+                                const x = (index / (dailyAmounts.length - 1)) * chartWidth;
+                                const y = chartHeight - ((val / maxVal) * chartHeight);
+                                return `${x},${y}`;
+                            });
+
+                            const pathData = `M ${points.join(' L ')}`;
 
                             return (
-                                <View style={styles.chartRow}>
-                                    {data.map((item, index) => {
-                                        const heightPercent = (item.amount / maxAmount) * 100;
-                                        // Ensure minimal visible height for 0 values or just show flat
-                                        const barHeight = heightPercent > 0 ? `${heightPercent}%` : '2%';
-
-                                        return (
-                                            <View key={index} style={styles.barWrapper}>
-                                                <View style={styles.barContainer}>
-                                                    <View
-                                                        style={[
-                                                            styles.barFill,
-                                                            { height: barHeight as any },
-                                                            item.amount > 0 ? styles.barActive : styles.barInactive
-                                                        ]}
-                                                    />
-                                                </View>
-                                                <Text style={styles.barLabel}>{item.dayName}</Text>
-                                            </View>
-                                        );
-                                    })}
+                                <View>
+                                    <Svg height={chartHeight + 20} width={chartWidth + 20} style={{ overflow: 'visible' }}>
+                                        {/* Line */}
+                                        <Path
+                                            d={pathData}
+                                            fill="none"
+                                            stroke="#1F5E2E"
+                                            strokeWidth="3"
+                                        />
+                                        {/* Dots */}
+                                        {dailyAmounts.map((val, index) => {
+                                            const x = (index / (dailyAmounts.length - 1)) * chartWidth;
+                                            const y = chartHeight - ((val / maxVal) * chartHeight);
+                                            return (
+                                                <Circle
+                                                    key={index}
+                                                    cx={x}
+                                                    cy={y}
+                                                    r="4"
+                                                    fill="#FFFFFF"
+                                                    stroke="#1F5E2E"
+                                                    strokeWidth="2"
+                                                />
+                                            );
+                                        })}
+                                        {/* Labels */}
+                                        {labels.map((label, index) => {
+                                            const x = (index / (labels.length - 1)) * chartWidth;
+                                            return (
+                                                <SvgText
+                                                    key={index}
+                                                    x={x}
+                                                    y={chartHeight + 20}
+                                                    fontSize="10"
+                                                    fill="#999"
+                                                    textAnchor="middle"
+                                                >
+                                                    {label}
+                                                </SvgText>
+                                            );
+                                        })}
+                                    </Svg>
                                 </View>
                             );
                         })()}
