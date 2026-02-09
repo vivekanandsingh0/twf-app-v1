@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useUser } from './UserContext';
 import { Alert } from 'react-native';
+import { supabase } from '../lib/supabase';
 
 export interface Address {
     id: string;
@@ -13,17 +15,6 @@ export interface Address {
     latitude?: number;
     longitude?: number;
 }
-
-// Keep initial addresses empty as we will fetch from DB
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-
-const getApiUrl = () => {
-    const debuggerHost = Constants.expoConfig?.hostUri;
-    const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-    const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
-    return `http://${host}:3000`;
-};
 
 // Keep initial addresses empty as we will fetch from DB
 const INITIAL_ADDRESSES: Address[] = [];
@@ -63,18 +54,19 @@ export function AddressProvider({ children }: { children: ReactNode }) {
         if (!user) return;
         setLoading(true);
         try {
-            const API_URL = getApiUrl();
-            const res = await fetch(`${API_URL}/api/profiles/${user.id}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.addresses && Array.isArray(data.addresses)) {
-                    setAddresses(data.addresses);
-                    if (!selectedAddress && data.addresses.length > 0) {
-                        setSelectedAddress(data.addresses[0]);
-                    }
-                } else {
-                    setAddresses([]);
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('addresses')
+                .eq('id', user.id)
+                .single();
+
+            if (data && data.addresses && Array.isArray(data.addresses)) {
+                setAddresses(data.addresses);
+                if (!selectedAddress && data.addresses.length > 0) {
+                    setSelectedAddress(data.addresses[0]);
                 }
+            } else {
+                setAddresses([]);
             }
         } catch (e) {
             console.error("Failed to fetch addresses:", e);
@@ -86,14 +78,12 @@ export function AddressProvider({ children }: { children: ReactNode }) {
     const syncAddressesToBackend = async (newAddresses: Address[]) => {
         if (!user) return;
         try {
-            const API_URL = getApiUrl();
-            await fetch(`${API_URL}/api/profiles/${user.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    addresses: newAddresses
-                })
-            });
+            const { error } = await supabase
+                .from('profiles')
+                .update({ addresses: newAddresses })
+                .eq('id', user.id);
+
+            if (error) throw error;
         } catch (e) {
             console.error("Failed to sync addresses:", e);
         }
@@ -107,7 +97,7 @@ export function AddressProvider({ children }: { children: ReactNode }) {
                 icon: getIconForType(addressData.type)
             };
             const updatedAddresses = [newAddress, ...addresses];
-            setAddresses(updatedAddresses);
+            setAddresses(updatedAddresses); // Optimistic
 
             // If this is the first address, select it
             if (addresses.length === 0) {
@@ -126,7 +116,7 @@ export function AddressProvider({ children }: { children: ReactNode }) {
             const updatedAddresses = addresses.map(addr =>
                 addr.id === id ? { ...addr, ...updatedData, icon: updatedData.type ? getIconForType(updatedData.type) : addr.icon } : addr
             );
-            setAddresses(updatedAddresses);
+            setAddresses(updatedAddresses); // Optimistic
 
             // If updating currently selected address, update it too
             if (selectedAddress?.id === id) {
@@ -143,7 +133,7 @@ export function AddressProvider({ children }: { children: ReactNode }) {
     const deleteAddress = async (id: string) => {
         try {
             const newAddresses = addresses.filter(addr => addr.id !== id);
-            setAddresses(newAddresses);
+            setAddresses(newAddresses); // Optimistic
 
             // If deleted address was selected, select the first one
             if (selectedAddress?.id === id) {
@@ -165,6 +155,9 @@ export function AddressProvider({ children }: { children: ReactNode }) {
         if (lowerType.includes('cafe') || lowerType.includes('coffee')) return 'cafe-outline';
         return 'location-outline';
     };
+
+
+
 
     return (
         <AddressContext.Provider value={{

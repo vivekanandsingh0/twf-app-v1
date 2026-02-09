@@ -14,7 +14,7 @@ export default function AddProductVendorScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { addProduct: addVendorProduct } = useVendor();
-    const { addProduct: addMarketProduct } = useMarket();
+    // const { addProduct: addMarketProduct } = useMarket(); // Removed as Market updates via DB sync
     const { user } = useUser();
 
     const [productName, setProductName] = useState('');
@@ -26,44 +26,51 @@ export default function AddProductVendorScreen() {
     const [quantity, setQuantity] = useState('');
     const [orderType, setOrderType] = useState<'Instant' | 'Pre-order'>('Instant');
 
-    const handleSave = () => {
+    const [loading, setLoading] = useState(false);
+
+    const handleSave = async () => {
+        console.log("Handle Save Pressed");
         if (!productName || !price || !quantity) {
             Alert.alert("Missing Fields", "Please fill in all required fields.");
             return;
         }
 
-        const numericPrice = parseFloat(price);
-        const numericStock = parseInt(quantity);
-        const productImage = require('@/assets/images/3d-model-with-veg.png'); // Mock image
+        if (!user) {
+            Alert.alert("Error", "You must be logged in to add products.");
+            return;
+        }
 
-        // 1. Add to Vendor Context (Private Management)
-        addVendorProduct({
-            name: productName,
-            description: productInfo,
-            category,
-            price: numericPrice,
-            unit: unit || 'kg',
-            stock: numericStock,
-            status: 'Active',
-            image: productImage
-        });
+        setLoading(true);
+        try {
+            const numericPrice = parseFloat(price);
+            const numericStock = parseInt(quantity);
+            const productImage = require('@/assets/images/3d-model-with-veg.png'); // Mock image (number)
 
-        // 2. Add to Market Context (Public Listing) - bridging the mock data
-        addMarketProduct({
-            vendorId: user?.id || 'vendor_def_001', // Link to current user or default
-            name: productName,
-            type: category, // Map Category to Type
-            price: numericPrice,
-            unit: unit || 'kg',
-            image: productImage,
-            description: productInfo,
-            isFavorite: false,
-            tag: highlights || category, // Use highlights as tag or fallback to category
-            discount: ''
-        });
+            // 1. Add to Vendor Context (Writes to DB)
+            const success = await addVendorProduct({
+                name: productName,
+                description: productInfo,
+                category,
+                price: numericPrice,
+                unit: unit || 'kg',
+                stock: numericStock,
+                status: 'Active',
+                image: productImage // Will be handled (set to null in DB) by context
+            });
 
-        Alert.alert("Success", "Product added and listed in Market!");
-        router.back();
+            if (success) {
+                Alert.alert("Success", "Product added and listed in Market!", [
+                    { text: "OK", onPress: () => router.back() }
+                ]);
+            } else {
+                Alert.alert("Error", "Failed to add product. Please check your connection and try again.");
+            }
+        } catch (err) {
+            console.error(err);
+            Alert.alert("Error", "An unexpected error occurred.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -198,9 +205,22 @@ export default function AddProductVendorScreen() {
                 </View>
 
                 {/* Submit Button */}
-                <TouchableOpacity style={styles.submitButton} activeOpacity={0.8} onPress={handleSave}>
-                    <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.submitButtonText}>Submit for Approval</Text>
+                <TouchableOpacity
+                    style={[styles.submitButton, loading && { opacity: 0.7 }]}
+                    activeOpacity={0.8}
+                    onPress={handleSave}
+                    disabled={loading}
+                >
+                    {loading ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={[styles.submitButtonText, { marginRight: 10 }]}>Processing...</Text>
+                        </View>
+                    ) : (
+                        <>
+                            <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
+                            <Text style={styles.submitButtonText}>Submit for Approval</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
 
                 {/* Bottom Padding */}

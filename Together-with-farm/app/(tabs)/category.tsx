@@ -57,8 +57,8 @@ const CATEGORIES = [
 ];
 
 const categoryFilters: Record<string, string[]> = {
-    vegetables: ['Roots', 'Leafy', 'Hydroponic', 'Organic', 'Fruit Veg', 'Daily'],
-    fruits: ['Fruit', 'Seasonal', 'Bestsellers'], // Assuming some mapping
+    vegetables: ['Roots', 'Leafy', 'Hydroponic', 'Organic', 'Fruit Veg', 'Daily', 'Vegetables'],
+    fruits: ['Fruit', 'Seasonal', 'Bestsellers', 'Fruits'], // Assuming some mapping
     meats: ['Meat', 'Poultry'],
     seafood: ['Seafood', 'Fish'],
     dairy: ['Dairy', 'Eggs'],
@@ -80,7 +80,7 @@ export default function CategoryScreen() {
         // Check if product type matches one of the filters for the category
         // OR if category is vegetables and we just dump everything that isn't other stuff (fallback)
         // For simplicity, strict match on types defined in context
-        const matchesCategory = filters.includes(p.type) || filters.some(f => p.tag?.includes(f)) || (selectedCategoryId === 'vegetables' && !['Fruit', 'Meat', 'Dairy', 'Bakery'].includes(p.type));
+        const matchesCategory = filters.includes(p.type) || filters.some(f => p.tag?.includes(f)) || (selectedCategoryId === 'vegetables' && !['Fruit', 'Fruits', 'Meat', 'Dairy', 'Bakery', 'Seafood'].includes(p.type));
 
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesSearch;

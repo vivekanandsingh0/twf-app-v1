@@ -51,7 +51,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
         // Finish splash after 2.5 seconds
         const timer = setTimeout(() => {
-            runOnJS(onFinish)();
+            onFinish();
         }, 2500);
 
         return () => clearTimeout(timer);

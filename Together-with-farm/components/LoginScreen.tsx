@@ -72,7 +72,11 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
             setLoading(false);
 
             if (error) {
-                alert(`Error: ${error.message}`);
+                if (error.message.includes('Twilio')) {
+                    alert(`SMS Config Error: The backend SMS provider is misconfigured. Please use a Test Phone Number (e.g. 1234567890) or check Supabase settings.`);
+                } else {
+                    alert(`Error: ${error.message}`);
+                }
             } else {
                 setStep('otp');
             }

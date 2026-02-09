@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // --- Interfaces ---
 
@@ -92,11 +92,10 @@ const MOCK_ARTICLES: Article[] = [
 ];
 
 // --- Provider ---
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-import { useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export function MarketProvider({ children }: { children: ReactNode }) {
+    // ... vendors state ...
     const [vendors] = useState<MarketVendor[]>([
         {
             id: 'vendor_1',
@@ -110,32 +109,32 @@ export function MarketProvider({ children }: { children: ReactNode }) {
             story: "Legacy farming.",
             quote: "Healthy living for everyone."
         },
-        // Legacy Mocks can be kept or removed; fetching vendors would be better too but let's fix Products first
     ]);
     const [products, setProducts] = useState<MarketProduct[]>([]);
     const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
 
-    // FETCH PRODUCTS FROM BACKEND
+    // FETCH PRODUCTS FROM SUPABASE
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const debuggerHost = Constants.expoConfig?.hostUri;
-                const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-                const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
-                const API_URL = `http://${host}:3000`;
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .gt('stock', 0); // Only show in-stock products
 
-                const res = await fetch(`${API_URL}/api/products`);
-                if (res.ok) {
-                    const data = await res.json();
+                if (error) throw error;
+
+                if (data) {
                     const mappedProducts: MarketProduct[] = data.map((p: any) => ({
-                        id: p.id, // String from backend
+                        id: p.id,
                         vendorId: p.vendor_id,
                         name: p.name,
-                        type: p.category || 'Vegetables', // Fallback
+                        type: p.category || 'Vegetables',
                         price: p.price,
                         unit: p.unit || 'kg',
-                        discount: undefined, // Backend doesn't have this yet
+                        discount: undefined,
                         specialOffer: undefined,
+                        // If image_url is null (from local asset upload), fallback to placeholder
                         image: p.image_url ? { uri: p.image_url } : require('@/assets/images/3d-model-with-veg.png'),
                         description: p.description || 'Fresh produce from local farmers.',
                         isFavorite: false,
@@ -147,11 +146,20 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                 console.error("Failed to fetch products for Market", e);
             }
         };
+
         fetchProducts();
 
-        // Optional: Poll every 10s to see new items
-        const interval = setInterval(fetchProducts, 10000);
-        return () => clearInterval(interval);
+        // Realtime subscription for new products
+        const subscription = supabase
+            .channel('market:products')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+                fetchProducts();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(subscription);
+        };
     }, []);
 
     const addArticle = (article: Omit<Article, 'id'>) => {

@@ -40,42 +40,40 @@ function AppContent() {
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [userType, setUserType] = useState<'User' | 'Vendor'>('User');
+  const [hasNavigated, setHasNavigated] = useState(false);
 
-  // Reset auth flow state when user logs out
   // Reset auth flow state when user logs out
   useEffect(() => {
     if (!session && !loading) {
-      setShowSplash(true);
+      // User is logged out
       setShowOnboarding(true);
       setShowRoleSelection(false);
       setShowLogin(false);
-    } else if (session && !loading) {
-      // Redirect to appropriate home screen on login
-      // This prevents stuck states like "Product not found"
+      setHasNavigated(false);
+    } else if (session && !loading && !hasNavigated) {
+      // User is logged in - Navigate only once
       if (userData.userType === 'Vendor') {
         router.replace('/(vendor-tabs)');
       } else {
         router.replace('/(tabs)');
       }
+      setHasNavigated(true);
     }
-  }, [session, loading, userData.userType]);
+  }, [session, loading, userData.userType, hasNavigated]);
 
-  if (showSplash || !fontsLoaded) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
-  }
+  // Determine Main Content
+  let content = null;
 
-  // If Supabase is still loading the session after Splash is done, show a loader
   if (loading) {
-    return (
+    // While loading session, show nothing (Splash covers it) or a Spinner underneath
+    content = (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
         <ActivityIndicator size="large" color="#1F5E2E" />
       </View>
     );
-  }
-
-  // If user is authenticated, show the main app
-  if (session) {
-    return (
+  } else if (session) {
+    // Authenticated Stack
+    content = (
       <CartProvider>
         <AddressProvider>
           <FavouritesProvider>
@@ -83,27 +81,27 @@ function AppContent() {
               <VendorProvider>
                 <NotificationProvider>
                   <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                    <Stack>
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="(vendor-tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="add-product-vendor" options={{ headerShown: false }} />
-                      <Stack.Screen name="vendor-payouts" options={{ headerShown: false }} />
-                      <Stack.Screen name="notifications" options={{ headerShown: false }} />
-                      <Stack.Screen name="vendor-order-details" options={{ headerShown: false }} />
-                      <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
-                      <Stack.Screen name="farmer/[id]" options={{ headerShown: false }} />
-                      <Stack.Screen name="profile-edit" options={{ headerShown: false }} />
-                      <Stack.Screen name="edit-profile-vendor" options={{ headerShown: false }} />
-                      <Stack.Screen name="favourites" options={{ headerShown: false }} />
-                      <Stack.Screen name="addresses" options={{ headerShown: false }} />
-                      <Stack.Screen name="settings" options={{ headerShown: false }} />
-                      <Stack.Screen name="cart" options={{ headerShown: false }} />
-                      <Stack.Screen name="checkout" options={{ headerShown: false }} />
-                      <Stack.Screen name="confirm-address" options={{ headerShown: false }} />
-                      <Stack.Screen name="business-dashboard" options={{ headerShown: false }} />
-                      <Stack.Screen name="vendor-payment-methods" options={{ headerShown: false }} />
-                      <Stack.Screen name="support" options={{ headerShown: false }} />
-                      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                    <Stack screenOptions={{ headerShown: false }}>
+                      <Stack.Screen name="(tabs)" />
+                      <Stack.Screen name="(vendor-tabs)" />
+                      <Stack.Screen name="add-product-vendor" />
+                      <Stack.Screen name="vendor-payouts" />
+                      <Stack.Screen name="notifications" />
+                      <Stack.Screen name="vendor-order-details" />
+                      <Stack.Screen name="product/[id]" />
+                      <Stack.Screen name="farmer/[id]" />
+                      <Stack.Screen name="profile-edit" />
+                      <Stack.Screen name="edit-profile-vendor" />
+                      <Stack.Screen name="favourites" />
+                      <Stack.Screen name="addresses" />
+                      <Stack.Screen name="settings" />
+                      <Stack.Screen name="cart" />
+                      <Stack.Screen name="checkout" />
+                      <Stack.Screen name="confirm-address" />
+                      <Stack.Screen name="business-dashboard" />
+                      <Stack.Screen name="vendor-payment-methods" />
+                      <Stack.Screen name="support" />
+                      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
                     </Stack>
                     <StatusBar style="auto" />
                   </ThemeProvider>
@@ -114,51 +112,55 @@ function AppContent() {
         </AddressProvider>
       </CartProvider>
     );
+  } else {
+    // Auth Flow
+    if (showOnboarding) {
+      content = <OnboardingScreen onFinish={() => {
+        setShowOnboarding(false);
+        setShowRoleSelection(true);
+      }} />;
+    } else if (showRoleSelection) {
+      content = (
+        <RoleSelectionScreen
+          onSelectUser={() => {
+            setUserType('User');
+            setShowRoleSelection(false);
+            setShowLogin(true);
+          }}
+          onSelectVendor={() => {
+            setUserType('Vendor');
+            setShowRoleSelection(false);
+            setShowLogin(true);
+          }}
+        />
+      );
+    } else if (showLogin) {
+      content = (
+        <LoginScreen
+          userType={userType}
+          onLoginSuccess={() => {
+            setShowLogin(false);
+          }}
+          onBack={() => {
+            setShowLogin(false);
+            setShowRoleSelection(true);
+          }}
+        />
+      );
+    }
   }
 
-  // Auth Flow
-  if (showOnboarding) {
-    return <OnboardingScreen onFinish={() => {
-      setShowOnboarding(false);
-      setShowRoleSelection(true);
-    }} />;
-  }
-
-  if (showRoleSelection) {
-    return (
-      <RoleSelectionScreen
-        onSelectUser={() => {
-          setUserType('User');
-          setShowRoleSelection(false);
-          setShowLogin(true);
-        }}
-        onSelectVendor={() => {
-          setUserType('Vendor');
-          setShowRoleSelection(false);
-          setShowLogin(true);
-        }}
-      />
-    );
-  }
-
-  if (showLogin) {
-    return (
-      <LoginScreen
-        userType={userType}
-        onLoginSuccess={() => {
-          // Context handles session update, triggering re-render to main app
-          // But strictly we can reset this local state too
-          setShowLogin(false);
-        }}
-        onBack={() => {
-          setShowLogin(false);
-          setShowRoleSelection(true);
-        }}
-      />
-    );
-  }
-
-  return null;
+  return (
+    <View style={{ flex: 1 }}>
+      {content}
+      {/* Splash Screen Overlay - Always rendered on top until finished */}
+      {(showSplash || !fontsLoaded) && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
+          <SplashScreen onFinish={() => setShowSplash(false)} />
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function RootLayout() {

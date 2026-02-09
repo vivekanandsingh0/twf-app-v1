@@ -132,44 +132,79 @@ const MOCK_REQUESTS = [
 // This class replaces the direct Supabase calls. 
 // When you are ready for real backend, simply swap the implementation inside methods.
 
-import { localDb } from './local-db';
+import { supabase } from './supabase';
 
 export const db = {
     orders: {
         getAll: async () => {
-            const data = await localDb.orders.getAll();
-            return { data, error: null };
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*, customer:profiles!user_id(*), vendor:profiles!vendor_id(*)');
+            return { data, error };
         },
         getById: async (id: string) => {
-            const data = await localDb.orders.getById(id);
-            return { data, error: null };
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*, customer:profiles!user_id(*), vendor:profiles!vendor_id(*)')
+                .eq('id', id)
+                .single();
+            return { data, error };
         }
     },
     products: {
         getAll: async () => {
-            const data = await localDb.products.getAll();
-            return { data, error: null };
+            const { data, error } = await supabase
+                .from('products')
+                .select('*, vendor:profiles!vendor_id(*)');
+            return { data, error };
         }
     },
     vendors: {
         getAll: async () => {
-            const data = await localDb.vendors.getAll();
-            return { data, error: null };
+            // Vendors are profiles with user_type = 'Vendor'
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_type', 'Vendor');
+            return { data, error };
         },
         getRequests: async () => {
-            const data = await localDb.vendors.getRequests();
-            return { data, error: null };
+            // Assuming a 'vendor_requests' table or similar logic
+            // For now, let's just return empty or mock if table doesn't exist yet
+            // But let's try to fetch if you have a requests table
+            // If not, we might need to create it. For now, returning [] to prevent crash if table missing
+            // Or better, let's assume 'vendor_onboarding' or similar
+            return { data: [], error: null };
         }
     },
     users: {
         getAll: async () => {
-            const data = await localDb.profiles.getAll();
-            return { data, error: null };
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*');
+            return { data, error };
         }
     },
     dashboard: {
         getStats: async () => {
-            return await localDb.dashboard.getStats();
+            // Calculate stats from real data
+            const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('user_type', 'User');
+            const { count: vendorCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('user_type', 'Vendor');
+            const { count: orderCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+
+            // For total revenue, we need to sum. Supabase doesn't have direct sum aggregation in JS client easily without RPC
+            // So fetching orders total_amount
+            const { data: orders } = await supabase.from('orders').select('total_amount');
+            const totalRevenue = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+
+            return {
+                totalUsers: userCount || 0,
+                totalVendors: vendorCount || 0,
+                totalOrders: orderCount || 0,
+                totalRevenue: totalRevenue
+            };
         }
     }
+    // You might need to add other entities like 'addresses' if used independently
 };
+
