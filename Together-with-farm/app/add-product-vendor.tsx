@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, ImageBackground, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, ImageBackground, Alert, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useVendor } from '@/contexts/VendorContext';
 import { useMarket } from '@/contexts/MarketContext';
 import { useUser } from '@/contexts/UserContext';
@@ -13,20 +14,81 @@ const CATEGORIES = ['Vegetables', 'Fruits', 'Dairy', 'Bakery', 'Meat', 'Seafood'
 export default function AddProductVendorScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { addProduct: addVendorProduct } = useVendor();
+    const { addProduct: addVendorProduct, updateProduct, deleteProduct, products } = useVendor();
     // const { addProduct: addMarketProduct } = useMarket(); // Removed as Market updates via DB sync
     const { user } = useUser();
 
     const [productName, setProductName] = useState('');
+    const [images, setImages] = useState<string[]>([]);
     const [productInfo, setProductInfo] = useState('');
-    const [highlights, setHighlights] = useState('');
+    const [highlights, setHighlights] = useState<{ title: string; value: string }[]>([]);
     const [category, setCategory] = useState('Vegetables');
     const [price, setPrice] = useState('');
     const [unit, setUnit] = useState('kg');
     const [quantity, setQuantity] = useState('');
     const [orderType, setOrderType] = useState<'Instant' | 'Pre-order'>('Instant');
 
+    const params = useLocalSearchParams();
+    // Ensure id is a string (handle array case)
+    const id = Array.isArray(params.id) ? params.id[0] : params.id;
+    const isEditMode = !!id;
+
+    React.useEffect(() => {
+        if (id && products.length > 0) {
+            const productToEdit = products.find(p => p.id === id);
+            if (productToEdit) {
+                setProductName(productToEdit.name);
+                // Load existing images or fallback to single image if available
+                if (productToEdit.images && productToEdit.images.length > 0) {
+                    setImages(productToEdit.images);
+                } else if (productToEdit.image && typeof productToEdit.image === 'object' && productToEdit.image.uri) {
+                    setImages([productToEdit.image.uri]);
+                } else if (productToEdit.image && typeof productToEdit.image === 'string') {
+                    // rare case if it was just a string
+                    setImages([productToEdit.image]);
+                }
+
+                setProductInfo(productToEdit.description);
+                setHighlights(productToEdit.highlights && productToEdit.highlights.length > 0
+                    ? productToEdit.highlights
+                    : [{ title: '', value: '' }]);
+                setCategory(productToEdit.category);
+                setPrice(productToEdit.price.toString());
+                setUnit(productToEdit.unit);
+                setQuantity(productToEdit.stock.toString());
+                // setOrderType(productToEdit.orderType); // Assuming orderType exists
+            }
+        }
+    }, [id, products]);
+
     const [loading, setLoading] = useState(false);
+
+    const pickImage = async () => {
+        if (images.length >= 3) {
+            Alert.alert("Limit Reached", "You can only add up to 3 images.");
+            return;
+        }
+
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'], // Updated to use new API
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            const uri = result.assets[0].uri;
+            console.log('📸 [AddProduct] Image selected:', uri);
+            // Just store the URI - VendorContext will handle upload when saving
+            setImages([...images, uri]);
+        }
+    };
+
+    const removeImage = (index: number) => {
+        const newImages = [...images];
+        newImages.splice(index, 1);
+        setImages(newImages);
+    };
 
     const handleSave = async () => {
         console.log("Handle Save Pressed");
@@ -35,42 +97,100 @@ export default function AddProductVendorScreen() {
             return;
         }
 
-        if (!user) {
-            Alert.alert("Error", "You must be logged in to add products.");
+        if (images.length === 0) {
+            Alert.alert("Image Required", "Please add at least one product image.");
             return;
         }
 
-        setLoading(true);
+        if (!user) {
+            Alert.alert("Error", "You must be logged in to manage products.");
+            return;
+        }
+
+        // Optimistic UI - Don't wait for DB
         try {
             const numericPrice = parseFloat(price);
             const numericStock = parseInt(quantity);
-            const productImage = require('@/assets/images/3d-model-with-veg.png'); // Mock image (number)
+            // const productImage = require('@/assets/images/3d-model-with-veg.png'); // Mock image (number)
 
-            // 1. Add to Vendor Context (Writes to DB)
-            const success = await addVendorProduct({
-                name: productName,
-                description: productInfo,
-                category,
-                price: numericPrice,
-                unit: unit || 'kg',
-                stock: numericStock,
-                status: 'Active',
-                image: productImage // Will be handled (set to null in DB) by context
-            });
+            if (isEditMode && id) {
+                // UPDATE EXISTING (Optimistic)
+                updateProduct(id, {
+                    name: productName,
+                    images: images,
+                    image: images[0], // Primary for display logic compatibility
+                    description: productInfo,
+                    category,
+                    price: numericPrice,
+                    unit: unit || 'kg',
+                    stock: numericStock,
+                    highlights: highlights.filter(h => h.title || h.value), // Filter empty
+                }).catch(err => {
+                    console.error("Background update failed:", err);
+                    Alert.alert("Error", "Failed to save changes to server.");
+                });
 
-            if (success) {
-                Alert.alert("Success", "Product added and listed in Market!", [
-                    { text: "OK", onPress: () => router.back() }
-                ]);
+                router.back(); // Navigate immediately
+
             } else {
-                Alert.alert("Error", "Failed to add product. Please check your connection and try again.");
+                // CREATE NEW (Optimistic - Instant)
+                addVendorProduct({
+                    name: productName,
+                    description: productInfo,
+                    category,
+                    price: numericPrice,
+                    unit: unit || 'kg',
+                    stock: numericStock,
+                    highlights: highlights.filter(h => h.title || h.value),
+                    status: 'Active',
+                    image: images[0], // First image as primary
+                    images: images
+                });
+
+                // Don't wait, just go back
+                router.back();
             }
         } catch (err) {
             console.error(err);
-            Alert.alert("Error", "An unexpected error occurred.");
-        } finally {
             setLoading(false);
+            Alert.alert("Error", "An unexpected error occurred.");
         }
+    };
+
+    const handleDelete = () => {
+        console.log("Delete button pressed");
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm("Are you sure you want to delete this product?");
+            if (confirmed) {
+                performDelete();
+            }
+        } else {
+            Alert.alert(
+                "Delete Product",
+                "Are you sure you want to delete this product? This action cannot be undone.",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: performDelete
+                    }
+                ]
+            );
+        }
+    };
+
+    const performDelete = async () => {
+        if (!id) return;
+
+        console.log("Performing delete for ID:", id);
+        // Optimistic Delete - Don't wait for Promise to resolve
+        deleteProduct(id).catch(err => {
+            console.error("Background delete failed:", err);
+            Alert.alert("Error", "Failed to delete from server.");
+        });
+
+        router.back(); // Navigate immediately
     };
 
     return (
@@ -82,7 +202,7 @@ export default function AddProductVendorScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Add New Product</Text>
+                <Text style={styles.headerTitle}>{isEditMode ? 'Edit Product' : 'Add New Product'}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -91,17 +211,24 @@ export default function AddProductVendorScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Image Picker */}
-                <TouchableOpacity style={styles.imageContainer}>
-                    <ImageBackground
-                        source={require('@/assets/images/3d-model-with-veg.png')}
-                        style={styles.imageBackground}
-                        imageStyle={{ borderRadius: 16 }}
-                    >
-                        <View style={styles.cameraIconContainer}>
-                            <Ionicons name="camera-outline" size={28} color="#FFFFFF" />
+                {/* Image Picker */}
+                <Text style={styles.label}>Product Images (Min 1, Max 3)</Text>
+                <View style={styles.imagesRow}>
+                    {images.map((uri, index) => (
+                        <View key={index} style={styles.imageSlot}>
+                            <Image source={{ uri }} style={styles.thumbnail} />
+                            <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(index)}>
+                                <Ionicons name="close-circle" size={24} color="#FF5252" />
+                            </TouchableOpacity>
                         </View>
-                    </ImageBackground>
-                </TouchableOpacity>
+                    ))}
+                    {images.length < 3 && (
+                        <TouchableOpacity style={[styles.imageSlot, styles.addSlot]} onPress={pickImage}>
+                            <Ionicons name="camera-outline" size={32} color="#1F5E2E" />
+                            <Text style={styles.addText}>Add</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
 
                 {/* Product Name */}
                 <Text style={styles.label}>Product Name</Text>
@@ -127,13 +254,50 @@ export default function AddProductVendorScreen() {
 
                 {/* Highlights */}
                 <Text style={styles.label}>Highlights</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="e.g, Vitamin A rich, Gluten Free"
-                    placeholderTextColor="#9CA3AF"
-                    value={highlights}
-                    onChangeText={setHighlights}
-                />
+                <View style={{ marginBottom: 20 }}>
+                    {highlights.map((item, index) => (
+                        <View key={index} style={styles.highlightRow}>
+                            <TextInput
+                                style={[styles.input, { flex: 1, marginRight: 8, marginBottom: 0 }]}
+                                placeholder="Title (e.g. Nutrient)"
+                                placeholderTextColor="#9CA3AF"
+                                value={item.title}
+                                onChangeText={(text) => {
+                                    const newHighlights = [...highlights];
+                                    newHighlights[index].title = text;
+                                    setHighlights(newHighlights);
+                                }}
+                            />
+                            <TextInput
+                                style={[styles.input, { flex: 1, marginRight: 8, marginBottom: 0 }]}
+                                placeholder="Value (e.g. Rich)"
+                                placeholderTextColor="#9CA3AF"
+                                value={item.value}
+                                onChangeText={(text) => {
+                                    const newHighlights = [...highlights];
+                                    newHighlights[index].value = text;
+                                    setHighlights(newHighlights);
+                                }}
+                            />
+                            <TouchableOpacity
+                                onPress={() => {
+                                    const newHighlights = highlights.filter((_, i) => i !== index);
+                                    setHighlights(newHighlights);
+                                }}
+                                style={styles.removeHighlightBtn}
+                            >
+                                <Ionicons name="close-circle" size={24} color="#FF5252" />
+                            </TouchableOpacity>
+                        </View>
+                    ))}
+                    <TouchableOpacity
+                        style={styles.addHighlightBtn}
+                        onPress={() => setHighlights([...highlights, { title: '', value: '' }])}
+                    >
+                        <Ionicons name="add" size={20} color="#1F5E2E" />
+                        <Text style={styles.addHighlightText}>Add Highlight</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {/* Category Selection */}
                 <Text style={styles.label}>Category</Text>
@@ -218,10 +382,22 @@ export default function AddProductVendorScreen() {
                     ) : (
                         <>
                             <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
-                            <Text style={styles.submitButtonText}>Submit for Approval</Text>
+                            <Text style={styles.submitButtonText}>{isEditMode ? 'Save Changes' : 'Submit for Approval'}</Text>
                         </>
                     )}
                 </TouchableOpacity>
+
+                {isEditMode && (
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        activeOpacity={0.8}
+                        onPress={handleDelete}
+                        disabled={loading}
+                    >
+                        <Ionicons name="trash-outline" size={24} color="#FF5252" style={{ marginRight: 8 }} />
+                        <Text style={styles.deleteButtonText}>Delete Product</Text>
+                    </TouchableOpacity>
+                )}
 
                 {/* Bottom Padding */}
                 <View style={{ height: 40 }} />
@@ -259,27 +435,44 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 10,
     },
-    imageContainer: {
-        width: '100%',
-        height: 180,
+    imagesRow: {
+        flexDirection: 'row',
+        gap: 12,
         marginBottom: 24,
+    },
+    imageSlot: {
+        width: 100,
+        height: 100,
         borderRadius: 16,
         overflow: 'hidden',
+        position: 'relative',
     },
-    imageBackground: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    cameraIconContainer: {
-        width: 56,
-        height: 56,
+    thumbnail: {
+        width: '100%',
+        height: '100%',
         borderRadius: 16,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    removeBtn: {
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        backgroundColor: 'white',
+        borderRadius: 12,
+    },
+    addSlot: {
+        backgroundColor: '#E8F5E9',
+        borderWidth: 1,
+        borderColor: '#1F5E2E',
+        borderRadius: 16,
+        borderStyle: 'dashed',
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
+    },
+    addText: {
+        fontFamily: 'DMSans_500Medium',
+        color: '#1F5E2E',
+        fontSize: 12,
+        marginTop: 4,
     },
     label: {
         fontSize: 16,
@@ -406,5 +599,44 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'DMSans_700Bold',
         color: '#FFFFFF',
+    },
+    deleteButton: {
+        marginTop: 16,
+        backgroundColor: '#FFF0F0',
+        height: 56,
+        borderRadius: 28,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#FF5252',
+    },
+    deleteButtonText: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#FF5252',
+    },
+    highlightRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    removeHighlightBtn: {
+        padding: 4,
+    },
+    addHighlightBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        backgroundColor: '#E8F5E9',
+    },
+    addHighlightText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1F5E2E',
+        marginLeft: 4,
     },
 });

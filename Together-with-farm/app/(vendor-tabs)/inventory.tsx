@@ -65,7 +65,12 @@ export default function VendorInventoryScreen() {
         const description = getDescription(item);
 
         return (
-            <View key={item.id} style={styles.itemCard}>
+            <TouchableOpacity
+                key={item.id}
+                style={styles.itemCard}
+                onPress={() => router.push({ pathname: '/add-product-vendor', params: { id: item.id } })}
+                activeOpacity={0.7}
+            >
                 <Image
                     source={item.image}
                     style={styles.itemImage}
@@ -88,7 +93,7 @@ export default function VendorInventoryScreen() {
                         </Text>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 

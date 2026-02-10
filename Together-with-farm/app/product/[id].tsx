@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -9,7 +9,9 @@ import {
     Share,
     Platform,
     ActivityIndicator,
-    Image
+    Image,
+    NativeSyntheticEvent,
+    NativeScrollEvent
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,14 +68,37 @@ export default function ProductDetailsScreen() {
 
     const qty = getItemQuantity(product.id);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
-    // Mock multiple images for demonstration
-    const productImages = [product.image, product.image, product.image];
 
-    const onScroll = (event: any) => {
+    // Determine images to show
+    const productImages = product.images && product.images.length > 0
+        ? product.images.map(uri => ({ uri }))
+        : [product.image];
+
+    const scrollRef = useRef<ScrollView>(null);
+
+    // Auto Slide Logic
+    useEffect(() => {
+        if (productImages.length <= 1) return;
+
+        const interval = setInterval(() => {
+            setActiveImageIndex(prev => {
+                const nextIndex = (prev + 1) % productImages.length;
+                scrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
+                return nextIndex;
+            });
+        }, 3000); // 3 seconds
+
+        return () => clearInterval(interval);
+    }, [productImages.length]);
+
+    const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const slideSize = event.nativeEvent.layoutMeasurement.width;
         const index = event.nativeEvent.contentOffset.x / slideSize;
         const roundIndex = Math.round(index);
-        setActiveImageIndex(roundIndex);
+        // Only update if it changed significantly to avoid jitter with auto-scroll
+        if (roundIndex !== activeImageIndex) {
+            setActiveImageIndex(roundIndex);
+        }
     };
 
     const onShare = async () => {
@@ -120,6 +145,7 @@ export default function ProductDetailsScreen() {
 
                     <View style={{ height: 250, marginTop: 20, marginBottom: 20 }}>
                         <ScrollView
+                            ref={scrollRef}
                             horizontal
                             pagingEnabled
                             showsHorizontalScrollIndicator={false}
@@ -176,17 +202,17 @@ export default function ProductDetailsScreen() {
                     </View>
 
                     {/* Highlights */}
-                    <View style={styles.highlightsContainer}>
-                        <Text style={styles.subHeader}>Highlights</Text>
-                        <View style={styles.highlightRow}>
-                            <Text style={styles.highlightLabel}>Health Benefits</Text>
-                            <Text style={styles.highlightValue}>Nutrient Rich</Text>
+                    {product.highlights && product.highlights.length > 0 && (
+                        <View style={styles.highlightsContainer}>
+                            <Text style={styles.subHeader}>Highlights</Text>
+                            {product.highlights.map((h: any, i: number) => (
+                                <View key={i} style={styles.highlightRow}>
+                                    <Text style={styles.highlightLabel}>{h.title}</Text>
+                                    <Text style={styles.highlightValue}>{h.value}</Text>
+                                </View>
+                            ))}
                         </View>
-                        <View style={styles.highlightRow}>
-                            <Text style={styles.highlightLabel}>Good to know</Text>
-                            <Text style={styles.highlightValue}>Locally Sourced</Text>
-                        </View>
-                    </View>
+                    )}
 
                     {/* Info */}
                     <View style={styles.infoContainer}>

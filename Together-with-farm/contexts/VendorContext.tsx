@@ -3,6 +3,55 @@ import { View, Text, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase } from '../lib/supabase';
 import { useUser } from './UserContext';
+import * as FileSystem from 'expo-file-system'; // For base64 if needed, but fetch+blob is better usually
+
+// Helper to upload image
+const uploadImageToSupabase = async (uri: string, userId: string) => {
+    try {
+        console.log('📤 [Upload] Starting image upload:', uri.substring(0, 50) + '...');
+
+        // Check if it's already a Supabase URL (starts with https:// and contains supabase.co)
+        if (uri.startsWith('https://') && uri.includes('supabase.co')) {
+            console.log('⏭️  [Upload] Image already on Supabase, skipping upload:', uri);
+            return uri; // Already uploaded to Supabase
+        }
+
+        // For file:// or blob: URIs, we need to upload
+        console.log('☁️  [Upload] Fetching image data...');
+        const response = await fetch(uri);
+        const blob = await response.blob();
+
+        // Determine file extension
+        const fileExt = blob.type.split('/')[1] || 'jpg'; // Get from MIME type
+        const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        console.log('☁️  [Upload] Uploading to Supabase Storage:', filePath);
+
+        const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(filePath, blob, {
+                contentType: blob.type,
+                upsert: false
+            });
+
+        if (uploadError) {
+            console.error("❌ [Upload] Upload Error detail:", uploadError);
+            throw uploadError;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(filePath);
+
+        console.log('✅ [Upload] Image uploaded successfully:', publicUrl);
+        return publicUrl;
+
+    } catch (e) {
+        console.error("❌ [Upload] Failed to upload image:", e);
+        return null; // Return null on failure
+    }
+};
 
 
 // --- Interfaces ---
@@ -10,13 +59,16 @@ import { useUser } from './UserContext';
 export interface VendorProduct {
     id: string;
     name: string;
-    image: any; // Using dynamic imports or URIs
+    image: any; // Primary image (first in array or fallback)
+    images: string[]; // All images
     price: number;
     unit: string; // e.g., 'kg', 'bunch'
     stock: number;
     category: string;
     description: string;
+    highlights?: { title: string; value: string }[];
     status: 'Active' | 'Draft' | 'Out of Stock';
+    image_url?: string; // For backend compatibility
 }
 
 export interface VendorOrder {
@@ -85,8 +137,8 @@ interface VendorContextType {
 
     // Actions
     addProduct: (product: Omit<VendorProduct, 'id'>) => Promise<boolean>;
-    updateProduct: (id: string, updates: Partial<VendorProduct>) => void;
-    deleteProduct: (id: string) => void;
+    updateProduct: (id: string, updates: Partial<VendorProduct>) => Promise<void>;
+    deleteProduct: (id: string) => Promise<void>;
     updateOrderStatus: (orderId: string, status: VendorOrder['status']) => void;
     addOrder: (order: VendorOrder) => void; // Exposed to Payment Screen
     toggleShopStatus: () => Promise<void>;
@@ -198,13 +250,15 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                     setProducts(data.map((p: any) => ({
                         id: p.id,
                         name: p.name,
-                        image: p.image_url ? { uri: p.image_url } : require('@/assets/images/3d-model-with-veg.png'),
+                        image: p.images && p.images.length > 0 ? { uri: p.images[0] } : (p.image_url ? { uri: p.image_url } : require('@/assets/images/3d-model-with-veg.png')),
                         image_url: p.image_url,
+                        images: p.images || (p.image_url ? [p.image_url] : []),
                         price: p.price,
                         unit: p.unit,
                         stock: p.stock,
                         category: p.category,
                         description: p.description || '',
+                        highlights: p.highlights || [], // Fetch highlights
                         status: p.stock > 0 ? 'Active' : 'Out of Stock'
                     })));
                 }
@@ -297,13 +351,49 @@ export function VendorProvider({ children }: { children: ReactNode }) {
     const addProduct = async (productData: Omit<VendorProduct, 'id'>): Promise<boolean> => {
         if (!user) return false;
 
-        try {
-            // Check if image is a local asset (number) or a remote URL (string)
-            const imageUrlToSave = typeof productData.image === 'string' ? productData.image : null;
+        // 1. Create a temporary Optimistic Product
+        const tempId = `temp-${Date.now()}`;
+        const newOptimisticProduct: VendorProduct = {
+            id: tempId,
+            ...productData,
+            // Ensure standard format for UI
+            image: productData.images && productData.images.length > 0
+                ? { uri: productData.images[0] }
+                : (typeof productData.image === 'string' ? { uri: productData.image } : productData.image),
+            status: productData.stock > 0 ? 'Active' : 'Out of Stock'
+        };
 
-            const { data, error } = await supabase
-                .from('products')
-                .insert({
+        // 2. Update Local State Immediately
+        setProducts(prev => [newOptimisticProduct, ...prev]);
+
+        // 3. Background Sync to DB
+        (async () => {
+            try {
+                console.log('🚀 [VendorContext] Starting product save...', {
+                    name: productData.name,
+                    category: productData.category,
+                    stock: productData.stock,
+                    hasImages: productData.images?.length || 0
+                });
+
+                // Upload Images First
+                let finalImages: string[] = [];
+                if (productData.images && productData.images.length > 0) {
+                    console.log('📸 [VendorContext] Uploading images...', productData.images.length);
+                    const uploadPromises = productData.images.map(img => uploadImageToSupabase(img, user.id));
+                    const results = await Promise.all(uploadPromises);
+                    finalImages = results.filter(url => url !== null) as string[];
+                    console.log('✅ [VendorContext] Images uploaded:', finalImages.length, 'successful');
+                }
+
+                // Fallback for single image property
+                let imageUrlToSave = typeof productData.image === 'string' ? productData.image : null;
+                // If the primary image was also a file://, it should be in finalImages[0] now if images structure is consistent
+                if (finalImages.length > 0) {
+                    imageUrlToSave = finalImages[0];
+                }
+
+                const insertData = {
                     name: productData.name,
                     price: productData.price,
                     unit: productData.unit,
@@ -311,54 +401,130 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                     category: productData.category,
                     description: productData.description,
                     image_url: imageUrlToSave,
+                    images: finalImages,
+                    highlights: productData.highlights,
                     vendor_id: user.id
-                })
-                .select()
-                .single();
+                };
 
-            if (error) {
-                console.error("Supabase insert error:", error);
-                throw error;
-            }
+                console.log('💾 [VendorContext] Attempting database insert...', insertData);
 
-            if (data) {
-                setProducts(prev => [...prev, {
-                    ...productData,
-                    id: data.id,
-                    status: data.stock > 0 ? 'Active' : 'Out of Stock'
-                }]);
-                return true;
+                const { data, error } = await supabase
+                    .from('products')
+                    .insert(insertData)
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error('❌ [VendorContext] Database insert error:', error);
+                    throw error;
+                }
+
+                console.log('✅ [VendorContext] Product saved successfully!', data);
+
+                if (data) {
+                    // 4. Success: Replace Temp ID with Real ID AND Real Image URLs
+                    setProducts(prev => prev.map(p => p.id === tempId ? {
+                        ...p,
+                        id: data.id,
+                        images: finalImages,
+                        image: finalImages.length > 0 ? { uri: finalImages[0] } : p.image,
+                    } : p));
+                }
+            } catch (e: any) {
+                console.error("Failed to add product in background", e);
+                // 5. Error: Rollback (Remove the temp product)
+                setProducts(prev => prev.filter(p => p.id !== tempId));
+
+                // Alert the user so they know WHY it disappeared
+                // This is crucial for debugging schema mismatches
+                if (Platform.OS === 'web') {
+                    alert(`Failed to save product: ${e.message || 'Unknown error'}`);
+                } else {
+                    const { Alert } = require('react-native');
+                    Alert.alert("Save Failed", `Could not save product to database. It has been removed. Error: ${e.message || JSON.stringify(e)}`);
+                }
             }
-            return false;
-        } catch (e: any) {
-            console.error("Failed to add product", e);
-            return false;
-        }
+        })();
+
+        return true; // Return immediately
     };
 
     const updateProduct = async (id: string, updates: Partial<VendorProduct>) => {
-        // Optimistic
+        // Optimistic UI update
+        // We update local state immediately. If upload happens, we'll update again with URLs.
         setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
 
         try {
             const dbUpdates: any = { ...updates };
-            // Map fields if necessary, e.g. image -> image_url
-            if (updates.image) dbUpdates.image_url = updates.image;
-            delete dbUpdates.image;
-            delete dbUpdates.status; // Computed in view, but maybe stored in DB too?
 
-            await supabase.from('products').update(dbUpdates).eq('id', id);
+            // 1. Handle Images Array Upload
+            if (updates.images && updates.images.length > 0) {
+                // Upload any local file:// URIs
+                const uploadPromises = updates.images.map(img => uploadImageToSupabase(img, user?.id || 'anonymous'));
+                const results = await Promise.all(uploadPromises);
+                const finalImages = results.filter(url => url !== null) as string[];
+
+                dbUpdates.images = finalImages;
+
+                // Sync primary image_url for backward compatibility
+                if (finalImages.length > 0) {
+                    dbUpdates.image_url = finalImages[0];
+                }
+            }
+
+            // 2. Handle Single Image Upload (if updated separately)
+            if (updates.image && typeof updates.image === 'string' && updates.image.startsWith('file://')) {
+                const url = await uploadImageToSupabase(updates.image, user?.id || 'anonymous');
+                if (url) dbUpdates.image_url = url;
+            }
+
+            // Cleanup fields not in DB
+            delete dbUpdates.image;
+            delete dbUpdates.status;
+
+            const { error } = await supabase.from('products').update(dbUpdates).eq('id', id);
+
+            if (error) throw error;
+
+            // 3. Update Local State with Remote URLs (to prevent re-upload on next edit)
+            if (dbUpdates.images || dbUpdates.image_url) {
+                setProducts(prev => prev.map(p => p.id === id ? {
+                    ...p,
+                    images: dbUpdates.images || p.images,
+                    image_url: dbUpdates.image_url || p.image_url,
+                    image: (dbUpdates.images && dbUpdates.images.length > 0)
+                        ? { uri: dbUpdates.images[0] }
+                        : (dbUpdates.image_url ? { uri: dbUpdates.image_url } : p.image)
+                } : p));
+            }
+
         } catch (e) {
             console.error("Failed to update product", e);
+            // Optional: Show alert or rollback
         }
     };
 
     const deleteProduct = async (id: string) => {
+        console.log("🗑️  [VendorContext] Deleting product with ID:", id);
+        // Optimistic update
+        const previousProducts = products;
         setProducts(prev => prev.filter(p => p.id !== id));
+        console.log("✅ [VendorContext] Optimistic delete - removed from UI");
+
         try {
-            await supabase.from('products').delete().eq('id', id);
+            console.log("💾 [VendorContext] Attempting database delete...");
+            const { error } = await supabase.from('products').delete().eq('id', id);
+
+            if (error) {
+                console.error("❌ [VendorContext] Supabase delete error:", error);
+                setProducts(previousProducts); // Rollback
+                throw error;
+            }
+            console.log("✅ [VendorContext] Product deleted successfully from database");
         } catch (e) {
-            console.error("Failed to delete product", e);
+            console.error("❌ [VendorContext] Failed to delete product:", e);
+            setProducts(previousProducts); // Rollback
+            throw e; // Re-throw to let UI know
         }
     };
 

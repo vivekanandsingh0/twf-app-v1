@@ -29,9 +29,11 @@ export interface MarketProduct {
     discount?: string; // e.g. '-40%', 'BOGO'
     specialOffer?: string; // e.g. 'Limited Time Deal'
     image: any;
+    images: string[];
     description: string;
     isFavorite: boolean;
     tag?: string; // Additional tag like 'Organic'
+    highlights?: { title: string; value: string }[];
 }
 
 export interface Article {
@@ -125,21 +127,41 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                 if (error) throw error;
 
                 if (data) {
-                    const mappedProducts: MarketProduct[] = data.map((p: any) => ({
-                        id: p.id,
-                        vendorId: p.vendor_id,
-                        name: p.name,
-                        type: p.category || 'Vegetables',
-                        price: p.price,
-                        unit: p.unit || 'kg',
-                        discount: undefined,
-                        specialOffer: undefined,
-                        // If image_url is null (from local asset upload), fallback to placeholder
-                        image: p.image_url ? { uri: p.image_url } : require('@/assets/images/3d-model-with-veg.png'),
-                        description: p.description || 'Fresh produce from local farmers.',
-                        isFavorite: false,
-                        tag: p.stock < 5 ? 'Low Stock' : 'Fresh'
-                    }));
+                    const mappedProducts: MarketProduct[] = data.map((p: any) => {
+                        // Safe parsing for images
+                        let productImages = p.images || [];
+                        if (typeof productImages === 'string') {
+                            try { productImages = JSON.parse(productImages); } catch (e) { console.error("JSON parse error for images", e); productImages = []; }
+                        }
+                        if (!Array.isArray(productImages)) productImages = [];
+
+                        // Combine legacy image_url if needed
+                        if (productImages.length === 0 && p.image_url) {
+                            productImages.push(p.image_url);
+                        }
+
+                        // Determine primary image
+                        const primaryImage = productImages.length > 0
+                            ? { uri: productImages[0] }
+                            : require('@/assets/images/3d-model-with-veg.png');
+
+                        return {
+                            id: p.id,
+                            vendorId: p.vendor_id,
+                            name: p.name,
+                            type: p.category || 'Vegetables',
+                            price: p.price,
+                            unit: p.unit || 'kg',
+                            discount: undefined,
+                            specialOffer: undefined,
+                            image: primaryImage,
+                            images: productImages,
+                            description: p.description || 'Fresh produce from local farmers.',
+                            isFavorite: false,
+                            tag: p.stock < 5 ? 'Low Stock' : 'Fresh',
+                            highlights: p.highlights || []
+                        };
+                    });
                     setProducts(mappedProducts);
                 }
             } catch (e) {

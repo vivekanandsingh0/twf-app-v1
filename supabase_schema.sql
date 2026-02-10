@@ -69,12 +69,14 @@ create table public.products (
   vendor_id uuid references public.profiles(id) on delete cascade not null,
   
   name text not null,
-  image_url text, -- Store the storage URL here
+  image_url text, -- Store the storage URL here (deprecated, use images array)
+  images jsonb default '[]'::jsonb, -- Array of image URLs
   price numeric not null default 0,
   unit text, -- e.g., 'kg', 'piece'
   stock numeric default 0,
   category text,
   description text,
+  highlights jsonb default '[]'::jsonb, -- Array of {title, value} objects
   
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
