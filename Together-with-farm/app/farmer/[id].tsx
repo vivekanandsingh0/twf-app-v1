@@ -92,9 +92,6 @@ export default function FarmerDetailsScreen() {
                         </TouchableOpacity>
                         <View style={styles.headerRight}>
                             <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="heart-outline" size={24} color="#1A1A1A" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
                                 <Ionicons name="share-outline" size={24} color="#1A1A1A" />
                             </TouchableOpacity>
                         </View>

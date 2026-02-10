@@ -13,17 +13,17 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFavourites } from '@/contexts/FavouritesContext';
+import { useMarket } from '@/contexts/MarketContext';
 
 const { width } = Dimensions.get('window');
-
-import { PRODUCTS as ALL_PRODUCTS } from '@/constants/products';
 
 export default function FavouritesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { favourites, toggleFavourite, isFavourite } = useFavourites();
+    const { products } = useMarket();
 
-    const favouriteProducts = ALL_PRODUCTS.filter(p => isFavourite(p.id));
+    const favouriteProducts = products.filter(p => isFavourite(p.id));
 
     return (
         <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -69,13 +69,13 @@ export default function FavouritesScreen() {
                             >
                                 <View style={styles.productImageContainer}>
                                     <Image
-                                        source={{ uri: item.image }}
+                                        source={item.image}
                                         style={styles.productImage}
                                         contentFit="cover"
                                     />
-                                    {item.discount > 0 && (
+                                    {item.discount && (
                                         <View style={styles.discountBadge}>
-                                            <Text style={styles.discountText}>-{item.discount}%</Text>
+                                            <Text style={styles.discountText}>{item.discount}</Text>
                                         </View>
                                     )}
                                     <TouchableOpacity
@@ -94,12 +94,12 @@ export default function FavouritesScreen() {
                                 </View>
 
                                 <View style={styles.productInfo}>
-                                    <Text style={styles.tagText}>{item.tag}</Text>
-                                    <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                                    <Text style={styles.tagText}>{item.tag || item.type}</Text>
+                                    <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
 
                                     <View style={styles.priceRow}>
                                         <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                                            <Text style={styles.priceText}>${item.price}</Text>
+                                            <Text style={styles.priceText}>₹{item.price}</Text>
                                             <Text style={styles.unitText}>/{item.unit}</Text>
                                         </View>
 

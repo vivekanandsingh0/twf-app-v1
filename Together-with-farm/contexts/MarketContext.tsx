@@ -97,23 +97,66 @@ const MOCK_ARTICLES: Article[] = [
 import { supabase } from '@/lib/supabase';
 
 export function MarketProvider({ children }: { children: ReactNode }) {
-    // ... vendors state ...
-    const [vendors] = useState<MarketVendor[]>([
-        {
-            id: 'vendor_1',
-            name: 'Amit Kumar',
-            image: require('@/assets/images/3d-model-with-veg.png'),
-            coverImage: require('@/assets/images/3d-model-with-veg.png'),
-            bio: 'Specialist in organic root vegetables.',
-            location: 'Sikar, Rajasthan',
-            tag: 'FEATURED VENDOR',
-            stats: { experience: '12 Years', method: 'Organic', size: '5 Acres' },
-            story: "Legacy farming.",
-            quote: "Healthy living for everyone."
-        },
-    ]);
+    const [vendors, setVendors] = useState<MarketVendor[]>([]);
     const [products, setProducts] = useState<MarketProduct[]>([]);
     const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
+
+    // FETCH VENDORS FROM SUPABASE
+    useEffect(() => {
+        const fetchVendors = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('user_type', 'Vendor');
+
+                if (error) throw error;
+
+                if (data) {
+                    const mappedVendors: MarketVendor[] = data.map((v: any) => {
+                        // Determine vendor image
+                        const vendorImage = v.profile_image || v.avatar_url
+                            ? { uri: v.profile_image || v.avatar_url }
+                            : require('@/assets/images/3d-model-with-veg.png');
+
+                        return {
+                            id: v.id,
+                            name: v.business_name || v.full_name || 'Vendor',
+                            image: vendorImage,
+                            coverImage: vendorImage,
+                            bio: v.bio || 'Passionate about providing fresh, quality produce.',
+                            location: v.address || 'India',
+                            tag: v.shop_status === 'Active' ? 'FEATURED VENDOR' : 'VENDOR',
+                            stats: {
+                                experience: v.experience || 'N/A',
+                                method: 'Organic',
+                                size: v.farm_size || 'N/A'
+                            },
+                            story: v.bio || 'Dedicated to sustainable farming.',
+                            quote: "Fresh from farm to your table."
+                        };
+                    });
+                    setVendors(mappedVendors);
+                }
+            } catch (e) {
+                console.error("Failed to fetch vendors for Market", e);
+            }
+        };
+
+        fetchVendors();
+
+        // Realtime subscription for vendor updates
+        const vendorSubscription = supabase
+            .channel('market:vendors')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+                fetchVendors();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(vendorSubscription);
+        };
+    }, []);
 
     // FETCH PRODUCTS FROM SUPABASE
     useEffect(() => {

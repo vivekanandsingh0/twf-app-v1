@@ -8,6 +8,7 @@ import {
     ScrollView,
     FlatList,
     Dimensions,
+    Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -74,17 +75,52 @@ export default function CategoryScreen() {
 
     const [selectedCategoryId, setSelectedCategoryId] = useState('vegetables');
     const [searchQuery, setSearchQuery] = useState('');
+    const [showFilterModal, setShowFilterModal] = useState(false);
+
+    // Filter states
+    const [sortBy, setSortBy] = useState<'price-low' | 'price-high' | 'name' | 'popular'>('popular');
+    const [priceRange, setPriceRange] = useState<'all' | 'under-50' | '50-100' | 'above-100'>('all');
+    const [showDiscountOnly, setShowDiscountOnly] = useState(false);
+    const [showInStockOnly, setShowInStockOnly] = useState(false);
 
     const activeCategoryProducts = products.filter(p => {
         const filters = categoryFilters[selectedCategoryId] || [];
-        // Check if product type matches one of the filters for the category
-        // OR if category is vegetables and we just dump everything that isn't other stuff (fallback)
-        // For simplicity, strict match on types defined in context
         const matchesCategory = filters.includes(p.type) || filters.some(f => p.tag?.includes(f)) || (selectedCategoryId === 'vegetables' && !['Fruit', 'Fruits', 'Meat', 'Dairy', 'Bakery', 'Seafood'].includes(p.type));
-
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
+
+        // Price filter
+        let matchesPrice = true;
+        if (priceRange === 'under-50') matchesPrice = p.price < 50;
+        else if (priceRange === '50-100') matchesPrice = p.price >= 50 && p.price <= 100;
+        else if (priceRange === 'above-100') matchesPrice = p.price > 100;
+
+        // Discount filter
+        const matchesDiscount = !showDiscountOnly || (p.discount && p.discount !== '');
+
+        return matchesCategory && matchesSearch && matchesPrice && matchesDiscount;
+    }).sort((a, b) => {
+        // Sorting logic
+        if (sortBy === 'price-low') {
+            return a.price - b.price;
+        } else if (sortBy === 'price-high') {
+            return b.price - a.price;
+        } else if (sortBy === 'name') {
+            return a.name.localeCompare(b.name);
+        }
+        return 0; // popular (default order)
     });
+
+    const activeFilterCount =
+        (priceRange !== 'all' ? 1 : 0) +
+        (showDiscountOnly ? 1 : 0) +
+        (sortBy !== 'popular' ? 1 : 0);
+
+    const resetFilters = () => {
+        setSortBy('popular');
+        setPriceRange('all');
+        setShowDiscountOnly(false);
+        setShowInStockOnly(false);
+    };
 
     const renderCategoryItem = (item: typeof CATEGORIES[0]) => {
         const isActive = selectedCategoryId === item.id;
@@ -185,11 +221,16 @@ export default function CategoryScreen() {
                     <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Categories</Text>
-                <TouchableOpacity style={styles.iconButton}>
+                <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => setShowFilterModal(true)}
+                >
                     <Ionicons name="options-outline" size={24} color="#1A1A1A" />
-                    <View style={styles.filterBadge}>
-                        <Text style={styles.filterBadgeText}>2</Text>
-                    </View>
+                    {activeFilterCount > 0 && (
+                        <View style={styles.filterBadge}>
+                            <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
             </View>
 
@@ -240,6 +281,186 @@ export default function CategoryScreen() {
 
             {/* Floating Cart Popup */}
             <CartPopup />
+
+            {/* Filter Modal */}
+            <Modal
+                visible={showFilterModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowFilterModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Filters & Sort</Text>
+                            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                                <Ionicons name="close" size={28} color="#1A1A1A" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {/* Sort By Section */}
+                            <View style={styles.filterSection}>
+                                <Text style={styles.filterSectionTitle}>Sort By</Text>
+                                <View style={styles.filterOptions}>
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, sortBy === 'popular' && styles.filterOptionActive]}
+                                        onPress={() => setSortBy('popular')}
+                                    >
+                                        <Ionicons
+                                            name={sortBy === 'popular' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={sortBy === 'popular' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, sortBy === 'popular' && styles.filterOptionTextActive]}>
+                                            Most Popular
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, sortBy === 'price-low' && styles.filterOptionActive]}
+                                        onPress={() => setSortBy('price-low')}
+                                    >
+                                        <Ionicons
+                                            name={sortBy === 'price-low' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={sortBy === 'price-low' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, sortBy === 'price-low' && styles.filterOptionTextActive]}>
+                                            Price: Low to High
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, sortBy === 'price-high' && styles.filterOptionActive]}
+                                        onPress={() => setSortBy('price-high')}
+                                    >
+                                        <Ionicons
+                                            name={sortBy === 'price-high' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={sortBy === 'price-high' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, sortBy === 'price-high' && styles.filterOptionTextActive]}>
+                                            Price: High to Low
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, sortBy === 'name' && styles.filterOptionActive]}
+                                        onPress={() => setSortBy('name')}
+                                    >
+                                        <Ionicons
+                                            name={sortBy === 'name' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={sortBy === 'name' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, sortBy === 'name' && styles.filterOptionTextActive]}>
+                                            Name (A-Z)
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Price Range Section */}
+                            <View style={styles.filterSection}>
+                                <Text style={styles.filterSectionTitle}>Price Range</Text>
+                                <View style={styles.filterOptions}>
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, priceRange === 'all' && styles.filterOptionActive]}
+                                        onPress={() => setPriceRange('all')}
+                                    >
+                                        <Ionicons
+                                            name={priceRange === 'all' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={priceRange === 'all' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, priceRange === 'all' && styles.filterOptionTextActive]}>
+                                            All Prices
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, priceRange === 'under-50' && styles.filterOptionActive]}
+                                        onPress={() => setPriceRange('under-50')}
+                                    >
+                                        <Ionicons
+                                            name={priceRange === 'under-50' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={priceRange === 'under-50' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, priceRange === 'under-50' && styles.filterOptionTextActive]}>
+                                            Under ₹50
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, priceRange === '50-100' && styles.filterOptionActive]}
+                                        onPress={() => setPriceRange('50-100')}
+                                    >
+                                        <Ionicons
+                                            name={priceRange === '50-100' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={priceRange === '50-100' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, priceRange === '50-100' && styles.filterOptionTextActive]}>
+                                            ₹50 - ₹100
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.filterOption, priceRange === 'above-100' && styles.filterOptionActive]}
+                                        onPress={() => setPriceRange('above-100')}
+                                    >
+                                        <Ionicons
+                                            name={priceRange === 'above-100' ? "radio-button-on" : "radio-button-off"}
+                                            size={20}
+                                            color={priceRange === 'above-100' ? "#1F5E2E" : "#999"}
+                                        />
+                                        <Text style={[styles.filterOptionText, priceRange === 'above-100' && styles.filterOptionTextActive]}>
+                                            Above ₹100
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Other Filters */}
+                            <View style={styles.filterSection}>
+                                <Text style={styles.filterSectionTitle}>Other Filters</Text>
+                                <TouchableOpacity
+                                    style={[styles.filterOption, showDiscountOnly && styles.filterOptionActive]}
+                                    onPress={() => setShowDiscountOnly(!showDiscountOnly)}
+                                >
+                                    <Ionicons
+                                        name={showDiscountOnly ? "checkbox" : "square-outline"}
+                                        size={20}
+                                        color={showDiscountOnly ? "#1F5E2E" : "#999"}
+                                    />
+                                    <Text style={[styles.filterOptionText, showDiscountOnly && styles.filterOptionTextActive]}>
+                                        Show Discounted Items Only
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+
+                        {/* Modal Footer */}
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={styles.resetButton}
+                                onPress={resetFilters}
+                            >
+                                <Text style={styles.resetButtonText}>Reset All</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.applyButton}
+                                onPress={() => setShowFilterModal(false)}
+                            >
+                                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -583,5 +804,105 @@ const styles = StyleSheet.create({
         color: '#1F5E2E',
         fontSize: 12,
         fontWeight: 'bold',
+    },
+
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: '80%',
+        paddingBottom: 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+    },
+    filterSection: {
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F5F5F5',
+    },
+    filterSectionTitle: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+        marginBottom: 12,
+    },
+    filterOptions: {
+        gap: 8,
+    },
+    filterOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: '#F9F9F9',
+        gap: 12,
+    },
+    filterOptionActive: {
+        backgroundColor: '#E8F5E9',
+        borderWidth: 1,
+        borderColor: '#1F5E2E',
+    },
+    filterOptionText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_500Medium',
+        color: '#666',
+        flex: 1,
+    },
+    filterOptionTextActive: {
+        color: '#1F5E2E',
+        fontFamily: 'DMSans_700Bold',
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        gap: 12,
+    },
+    resetButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#1F5E2E',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    resetButtonText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1F5E2E',
+    },
+    applyButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: '#1F5E2E',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    applyButtonText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+        color: '#fff',
     },
 });

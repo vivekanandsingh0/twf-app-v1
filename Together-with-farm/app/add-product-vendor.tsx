@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, ImageBackground, Alert, Platform, Image } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, ImageBackground, Alert, Platform, Image, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useVendor } from '@/contexts/VendorContext';
 import { useMarket } from '@/contexts/MarketContext';
 import { useUser } from '@/contexts/UserContext';
+import { supabase } from '@/lib/supabase';
 
 const CATEGORIES = ['Vegetables', 'Fruits', 'Dairy', 'Bakery', 'Meat', 'Seafood'];
 
@@ -20,6 +21,7 @@ export default function AddProductVendorScreen() {
 
     const [productName, setProductName] = useState('');
     const [images, setImages] = useState<string[]>([]);
+    const [uploadingImages, setUploadingImages] = useState<boolean[]>([]); // Track upload status for each image
     const [productInfo, setProductInfo] = useState('');
     const [highlights, setHighlights] = useState<{ title: string; value: string }[]>([]);
     const [category, setCategory] = useState('Vegetables');
@@ -70,28 +72,92 @@ export default function AddProductVendorScreen() {
         }
 
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'], // Updated to use new API
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.8,
         });
 
         if (!result.canceled) {
-            const uri = result.assets[0].uri;
-            console.log('📸 [AddProduct] Image selected:', uri);
-            // Just store the URI - VendorContext will handle upload when saving
-            setImages([...images, uri]);
+            const blobUri = result.assets[0].uri;
+            console.log('📸 [AddProduct] Image selected, uploading immediately...');
+
+            // Add placeholder to show loading state
+            const imageIndex = images.length;
+            setImages([...images, '']); // Empty string as placeholder
+            setUploadingImages([...uploadingImages, true]); // Mark as uploading
+
+            try {
+                if (!user?.id) {
+                    Alert.alert("Error", "You must be logged in to upload images.");
+                    // Remove placeholder
+                    setImages(prev => prev.filter((_, i) => i !== imageIndex));
+                    setUploadingImages(prev => prev.filter((_, i) => i !== imageIndex));
+                    return;
+                }
+
+                // Fetch the blob
+                const response = await fetch(blobUri);
+                const blob = await response.blob();
+
+                // Determine file extension from MIME type
+                const fileExt = blob.type.split('/')[1] || 'jpg';
+                const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+                console.log('☁️  [AddProduct] Uploading to Supabase Storage...');
+
+                // Upload to Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('product-images')
+                    .upload(fileName, blob, {
+                        contentType: blob.type,
+                        upsert: false
+                    });
+
+                if (uploadError) {
+                    console.error("❌ [AddProduct] Upload failed:", uploadError);
+                    Alert.alert("Upload Failed", `Could not upload image: ${uploadError.message || 'Unknown error'}`);
+                    // Remove placeholder
+                    setImages(prev => prev.filter((_, i) => i !== imageIndex));
+                    setUploadingImages(prev => prev.filter((_, i) => i !== imageIndex));
+                    return;
+                }
+
+                // Get public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('product-images')
+                    .getPublicUrl(fileName);
+
+                console.log('✅ [AddProduct] Upload successful:', publicUrl);
+
+                // Replace placeholder with actual URL
+                setImages(prev => prev.map((img, i) => i === imageIndex ? publicUrl : img));
+                setUploadingImages(prev => prev.map((uploading, i) => i === imageIndex ? false : uploading));
+
+            } catch (error) {
+                console.error("❌ [AddProduct] Upload exception:", error);
+                Alert.alert("Upload Failed", `An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                // Remove placeholder
+                setImages(prev => prev.filter((_, i) => i !== imageIndex));
+                setUploadingImages(prev => prev.filter((_, i) => i !== imageIndex));
+            }
         }
     };
 
     const removeImage = (index: number) => {
-        const newImages = [...images];
-        newImages.splice(index, 1);
-        setImages(newImages);
+        setImages(prev => prev.filter((_, i) => i !== index));
+        setUploadingImages(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSave = async () => {
         console.log("Handle Save Pressed");
+
+        // Check if any images are still uploading
+        if (uploadingImages.some(uploading => uploading)) {
+            Alert.alert("Please Wait", "Images are still uploading. Please wait for uploads to complete.");
+            return;
+        }
+
         if (!productName || !price || !quantity) {
             Alert.alert("Missing Fields", "Please fill in all required fields.");
             return;
@@ -211,15 +277,26 @@ export default function AddProductVendorScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Image Picker */}
-                {/* Image Picker */}
                 <Text style={styles.label}>Product Images (Min 1, Max 3)</Text>
                 <View style={styles.imagesRow}>
                     {images.map((uri, index) => (
                         <View key={index} style={styles.imageSlot}>
-                            <Image source={{ uri }} style={styles.thumbnail} />
-                            <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(index)}>
-                                <Ionicons name="close-circle" size={24} color="#FF5252" />
-                            </TouchableOpacity>
+                            {uri ? (
+                                <Image source={{ uri }} style={styles.thumbnail} />
+                            ) : (
+                                <View style={styles.thumbnail} />
+                            )}
+                            {uploadingImages[index] && (
+                                <View style={styles.uploadingOverlay}>
+                                    <ActivityIndicator size="large" color="#1F5E2E" />
+                                    <Text style={styles.uploadingText}>Uploading...</Text>
+                                </View>
+                            )}
+                            {!uploadingImages[index] && (
+                                <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(index)}>
+                                    <Ionicons name="close-circle" size={24} color="#FF5252" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                     ))}
                     {images.length < 3 && (
@@ -638,5 +715,22 @@ const styles = StyleSheet.create({
         fontFamily: 'DMSans_700Bold',
         color: '#1F5E2E',
         marginLeft: 4,
+    },
+    uploadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 12,
+    },
+    uploadingText: {
+        marginTop: 8,
+        fontSize: 12,
+        fontFamily: 'DMSans_500Medium',
+        color: '#1F5E2E',
     },
 });

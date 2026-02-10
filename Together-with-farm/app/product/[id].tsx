@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 // import { Image } from 'expo-image';
 import { useCart } from '@/contexts/CartContext';
 import { useMarket, MarketProduct } from '@/contexts/MarketContext';
+import { useFavourites } from '@/contexts/FavouritesContext';
 import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
@@ -30,6 +31,7 @@ export default function ProductDetailsScreen() {
     const insets = useSafeAreaInsets();
     const { updateQuantity, getItemQuantity } = useCart();
     const { products, vendors } = useMarket();
+    const { toggleFavourite, isFavourite } = useFavourites();
 
     const productId = Array.isArray(id) ? id[0] : id; // Handle string | string[]
     const product = products.find(p => p.id === productId);
@@ -122,8 +124,15 @@ export default function ProductDetailsScreen() {
                     <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
                 <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="heart-outline" size={24} color="#1A1A1A" />
+                    <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => product && toggleFavourite(product.id)}
+                    >
+                        <Ionicons
+                            name={product && isFavourite(product.id) ? "heart" : "heart-outline"}
+                            size={24}
+                            color={product && isFavourite(product.id) ? "#FF4B4B" : "#1A1A1A"}
+                        />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconButton} onPress={onShare}>
                         <Ionicons name="share-outline" size={24} color="#1A1A1A" />
