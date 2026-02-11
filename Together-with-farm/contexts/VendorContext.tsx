@@ -3,7 +3,7 @@ import { View, Text, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase } from '../lib/supabase';
 import { useUser } from './UserContext';
-import * as FileSystem from 'expo-file-system'; // For base64 if needed, but fetch+blob is better usually
+import * as FileSystem from 'expo-file-system/legacy';
 
 // Helper to upload image
 const uploadImageToSupabase = async (uri: string, userId: string) => {
@@ -17,21 +17,51 @@ const uploadImageToSupabase = async (uri: string, userId: string) => {
         }
 
         // For file:// or blob: URIs, we need to upload
-        console.log('☁️  [Upload] Fetching image data...');
-        const response = await fetch(uri);
-        const blob = await response.blob();
+        console.log('☁️  [Upload] Processing image upload...');
 
-        // Determine file extension
-        const fileExt = blob.type.split('/')[1] || 'jpg'; // Get from MIME type
+        let body: Blob | ArrayBuffer;
+        let contentType: string;
+        let fileExt: string;
+
+        // On Android/iOS, use expo-file-system to read file:// URIs as Base64 to ArrayBuffer
+        if (uri.startsWith('file://')) {
+            console.log('☁️  [Upload] Reading file as Base64...');
+            const base64 = await FileSystem.readAsStringAsync(uri, {
+                encoding: 'base64', // Use string "base64" for legacy compatibility
+            });
+
+            // Decode Base64 to ArrayBuffer manually (avoiding fetch data URI issues)
+            console.log('☁️  [Upload] Converting Base64 to ArrayBuffer...');
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            body = bytes.buffer;
+
+            // Guess mime type from extension
+            fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+            contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
+        } else {
+            // For web or blob: URIs, use fetch directly
+            console.log('☁️  [Upload] Fetching blob directly...');
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            body = blob;
+            fileExt = blob.type.split('/')[1] || 'jpg';
+            contentType = blob.type;
+        }
+
         const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${fileName}`;
 
-        console.log('☁️  [Upload] Uploading to Supabase Storage:', filePath);
+        console.log(`☁️  [Upload] Uploading to Supabase Storage: ${filePath} (Type: ${contentType})`);
 
         const { error: uploadError } = await supabase.storage
             .from('product-images')
-            .upload(filePath, blob, {
-                contentType: blob.type,
+            .upload(filePath, body, {
+                contentType: contentType,
                 upsert: false
             });
 
@@ -406,32 +436,62 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                     vendor_id: user.id
                 };
 
-                console.log('💾 [VendorContext] Attempting database insert...', insertData);
+                console.log('💾 [VendorContext] Attempting database insert...');
+                console.log('📋 [VendorContext] Insert data:', JSON.stringify(insertData, null, 2));
+                console.log('🔐 [VendorContext] User from context:', user.id);
 
-                const { data, error } = await supabase
-                    .from('products')
-                    .insert(insertData)
-                    .select()
-                    .single();
+                try {
+                    // Test if Supabase is responding at all
+                    console.log('🧪 [VendorContext] Testing Supabase connection...');
+                    const testResult = await supabase.from('products').select('count').limit(1);
+                    console.log('✅ [VendorContext] Supabase connection test:', testResult.error ? 'FAILED' : 'SUCCESS');
+                    if (testResult.error) {
+                        console.error('❌ [VendorContext] Connection test error:', testResult.error);
+                    }
 
-                if (error) {
-                    console.error('❌ [VendorContext] Database insert error:', error);
-                    throw error;
-                }
+                    console.log('⏳ [VendorContext] Starting insert...');
+                    const insertResult = await supabase
+                        .from('products')
+                        .insert(insertData)
+                        .select()
+                        .single();
 
-                console.log('✅ [VendorContext] Product saved successfully!', data);
+                    console.log('✅ [VendorContext] Insert completed');
 
-                if (data) {
-                    // 4. Success: Replace Temp ID with Real ID AND Real Image URLs
-                    setProducts(prev => prev.map(p => p.id === tempId ? {
-                        ...p,
-                        id: data.id,
-                        images: finalImages,
-                        image: finalImages.length > 0 ? { uri: finalImages[0] } : p.image,
-                    } : p));
+                    const { data, error } = insertResult;
+
+                    if (error) {
+                        console.error('❌ [VendorContext] Database insert error:', error);
+                        console.error('❌ [VendorContext] Error code:', error.code);
+                        console.error('❌ [VendorContext] Error message:', error.message);
+                        console.error('❌ [VendorContext] Error details:', JSON.stringify(error, null, 2));
+                        console.error('❌ [VendorContext] Error hint:', error.hint);
+                        throw error;
+                    }
+
+                    console.log('✅ [VendorContext] Product saved successfully!', data);
+
+                    if (data) {
+                        // 4. Success: Replace Temp ID with Real ID AND Real Image URLs
+                        setProducts(prev => prev.map(p => p.id === tempId ? {
+                            ...p,
+                            id: data.id,
+                            images: finalImages,
+                            image: finalImages.length > 0 ? { uri: finalImages[0] } : p.image,
+                        } : p));
+                    }
+                } catch (insertError: any) {
+                    console.error('❌ [VendorContext] Insert operation failed:', insertError);
+                    console.error('❌ [VendorContext] Insert error type:', typeof insertError);
+                    console.error('❌ [VendorContext] Insert error name:', insertError?.name);
+                    console.error('❌ [VendorContext] Insert error message:', insertError?.message);
+                    throw insertError;
                 }
             } catch (e: any) {
-                console.error("Failed to add product in background", e);
+                console.error("❌ [VendorContext] Failed to add product in background", e);
+                console.error("❌ [VendorContext] Error name:", e.name);
+                console.error("❌ [VendorContext] Error message:", e.message);
+                console.error("❌ [VendorContext] Full error:", JSON.stringify(e, null, 2));
                 // 5. Error: Rollback (Remove the temp product)
                 setProducts(prev => prev.filter(p => p.id !== tempId));
 

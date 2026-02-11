@@ -9,30 +9,35 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 import { Platform } from 'react-native';
 
-const SupabaseStorage = {
+// Use localStorage for web, AsyncStorage for native
+const SupabaseStorage = Platform.OS === 'web' ? {
     getItem: (key: string) => {
-        if (Platform.OS === 'web' && typeof window === 'undefined') {
-            return Promise.resolve(null);
+        if (typeof window !== 'undefined') {
+            return Promise.resolve(window.localStorage.getItem(key));
         }
-        return AsyncStorage.getItem(key);
+        return Promise.resolve(null);
     },
     setItem: (key: string, value: string) => {
-        if (Platform.OS === 'web' && typeof window === 'undefined') {
-            return Promise.resolve();
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem(key, value);
         }
-        return AsyncStorage.setItem(key, value);
+        return Promise.resolve();
     },
     removeItem: (key: string) => {
-        if (Platform.OS === 'web' && typeof window === 'undefined') {
-            return Promise.resolve();
+        if (typeof window !== 'undefined') {
+            window.localStorage.removeItem(key);
         }
-        return AsyncStorage.removeItem(key);
+        return Promise.resolve();
     },
+} : {
+    getItem: (key: string) => AsyncStorage.getItem(key),
+    setItem: (key: string, value: string) => AsyncStorage.setItem(key, value),
+    removeItem: (key: string) => AsyncStorage.removeItem(key),
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        storage: SupabaseStorage,
+        storage: SupabaseStorage as any,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
