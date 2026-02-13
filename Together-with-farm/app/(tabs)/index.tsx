@@ -7,53 +7,160 @@ import {
   TextInput,
   TouchableOpacity,
   Dimensions,
-  Modal,
-  RefreshControl
+  Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { useMarket, MarketVendor } from '@/contexts/MarketContext';
+import { useFavourites } from '@/contexts/FavouritesContext';
+import { useAddresses } from '@/contexts/AddressContext';
+import { useCart } from '@/contexts/CartContext';
+import { useMarket, MarketProduct } from '@/contexts/MarketContext';
+import CartPopup from '@/components/CartPopup';
 
-const CATEGORIES = ['All', 'Nutrition', 'Storage Tips', 'Recipes', 'Tips'];
+const { width } = Dimensions.get('window');
 
-export default function FeedScreen() {
-  const { vendors, articles } = useMarket();
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [refreshing, setRefreshing] = useState(false);
-  const insets = useSafeAreaInsets();
+const CATEGORIES = ['All', 'Leafy', 'Seasonals', 'Roots', 'Daily Essentials'];
+
+const LOCATIONS = [
+  { id: '1', type: 'Home', address: 'Patna, Bihar', zip: '800001' },
+  { id: '2', type: 'Office', address: 'Boring Road, Patna', zip: '800002' },
+  { id: '3', type: 'Parents', address: 'Danapur, Patna', zip: '801503' },
+];
+
+export default function MarketScreen() {
   const router = useRouter();
+  const { products } = useMarket();
+  const { toggleFavourite, isFavourite } = useFavourites();
+  const { addresses, selectedAddress, setSelectedAddress } = useAddresses();
+  const { updateQuantity, getItemQuantity } = useCart();
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Derived arrays
-  const spotlightFarmers = vendors.filter(v => v.tag); // Show all tagged vendors
-  const recentArticles = articles; // All articles for now
+  const insets = useSafeAreaInsets();
 
-  // Mock Insights - could also be in context or filtered articles
-  const insights = articles.filter(a => a.type === 'Agri-Tech' || a.tag === 'Trending');
+  const dealProducts = products.filter(p => p.specialOffer);
+  const regularProducts = products.filter(p => !p.specialOffer);
 
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    // Simulate fetch
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
-  }, []);
+  // Combine for search
+  const allProducts = products;
+  const filteredSearchResults = allProducts.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const renderProductCard = (item: any) => {
+    const qty = getItemQuantity(item.id);
+    const isDeal = item.specialOffer !== undefined;
+
+    // Dynamic style based on if it's a deal product or not, 
+    // passing existing logic.
+    const cardStyle = isDeal
+      ? [styles.productCard, { borderColor: '#FFD700', borderWidth: 2, backgroundColor: '#FFFDE7' }]
+      : styles.productCard;
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={cardStyle}
+        onPress={() => router.push(`/product/${item.id}`)}
+        activeOpacity={0.9}
+      >
+        <View style={styles.productImageContainer}>
+          <Image source={item.image} style={styles.productImage} contentFit="contain" />
+          <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
+            <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.favButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              toggleFavourite(item.id);
+            }}
+          >
+            <Ionicons
+              name={isFavourite(item.id) ? "heart" : "heart-outline"}
+              size={20}
+              color={isFavourite(item.id) ? "#FF4B4B" : "#1A1A1A"}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.productInfo}>
+          {isDeal && (
+            <Text style={[styles.productType, { color: '#F57F17', fontWeight: 'bold' }]}>{item.specialOffer}</Text>
+          )}
+          <Text style={styles.productType}>{!isDeal && item.type}</Text>
+          <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+
+          <View style={styles.priceRow}>
+            <View style={styles.priceContainer}>
+              <Text style={styles.price}>₹{item.price}</Text>
+              <Text style={styles.unit}>{item.unit}</Text>
+            </View>
+
+            {qty === 0 ? (
+              <TouchableOpacity
+                style={[styles.addButton, isDeal && { backgroundColor: '#F9A825' }]}
+                onPress={() => updateQuantity(item.id, 1)}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.quantityControl, isDeal && { backgroundColor: '#F9A825' }]}>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={() => updateQuantity(item.id, -1)}
+                >
+                  <Ionicons name="remove" size={16} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{qty}</Text>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={() => updateQuantity(item.id, 1)}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar style="dark" />
+    <View style={styles.container}>
+      <StatusBar style="light" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Social Feed</Text>
-        <View style={styles.headerRight}>
+      {/* Header Section */}
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 10, 30), zIndex: 10 }]}>
+        <View style={styles.headerTop}>
+          {/* Location Dropdown Trigger */}
           <TouchableOpacity
-            style={styles.iconButton}
+            style={styles.locationContainer}
+            onPress={() => setShowLocationPicker(!showLocationPicker)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.locationIconBg}>
+              <Ionicons name="location-outline" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.locationRow}>
+                <Text style={styles.locationTitle}>{selectedAddress?.type || 'Select Location'}</Text>
+                <Ionicons name={showLocationPicker ? "chevron-up" : "chevron-down"} size={16} color="#fff" />
+              </View>
+              <Text style={styles.deliveryTime} numberOfLines={1} ellipsizeMode="tail">
+                {selectedAddress?.address || 'No address selected'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.notificationBtn}
             onPress={() => router.push('/notifications')}
           >
             <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
@@ -62,141 +169,169 @@ export default function FeedScreen() {
             </View>
           </TouchableOpacity>
         </View>
-      </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1F5E2E']} />
-        }
-      >
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
-            placeholder="Search fresh products or brands"
+            placeholder="Search 'Tomato' or 'Potato'"
             placeholderTextColor="#999"
             style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
-        </View>
-
-        {/* Spotlight Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Spotlight</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.spotlightContainer}
-        >
-          {spotlightFarmers.map((farmer) => (
-            <TouchableOpacity
-              key={farmer.id}
-              style={styles.spotlightItem}
-              onPress={() => router.push(`/farmer/${farmer.id}`)}
-            >
-              <View style={[styles.spotlightImageContainer]}>
-                <Image source={farmer.image} style={styles.spotlightImage} contentFit="cover" />
-              </View>
-              {/* <Text style={styles.spotlightName} numberOfLines={1}>{farmer.name}</Text> */}
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color="#999" />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Categories */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesContainer}
-        >
-          {CATEGORIES.map((cat, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.categoryChip,
-                activeCategory === cat ? styles.activeCategoryChip : styles.inactiveCategoryChip
-              ]}
-              onPress={() => setActiveCategory(cat)}
-            >
-              <Text style={[
-                styles.categoryText,
-                activeCategory === cat ? styles.activeCategoryText : styles.inactiveCategoryText
-              ]}>
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* All Articles Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>All Articles</Text>
+          )}
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.articlesContainer}
-        >
-          {recentArticles.map((article) => (
-            <View key={article.id} style={styles.articleCard}>
-              <Image source={article.image} style={styles.articleImage} contentFit="cover" />
-
-              <View style={styles.imageOverlay}>
-                <View style={styles.tagBadge}>
-                  <Text style={styles.tagText}>{article.category}</Text>
-                </View>
-                <View style={styles.timeBadge}>
-                  <Text style={styles.timeText}>{article.time}</Text>
-                </View>
-              </View>
-
-              <View style={styles.articleContent}>
-                <Text style={styles.articleTitle} numberOfLines={2}>
-                  {article.title}
+        {/* Categories - Only show if NO search query */}
+        {searchQuery.length === 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesContainer}
+          >
+            {CATEGORIES.map((cat, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.categoryChip,
+                  activeCategory === cat ? styles.activeCategoryChip : styles.inactiveCategoryChip
+                ]}
+                onPress={() => setActiveCategory(cat)}
+              >
+                <Text style={[
+                  styles.categoryText,
+                  activeCategory === cat ? styles.activeCategoryText : styles.inactiveCategoryText
+                ]}>
+                  {cat}
                 </Text>
-                <TouchableOpacity style={styles.readMoreLink}>
-                  <Text style={styles.readMoreText}>Read article</Text>
-                  <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* Main Content */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {searchQuery.length > 0 ? (
+          // Search Results View
+          <View style={styles.searchResultsContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Search Results ({filteredSearchResults.length})</Text>
             </View>
-          ))}
-        </ScrollView>
-
-        {/* Admin Insights Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Admin Insights</Text>
-        </View>
-
-        <View style={styles.insightsContainer}>
-          {insights.map((item) => (
-            <View key={item.id} style={styles.insightCard}>
-              <Image source={item.image} style={styles.insightImage} contentFit="cover" />
-              <View style={styles.insightContent}>
-                <View style={styles.insightMetaRow}>
-                  <View style={styles.trendingBadge}>
-                    <Text style={styles.trendingText}>{item.tag || 'New'}</Text>
-                  </View>
-                  <Text style={styles.insightTime}>{item.time}</Text>
+            <View style={styles.gridContainer}>
+              {filteredSearchResults.length > 0 ? (
+                filteredSearchResults.map(renderProductCard)
+              ) : (
+                <View style={styles.noResults}>
+                  <Ionicons name="search" size={48} color="#DDD" />
+                  <Text style={styles.noResultText}>No items found for "{searchQuery}"</Text>
                 </View>
-                <Text style={styles.insightTitle} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <TouchableOpacity style={styles.readMoreLink}>
-                  <Text style={styles.readMoreText}>{item.type || 'Insight'}</Text>
-                  <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
-                </TouchableOpacity>
-              </View>
+              )}
             </View>
-          ))}
-        </View>
+          </View>
+        ) : (
+          // Normal Sections View
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Bestsellers</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+              {/* Show top rated or random products */}
+              {products.filter(p => p.isFavorite).slice(0, 5).map(renderProductCard)}
+            </ScrollView>
 
-        {/* Spacer for Floating Tab Bar */}
-        <View style={{ height: 100 }} />
+            {dealProducts.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Grab Best Deal</Text>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                  {dealProducts.map(renderProductCard)}
+                </ScrollView>
+              </>
+            )}
 
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Leafy & Fresh</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+              {products.filter(p => ['Leafy', 'Hydroponic', 'Organic', 'Fresh'].includes(p.type) || p.tag === 'Fresh').map(renderProductCard)}
+            </ScrollView>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Seasonal Fruits</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+              {products.filter(p => p.type.includes('Fruit')).map(renderProductCard)}
+            </ScrollView>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Farm Classics</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+              {products.filter(p => p.type === 'Daily' || p.tag === 'Local').map(renderProductCard)}
+            </ScrollView>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Root Vegetables</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+              {products.filter(p => p.type === 'Roots').map(renderProductCard)}
+            </ScrollView>
+          </>
+        )}
+
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Floating Cart Popup */}
+      <CartPopup />
+
+      {/* Location Dropdown Overlay - Global Position */}
+      {showLocationPicker && (
+        <>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 900 }}
+            activeOpacity={1}
+            onPress={() => setShowLocationPicker(false)}
+          />
+          <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }]}>
+            {addresses.map((addr) => (
+              <TouchableOpacity
+                key={addr.id}
+                style={styles.locationOption}
+                onPress={() => {
+                  setSelectedAddress(addr);
+                  setShowLocationPicker(false);
+                }}
+              >
+                <Ionicons
+                  name={selectedAddress?.id === addr.id ? "radio-button-on" : "radio-button-off"}
+                  size={18}
+                  color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
+                />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#1F5E2E' }]}>
+                    {addr.type}
+                  </Text>
+                  <Text style={styles.locationOptionAddress} numberOfLines={2}>
+                    {addr.address}, {addr.city}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+
     </View>
   );
 }
@@ -207,88 +342,86 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   header: {
+    backgroundColor: '#1F5E2E',
+    paddingBottom: 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden', // Ensures content respects the rounded corners
+  },
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    marginBottom: 16,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: 'DMSans_700Bold',
-    color: '#1A1A1A',
-  },
-  headerRight: {
+  locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    maxWidth: '70%',
   },
-  iconButton: {
-    padding: 4,
-    position: 'relative',
+  locationIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  locationTitle: {
+    color: '#fff',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 14,
+  },
+  deliveryTime: {
+    color: '#A5D6A7', // Light green text
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  notificationBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   notificationBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -4,
+    right: -4,
     backgroundColor: '#1F5E2E',
-    borderRadius: 10,
-    minWidth: 16,
+    borderRadius: 8,
+    width: 16,
     height: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#fff',
   },
   badgeText: {
     color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  spotlightContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 16,
-  },
-  spotlightItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  spotlightImageContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    padding: 3,
-    borderWidth: 2,
-    borderColor: '#EFEFEF', // Default border
-  },
-  activeSpotlight: {
-    borderColor: '#1F5E2E', // Active/Selected border
-  },
-  spotlightImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 35,
-  },
-  spotlightName: {
-    marginTop: 4,
-    fontSize: 12,
-    fontFamily: 'DMSans_500Medium',
-    color: '#333',
+    fontSize: 9,
+    fontFamily: 'DMSans_700Bold',
+    lineHeight: 10,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginBottom: 20,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
+    marginBottom: 20,
   },
   searchIcon: {
     marginRight: 8,
@@ -301,32 +434,34 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 24,
+    gap: 10,
   },
   categoryChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
+    minWidth: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeCategoryChip: {
-    backgroundColor: '#1F5E2E',
-    borderColor: '#1F5E2E',
+    backgroundColor: '#AED581', // Limeish Green
   },
   inactiveCategoryChip: {
-    backgroundColor: '#fff',
-    borderColor: '#EFEFEF',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Semi-transparent for "merged" look
   },
   categoryText: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 14,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 13,
   },
   activeCategoryText: {
-    color: '#fff',
+    color: '#1F5E2E',
   },
   inactiveCategoryText: {
-    color: '#333',
+    color: '#FFFFFF', // White text on transparent background
+  },
+  scrollContent: {
+    paddingTop: 24,
   },
   sectionHeader: {
     paddingHorizontal: 20,
@@ -337,232 +472,237 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_700Bold',
     color: '#1A1A1A',
   },
-  articlesContainer: {
+  productsContainer: {
     paddingHorizontal: 20,
     gap: 16,
-    marginBottom: 32,
+    paddingBottom: 24, // Space for shadow
   },
-  articleCard: {
-    width: 240,
+  productCard: {
+    width: 160,
     backgroundColor: '#fff',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    overflow: 'hidden',
-    // Shadow
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.05)',
-    elevation: 2,
-  },
-  articleImage: {
-    width: '100%',
-    height: 160,
-  },
-  imageOverlay: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  tagBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-  },
-  tagText: {
-    fontSize: 10,
-    fontFamily: 'DMSans_500Medium',
-    color: '#1F5E2E',
-  },
-  timeBadge: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  timeText: {
-    fontSize: 10,
-    fontFamily: 'DMSans_500Medium',
-    color: '#1A1A1A',
-  },
-  articleContent: {
     padding: 12,
-  },
-  articleTitle: {
-    fontSize: 16,
-    fontFamily: 'DMSans_700Bold',
-    color: '#1A1A1A',
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  readMoreLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  readMoreText: {
-    fontSize: 12,
-    fontFamily: 'DMSans_500Medium',
-    color: '#1F5E2E',
-  },
-  insightsContainer: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  insightCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    padding: 10,
     // Shadow
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.05)',
-    elevation: 2,
+    boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.06)',
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F5F5F5',
   },
-  insightImage: {
-    width: 80,
-    height: 80,
+  productImageContainer: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#F9F9F9',
     borderRadius: 12,
-  },
-  insightContent: {
-    flex: 1,
-    marginLeft: 12,
+    marginBottom: 12,
+    position: 'relative',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  insightMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
+  productImage: {
+    width: '90%',
+    height: '90%',
   },
-  trendingBadge: {
+  discountBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
     backgroundColor: '#1F5E2E',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
   },
-  trendingText: {
+  discountText: {
     color: '#fff',
-    fontSize: 9,
-    fontFamily: 'DMSans_700Bold',
-    textTransform: 'uppercase',
-  },
-  insightTime: {
     fontSize: 10,
-    color: '#999',
+    fontFamily: 'DMSans_700Bold',
+  },
+  favButton: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    padding: 2,
+  },
+  productInfo: {
+    width: '100%',
+  },
+  productType: {
+    fontSize: 10,
+    color: '#888',
     fontFamily: 'DMSans_400Regular',
+    marginBottom: 4,
   },
-  insightTitle: {
+  productName: {
     fontSize: 14,
-    fontFamily: 'DMSans_700Bold',
     color: '#1A1A1A',
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  modalCard: {
-    width: '85%',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 24,
-    overflow: 'visible', // Important for overlapping image
-    // paddingBottom: 24, // Handled in modalContent
-    alignItems: 'center',
-  },
-  modalHeader: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#1F5E2E',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  modalAvatarContainer: {
-    position: 'absolute',
-    top: 60, // Half of header height roughly
-    alignSelf: 'center',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    padding: 4,
-    backgroundColor: '#F5F5F5', // Match card bg to create 'cutout' effect look
-  },
-  modalAvatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 60,
-  },
-  modalContent: {
-    marginTop: 70, // Space for the avatar
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    alignItems: 'center',
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: 22,
     fontFamily: 'DMSans_700Bold',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
-  modalTagBadge: {
-    backgroundColor: '#E0E0E0',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 16,
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  modalTagText: {
-    fontSize: 10,
-    fontFamily: 'DMSans_700Bold',
-    color: '#555',
-    textTransform: 'uppercase',
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
-  modalBioName: {
+  price: {
     fontSize: 16,
+    fontFamily: 'DMSans_700Bold',
+    color: '#1F5E2E',
+  },
+  unit: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 2,
+    fontFamily: 'DMSans_400Regular',
+  },
+  // ... existing styles ...
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F5E2E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1F5E2E',
+    borderRadius: 16,
+    height: 32,
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  qtyBtn: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyText: {
+    color: '#fff',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 14,
+  },
+  cartPopupContainer: {
+    // ... existing styles ...
+    position: 'absolute',
+    bottom: 90, // Above tab bar
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  cartPopup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1F5E2E',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 30,
+    gap: 12,
+    boxShadow: '0px 4px 15px rgba(31, 94, 46, 0.4)',
+    elevation: 8,
+    minWidth: 160,
+  },
+  cartImages: {
+    width: 50,
+    height: 30,
+    position: 'relative',
+    marginRight: 8,
+  },
+  tinyThumb: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#1F5E2E',
+    position: 'absolute',
+    top: 0,
+    backgroundColor: '#fff',
+  },
+  moreThumb: {
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreText: {
+    fontSize: 10,
+    color: '#1F5E2E',
+    fontWeight: 'bold',
+  },
+  viewCartText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'DMSans_700Bold',
+  },
+  cartBadgeCount: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 'auto',
+  },
+  cartCountText: {
+    color: '#1F5E2E',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  // NEW STYLES
+  locationDropdown: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    width: 280,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 8,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    zIndex: 1000,
+  },
+  locationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  locationOptionTitle: {
+    fontSize: 14,
     fontFamily: 'DMSans_700Bold',
     color: '#333',
-    marginBottom: 8,
   },
-  modalDescription: {
-    textAlign: 'center',
-    fontSize: 14,
+  locationOptionAddress: {
+    fontSize: 12,
     fontFamily: 'DMSans_400Regular',
-    color: '#555',
-    lineHeight: 22,
-    marginBottom: 24,
+    color: '#666',
+    marginTop: 2,
   },
-  closeButton: {
-    backgroundColor: '#1F5E2E',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 30,
-    width: '100%',
+  searchResultsContainer: {
+    paddingBottom: 20,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingHorizontal: 20,
+  },
+  noResults: {
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 40,
+    gap: 12,
   },
-  closeButtonText: {
-    color: '#fff',
+  noResultText: {
     fontSize: 16,
-    fontFamily: 'DMSans_700Bold',
+    fontFamily: 'DMSans_500Medium',
+    color: '#999',
   },
 });

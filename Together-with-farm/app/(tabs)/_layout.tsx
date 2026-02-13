@@ -19,13 +19,13 @@ export default function TabLayout() {
         headerShown: false,
       }}>
       <Tabs.Screen
-        name="index"
+        name="feed"
         options={{
           title: 'Feed',
         }}
       />
       <Tabs.Screen
-        name="market"
+        name="index"
         options={{
           title: 'Market',
         }}

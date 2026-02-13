@@ -122,7 +122,7 @@ export default function OrderDetailScreen() {
                                 <Text style={styles.itemOrderNum}>{item.productName}</Text>
                                 {/* <View style={styles.statusChip}><Text style={styles.statusChipText}>{order.status}</Text></View> */}
                             </View>
-                            <Text style={styles.itemDesc}>Quantity: {item.quantity} • ${item.price}</Text>
+                            <Text style={styles.itemDesc}>Quantity: {item.quantity} • ₹{item.price}</Text>
                         </View>
                         <View style={styles.badgeContainer}>
                             <View style={styles.quantityBadge}><Text style={styles.quantityText}>{item.quantity}</Text></View>
@@ -159,7 +159,7 @@ export default function OrderDetailScreen() {
                     </View>
                     <View style={[styles.paymentRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
                         <Text style={styles.paymentLabel}>Total</Text>
-                        <Text style={styles.paymentTotal}>${order.totalAmount}</Text>
+                        <Text style={styles.paymentTotal}>₹{order.totalAmount}</Text>
                     </View>
                 </View>
 

@@ -56,7 +56,7 @@ export default function RoleSelectionScreen({ onSelectUser, onSelectVendor }: Ro
                             onPress={onSelectVendor}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.vendorButtonText}>Vendor</Text>
+                            <Text style={styles.vendorButtonText}>Farmer</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

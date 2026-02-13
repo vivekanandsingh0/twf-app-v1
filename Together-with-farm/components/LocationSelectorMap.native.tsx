@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -11,20 +11,24 @@ interface Props {
 }
 
 export default function LocationSelectorMap({ latitude, longitude, onLocationChange }: Props) {
-    const mapRef = useRef<MapView>(null);
+    const webViewRef = useRef<WebView>(null);
     const [loading, setLoading] = useState(false);
-
-    // Internal coordinate state for smooth dragging
     const [coord, setCoord] = useState({ latitude, longitude });
 
-    // Sync when props change (e.g. initial load or external update)
+    // Sync when props change
     useEffect(() => {
         setCoord({ latitude, longitude });
-        mapRef.current?.animateToRegion({
-            latitude, longitude,
-            latitudeDelta: 0.005, longitudeDelta: 0.005
-        }, 1000);
+        updateMapPosition(latitude, longitude);
     }, [latitude, longitude]);
+
+    const updateMapPosition = (lat: number, lng: number) => {
+        webViewRef.current?.injectJavaScript(`
+            if (typeof updateMarker === 'function') {
+                updateMarker(${lat}, ${lng});
+            }
+            true;
+        `);
+    };
 
     const handleLocateMe = async () => {
         setLoading(true);
@@ -39,11 +43,8 @@ export default function LocationSelectorMap({ latitude, longitude, onLocationCha
             const { latitude: lat, longitude: long } = loc.coords;
             setCoord({ latitude: lat, longitude: long });
             onLocationChange(lat, long);
+            updateMapPosition(lat, long);
 
-            mapRef.current?.animateToRegion({
-                latitude: lat, longitude: long,
-                latitudeDelta: 0.005, longitudeDelta: 0.005
-            }, 1000);
         } catch (e) {
             Alert.alert("Error", "Could not locate.");
         } finally {
@@ -51,30 +52,60 @@ export default function LocationSelectorMap({ latitude, longitude, onLocationCha
         }
     };
 
+    const leafletData = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <style>
+    body { padding: 0; margin: 0; }
+    html, body, #map { height: 100%; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map').setView([${coord.latitude}, ${coord.longitude}], 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: 'OpenStreetMap'
+    }).addTo(map);
+
+    var marker = L.marker([${coord.latitude}, ${coord.longitude}], { draggable: true }).addTo(map);
+
+    marker.on('dragend', function(e) {
+      var c = e.target.getLatLng();
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        latitude: c.lat,
+        longitude: c.lng
+      }));
+    });
+
+    function updateMarker(lat, lng) {
+        var newLatLng = new L.LatLng(lat, lng);
+        marker.setLatLng(newLatLng);
+        map.setView(newLatLng, 15);
+    }
+  </script>
+</body>
+</html>
+    `;
+
     return (
         <View style={StyleSheet.absoluteFill}>
-            <MapView
-                ref={mapRef}
-                style={StyleSheet.absoluteFill}
-                initialRegion={{
-                    latitude: coord.latitude,
-                    longitude: coord.longitude,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005
+            <WebView
+                ref={webViewRef}
+                originWhitelist={['*']}
+                source={{ html: leafletData }}
+                style={{ flex: 1 }}
+                onMessage={(event) => {
+                    const data = JSON.parse(event.nativeEvent.data);
+                    setCoord(data);
+                    onLocationChange(data.latitude, data.longitude);
                 }}
-                showsBuildings
-                showsIndoors
-            >
-                <Marker
-                    coordinate={coord}
-                    draggable
-                    onDragEnd={(e) => {
-                        const { latitude, longitude } = e.nativeEvent.coordinate;
-                        setCoord({ latitude, longitude });
-                        onLocationChange(latitude, longitude);
-                    }}
-                />
-            </MapView>
+            />
 
             <TouchableOpacity style={styles.locateBtn} onPress={handleLocateMe} activeOpacity={0.8}>
                 {loading ? (

@@ -92,7 +92,7 @@ export default function CheckoutScreen() {
                             <View style={styles.itemDetails}>
                                 <Text style={styles.itemTitle}>{item.name}</Text>
                                 <View style={styles.priceRow}>
-                                    <Text style={styles.itemPrice}>${item.price}</Text>
+                                    <Text style={styles.itemPrice}>₹{item.price}</Text>
                                     <Text style={styles.itemUnit}>/{item.unit}</Text>
                                 </View>
                             </View>
@@ -127,7 +127,7 @@ export default function CheckoutScreen() {
                     </View>
                     <TouchableOpacity
                         style={styles.addMoreBtn}
-                        onPress={() => router.push('/(tabs)/market')} // Go to market to add more
+                        onPress={() => router.push('/(tabs)')} // Go to market to add more
                     >
                         <Text style={styles.addMoreBtnText}>Add more</Text>
                     </TouchableOpacity>
@@ -168,7 +168,7 @@ export default function CheckoutScreen() {
                                 onPress={() => setTipAmount(amount)}
                             >
                                 <Text style={[styles.tipText, tipAmount === amount && styles.tipTextSelected]}>
-                                    ${amount}
+                                    ₹{amount}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -184,20 +184,20 @@ export default function CheckoutScreen() {
 
                     <View style={styles.summaryRow}>
                         <Text style={styles.summaryLabel}>Subtotal ({totalCartItems}items)</Text>
-                        <Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text>
+                        <Text style={styles.summaryValue}>₹{subtotal.toFixed(2)}</Text>
                     </View>
                     <View style={styles.summaryRow}>
                         <Text style={styles.summaryLabel}>Shipping fee</Text>
-                        <Text style={styles.summaryValue}>${shippingFee.toFixed(2)}</Text>
+                        <Text style={styles.summaryValue}>₹{shippingFee.toFixed(2)}</Text>
                     </View>
                     <View style={styles.summaryRow}>
                         <Text style={styles.summaryLabel}>Voucher Discount</Text>
-                        <Text style={styles.summaryValue}>${discount.toFixed(2)}</Text>
+                        <Text style={styles.summaryValue}>₹{discount.toFixed(2)}</Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.summaryRow}>
                         <Text style={styles.totalLabel}>Total</Text>
-                        <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+                        <Text style={styles.totalValue}>₹{total.toFixed(2)}</Text>
                     </View>
                 </View>
 
@@ -207,7 +207,7 @@ export default function CheckoutScreen() {
             {/* Bottom Bar */}
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }]}>
                 <View>
-                    <Text style={styles.bottomPrice}>${total.toFixed(2)}</Text>
+                    <Text style={styles.bottomPrice}>₹{total.toFixed(2)}</Text>
                     <Text style={styles.bottomItems}>{totalCartItems} items</Text>
                 </View>
                 <TouchableOpacity

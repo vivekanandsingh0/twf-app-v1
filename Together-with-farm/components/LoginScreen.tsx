@@ -114,7 +114,7 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                 {step === 'phone' ? (
                     <>
                         <Text style={styles.welcomeText}>Welcome Back</Text>
-                        <Text style={styles.subtext}>Continue Journey As {userType}</Text>
+                        <Text style={styles.subtext}>Continue Journey As {userType === 'Vendor' ? 'Farmer' : userType}</Text>
 
                         <View style={styles.logoContainer}>
                             <Image

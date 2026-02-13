@@ -47,7 +47,7 @@ export default function FarmerDetailsScreen() {
         >
             <View style={styles.productImageContainer}>
                 <Image source={item.image} style={styles.productImage} contentFit="contain" />
-                {item.discount && (
+                {!!item.discount && (
                     <View style={styles.discountBadge}>
                         <Text style={styles.discountText}>{item.discount}</Text>
                     </View>
@@ -62,12 +62,12 @@ export default function FarmerDetailsScreen() {
             </View>
 
             <View style={styles.productInfo}>
-                <Text style={styles.tagText}>{item.tag || item.type}</Text>
+                <Text style={styles.tagText}>{item.tag || item.type || ''}</Text>
                 <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
 
                 <View style={styles.priceRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                        <Text style={styles.priceText}>${item.price}</Text>
+                        <Text style={styles.priceText}>₹{item.price}</Text>
                         <Text style={styles.unitText}>/{item.unit}</Text>
                     </View>
 
@@ -81,10 +81,9 @@ export default function FarmerDetailsScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" /> {/* Overlay status bar for cover image */}
+            <StatusBar style="light" />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-                {/* Cover Image */}
                 <ImageBackground source={farmer.coverImage} style={styles.coverImage}>
                     <View style={[styles.headerOverlay, { paddingTop: insets.top + 10 }]}>
                         <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
@@ -98,7 +97,6 @@ export default function FarmerDetailsScreen() {
                     </View>
                 </ImageBackground>
 
-                {/* Floating Profile Card */}
                 <View style={styles.profileCardContainer}>
                     <View style={styles.profileCard}>
                         {/* Avatar & Name Row */}
@@ -134,21 +132,17 @@ export default function FarmerDetailsScreen() {
                     </View>
                 </View>
 
-                {/* Content Section */}
                 <View style={styles.contentSection}>
-                    {/* Our Story */}
                     <View style={styles.sectionHeaderRow}>
                         <Ionicons name="book-outline" size={20} color="#1F5E2E" style={{ marginRight: 8 }} />
                         <Text style={styles.sectionTitle}>Our Story</Text>
                     </View>
                     <Text style={styles.storyText}>{farmer.story}</Text>
 
-                    {/* Quote */}
                     <View style={styles.quoteContainer}>
                         <Text style={styles.quoteText}>"{farmer.quote}"</Text>
                     </View>
 
-                    {/* All Products */}
                     <Text style={styles.sectionTitleProducts}>All Products</Text>
                     <View style={styles.productsGrid}>
                         {farmerProducts.map(renderProductCard)}

@@ -135,7 +135,8 @@ export default function RateOrderScreen() {
                     {/* Show Details only if editing/new, OR just always show summaries? Keeping summary always */}
                     <View style={styles.cardFooter}>
                         <Text style={styles.totalLabel}>Total</Text>
-                        <Text style={styles.totalValue}>${order.totalAmount}</Text>
+                        <Text style={styles.totalValue}>₹{order.totalAmount}</Text>
+
                     </View>
 
                     {!isSubmitted && (

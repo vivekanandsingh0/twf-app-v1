@@ -178,7 +178,7 @@ export default function CategoryScreen() {
                     <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
 
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
-                        <Text style={styles.priceText}>${item.price}</Text>
+                        <Text style={styles.priceText}>₹{item.price}</Text>
                         <Text style={styles.unitText}>/{item.unit}</Text>
                     </View>
 

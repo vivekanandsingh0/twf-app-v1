@@ -44,8 +44,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
                     };
 
                     let iconName: any;
-                    if (route.name === 'index') iconName = isFocused ? 'home' : 'home-outline';
-                    else if (route.name === 'market') iconName = isFocused ? 'storefront' : 'storefront-outline';
+                    if (route.name === 'index') iconName = isFocused ? 'storefront' : 'storefront-outline';
+                    else if (route.name === 'feed') iconName = isFocused ? 'home' : 'home-outline';
                     else if (route.name === 'category') iconName = isFocused ? 'grid' : 'grid-outline';
                     else if (route.name === 'profile') iconName = isFocused ? 'person' : 'person-outline';
 

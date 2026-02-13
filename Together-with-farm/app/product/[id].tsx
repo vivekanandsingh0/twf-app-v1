@@ -275,7 +275,7 @@ export default function ProductDetailsScreen() {
                                 <Text style={styles.relatedTag}>{item.tag || item.type}</Text>
                                 <Text style={styles.relatedTitle} numberOfLines={1}>{item.name}</Text>
                                 <View style={styles.relatedPriceRow}>
-                                    <Text style={styles.relatedPrice}>${item.price}<Text style={styles.relatedUnit}>/{item.unit}</Text></Text>
+                                    <Text style={styles.relatedPrice}>₹{item.price}<Text style={styles.relatedUnit}>/{item.unit}</Text></Text>
                                     <View style={styles.addButtonSmall}>
                                         <Ionicons name="add" size={16} color="#fff" />
                                     </View>
@@ -292,7 +292,7 @@ export default function ProductDetailsScreen() {
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }]}>
                 <View>
                     <Text style={styles.weightText}>300 g</Text>
-                    <Text style={styles.bottomPrice}>${displayPrice}<Text style={styles.bottomUnit}>{displayUnit}</Text></Text>
+                    <Text style={styles.bottomPrice}>₹{displayPrice}<Text style={styles.bottomUnit}>{displayUnit}</Text></Text>
                     <Text style={styles.taxText}>Incl. of all taxes</Text>
                 </View>
 

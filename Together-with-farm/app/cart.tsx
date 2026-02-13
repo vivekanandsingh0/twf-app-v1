@@ -54,7 +54,7 @@ export default function CartScreen() {
                                 <View style={styles.itemDetails}>
                                     <Text style={styles.itemTitle}>{item.name}</Text>
                                     <View style={styles.priceContainer}>
-                                        <Text style={styles.itemPrice}>${item.price}</Text>
+                                        <Text style={styles.itemPrice}>₹{item.price}</Text>
                                         <Text style={styles.itemUnit}>/{item.unit}</Text>
                                     </View>
                                 </View>
@@ -88,7 +88,7 @@ export default function CartScreen() {
             {cartItems.length > 0 && (
                 <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }]}>
                     <View>
-                        <Text style={styles.totalPrice}>${totalPrice.toFixed(2)}</Text>
+                        <Text style={styles.totalPrice}>₹{totalPrice.toFixed(2)}</Text>
                         <Text style={styles.totalItems}>{totalCartItems} items</Text>
                     </View>
                     <TouchableOpacity

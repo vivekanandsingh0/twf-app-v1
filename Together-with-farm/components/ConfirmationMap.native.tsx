@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Alert, Text } from 'react-native';
-import MapView, { Marker, Region } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Address } from '@/contexts/AddressContext';
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function ConfirmationMap({ selectedAddress, onPinChange }: Props) {
-    const mapRef = useRef<MapView>(null);
+    const webViewRef = useRef<WebView>(null);
     const [loading, setLoading] = useState(false);
     const [coordinate, setCoordinate] = useState({
         latitude: selectedAddress?.latitude || 25.5941,
@@ -27,10 +27,7 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
                         latitude: selectedAddress.latitude,
                         longitude: selectedAddress.longitude,
                     });
-                    animateTo({
-                        latitude: selectedAddress.latitude,
-                        longitude: selectedAddress.longitude,
-                    });
+                    updateMapPosition(selectedAddress.latitude, selectedAddress.longitude);
                 } else {
                     // Try to Geocode address string
                     setLoading(true);
@@ -49,14 +46,13 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
                         if (geocoded && geocoded.length > 0) {
                             const { latitude, longitude } = geocoded[0];
                             setCoordinate({ latitude, longitude });
-                            animateTo({ latitude, longitude });
+                            updateMapPosition(latitude, longitude);
 
                             // Optionally update parent if we discovered coordinates
                             if (onPinChange) onPinChange(latitude, longitude);
                         }
                     } catch (error) {
                         console.log("Geocoding failed", error);
-                        // Try fallback if error?
                     } finally {
                         setLoading(false);
                     }
@@ -67,12 +63,13 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
         initializeMap();
     }, [selectedAddress?.id]); // Re-run if ID changes
 
-    const animateTo = (coord: { latitude: number; longitude: number }) => {
-        mapRef.current?.animateToRegion({
-            ...coord,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-        }, 1000);
+    const updateMapPosition = (lat: number, lng: number) => {
+        webViewRef.current?.injectJavaScript(`
+            if (typeof updateMarker === 'function') {
+                updateMarker(${lat}, ${lng});
+            }
+            true;
+        `);
     };
 
     const handleLocateMe = async () => {
@@ -88,7 +85,7 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
             const { latitude, longitude } = location.coords;
 
             setCoordinate({ latitude, longitude });
-            animateTo({ latitude, longitude });
+            updateMapPosition(latitude, longitude);
 
             if (onPinChange) onPinChange(latitude, longitude);
 
@@ -99,28 +96,60 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
         }
     };
 
+    const leafletData = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <style>
+    body { padding: 0; margin: 0; }
+    html, body, #map { height: 100%; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map').setView([${coordinate.latitude}, ${coordinate.longitude}], 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: 'OpenStreetMap'
+    }).addTo(map);
+
+    var marker = L.marker([${coordinate.latitude}, ${coordinate.longitude}], { draggable: true }).addTo(map);
+
+    marker.on('dragend', function(e) {
+      var coord = e.target.getLatLng();
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        latitude: coord.lat,
+        longitude: coord.lng
+      }));
+    });
+
+    function updateMarker(lat, lng) {
+        var newLatLng = new L.LatLng(lat, lng);
+        marker.setLatLng(newLatLng);
+        map.setView(newLatLng, 15);
+    }
+  </script>
+</body>
+</html>
+    `;
+
     return (
         <View style={styles.mapContainer}>
-            <MapView
-                ref={mapRef}
+            <WebView
+                ref={webViewRef}
+                originWhitelist={['*']}
+                source={{ html: leafletData }}
                 style={styles.map}
-                initialRegion={{
-                    latitude: coordinate.latitude,
-                    longitude: coordinate.longitude,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005,
+                onMessage={(event) => {
+                    const data = JSON.parse(event.nativeEvent.data);
+                    setCoordinate(data);
+                    if (onPinChange) onPinChange(data.latitude, data.longitude);
                 }}
-            >
-                <Marker
-                    coordinate={coordinate}
-                    draggable
-                    onDragEnd={(e) => {
-                        const { latitude, longitude } = e.nativeEvent.coordinate;
-                        setCoordinate({ latitude, longitude });
-                        if (onPinChange) onPinChange(latitude, longitude);
-                    }}
-                />
-            </MapView>
+            />
 
             {/* Locate Me Button */}
             <TouchableOpacity
@@ -140,11 +169,9 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
 
 const styles = StyleSheet.create({
     mapContainer: {
+        flex: 1,
         width: '100%',
-        height: 180, // Slightly taller
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginBottom: 16,
+        height: '100%',
         backgroundColor: '#f0f0f0',
         position: 'relative',
     },
