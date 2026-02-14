@@ -5,13 +5,13 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
-import { useVendor } from '@/contexts/VendorContext';
+import { useUser } from '@/contexts/UserContext';
 
 export default function OrderDetailScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { id } = useLocalSearchParams();
-    const { orders } = useVendor();
+    const { orders } = useUser();
 
     // Find Order
     const order = orders.find(o => o.id.includes(id as string));
@@ -89,25 +89,7 @@ export default function OrderDetailScreen() {
                     ))}
                 </View>
 
-                {/* Track Delivery Map - Only show if active */}
-                {order.status !== 'Delivered' && order.status !== 'Cancelled' && (
-                    <>
-                        <Text style={styles.sectionTitle}>Track Delivery</Text>
-                        <View style={styles.mapContainer}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&auto=format&fit=crop&q=60' }}
-                                style={styles.mapImage}
-                            />
-                            <View style={styles.mapOverlay}>
-                                <Text style={styles.overlayText}>{order.status}</Text>
-                            </View>
-                        </View>
 
-                        <TouchableOpacity style={styles.trackOrderBtn}>
-                            <Text style={styles.trackOrderBtnText}>Track Order</Text>
-                        </TouchableOpacity>
-                    </>
-                )}
 
                 {/* Order Items */}
                 <Text style={styles.sectionTitle}>Order Items</Text>

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 
 // Types
-type OrderStatus = 'Picked' | 'On the Way' | 'Delivered' | 'Cancelled';
+type OrderStatus = 'Pending' | 'Accepted' | 'Ready' | 'Shipped' | 'Picked' | 'On the Way' | 'Delivered' | 'Cancelled';
 type Order = {
     id: string;
     orderNumber: string;
@@ -31,15 +31,18 @@ export default function OrdersScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'Active' | 'Past'>('Active');
-    const { orders: allOrders } = useVendor();
-    const { user, userData } = useUser();
+    const { orders: userOrders, user, refreshOrders } = useUser();
+    const [refreshing, setRefreshing] = useState(false);
 
-    // Filter orders for Current User
-    const myOrders = allOrders.filter(o =>
-        (o.userId === user?.id) ||
-        (o.userId === userData.phoneNumber) || // Case where phone is used as ID
-        (o.customerName === userData.fullName) // Fallback for name matching
-    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await refreshOrders();
+        setRefreshing(false);
+    };
+
+    // Orders are already fetched for the logged-in user by UserContext
+    // Just sort them by date (newest first)
+    const myOrders = [...userOrders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Split into Active vs Past
     const activeOrders = myOrders.filter(o => ['Pending', 'Accepted', 'Ready', 'Shipped', 'Picked', 'On the Way'].includes(o.status));
@@ -159,7 +162,13 @@ export default function OrdersScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1F5E2E']} />
+                }
+            >
                 {activeTab === 'Active'
                     ? displayActive.map(o => renderOrderCard(o, false))
                     : displayPast.map(o => renderOrderCard(o, true))
@@ -169,7 +178,6 @@ export default function OrdersScreen() {
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,

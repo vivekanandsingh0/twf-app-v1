@@ -5,13 +5,13 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
-import { useVendor, VendorOrder } from '@/contexts/VendorContext';
+import { useUser } from '@/contexts/UserContext';
 
 export default function RateOrderScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { id } = useLocalSearchParams();
-    const { orders } = useVendor();
+    const { orders } = useUser();
 
     const orderId = String(id);
     // Find the order. Note: The ID passed might be just the number suffix if we stripped it, 

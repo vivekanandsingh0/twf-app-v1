@@ -39,10 +39,10 @@ export default function PaymentScreen() {
     const { quantities, clearCart } = useCart();
     const { addOrder } = useVendor();
     const { products: marketProducts } = useMarket();
-    const { userData, user } = useUser();
+    const { userData, user, refreshOrders } = useUser();
     const { selectedAddress } = useAddresses();
 
-    const handlePayment = () => {
+    const handlePayment = async () => {
         // 1. Identify items in cart
         const cartItemIds = Object.keys(quantities).filter(id => quantities[id] > 0);
 
@@ -75,8 +75,8 @@ export default function PaymentScreen() {
             }
         });
 
-        // 3. Create Vendor Orders
-        Object.keys(ordersByVendor).forEach(vendorId => {
+        // 3. Create Vendor Orders (async loop)
+        const orderPromises = Object.keys(ordersByVendor).map(async (vendorId) => {
             const vendorData = ordersByVendor[vendorId];
 
             // Use stable User ID if available, else fallback
@@ -85,6 +85,7 @@ export default function PaymentScreen() {
             const newOrder: VendorOrder = {
                 id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                 userId: finalUserId,
+                vendorId: vendorId, // Link order to specific Vendor
                 customerName: userData ? userData.fullName : "Guest User",
                 items: vendorData.items,
                 totalAmount: vendorData.total,
@@ -97,10 +98,18 @@ export default function PaymentScreen() {
                 deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.pincode}` : "Patna, Bihar" // Enhanced address line
             };
 
-            addOrder(newOrder); // This adds it to the Vendor Context (shared memory)
+            await addOrder(newOrder); // This adds it to the Vendor Context and Supabase
         });
 
-        // 4. Clear Cart and Redirect
+        await Promise.all(orderPromises);
+
+        // Slight delay to ensure DB propagation
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // 4. Force refresh User Orders (to ensure they appear immediately even if realtime is slow)
+        await refreshOrders();
+
+        // 5. Clear Cart and Redirect
         clearCart();
         router.push('/order-success');
     };

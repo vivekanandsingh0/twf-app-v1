@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, Alert } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase } from '../lib/supabase';
 import { useUser } from './UserContext';
@@ -104,6 +104,7 @@ export interface VendorProduct {
 export interface VendorOrder {
     id: string;
     userId: string; // Link to User
+    vendorId?: string; // Added to link to Vendor
     customerId?: string; // Optional link to User
     customerName: string;
     items: { productName: string; quantity: number; price: number; image?: any }[]; // Added image
@@ -495,12 +496,9 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 // 5. Error: Rollback (Remove the temp product)
                 setProducts(prev => prev.filter(p => p.id !== tempId));
 
-                // Alert the user so they know WHY it disappeared
-                // This is crucial for debugging schema mismatches
                 if (Platform.OS === 'web') {
                     alert(`Failed to save product: ${e.message || 'Unknown error'}`);
                 } else {
-                    const { Alert } = require('react-native');
                     Alert.alert("Save Failed", `Could not save product to database. It has been removed. Error: ${e.message || JSON.stringify(e)}`);
                 }
             }
@@ -588,11 +586,49 @@ export function VendorProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    // Note: addOrder is usually customer side, but if Vendor manually adds order:
     const addOrder = async (order: VendorOrder) => {
-        // No implementation for manual vendor order creation in this context yet, 
-        // usually orders come from Users. 
-        // If needed, insert into 'orders' table.
+        console.log("🛒 [VendorContext] Adding new order...", order);
+
+        // Optimistic Update (Optional, mainly for the user immediately)
+        setOrders(prev => [order, ...prev]);
+
+        try {
+            const insertData = {
+                user_id: order.userId,
+                vendor_id: order.vendorId, // crucial for vendor visibility
+                items: order.items,
+                total_amount: order.totalAmount,
+                status: 'Pending',
+                payment_status: order.paymentStatus,
+                payment_method: order.paymentMethod,
+                customer_phone: order.customerPhone,
+                shipping_fee: order.shippingFee,
+                delivery_address: order.deliveryAddress,
+                // created_at is auto-generated
+            };
+
+            console.log("💾 [VendorContext] Inserting order into DB:", JSON.stringify(insertData, null, 2));
+
+            const { data, error } = await supabase
+                .from('orders')
+                .insert(insertData)
+                .select()
+                .single();
+
+            if (error) {
+                console.error("❌ [VendorContext] Failed to insert order:", error);
+                throw error;
+            }
+
+            console.log("✅ [VendorContext] Order placed successfully:", data);
+
+            // Update the optimistic order with the real DB ID
+            setOrders(prev => prev.map(o => o.id === order.id ? { ...o, id: data.id } : o));
+
+        } catch (e) {
+            console.error("❌ [VendorContext] Exception in addOrder:", e);
+            throw e; // Re-throw so caller knows it failed
+        }
     };
 
     const updateOrderStatus = async (orderId: string, status: VendorOrder['status']) => {

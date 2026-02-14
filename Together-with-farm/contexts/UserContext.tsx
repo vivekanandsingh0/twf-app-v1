@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 
+import { VendorOrder } from './VendorContext'; // Import generic Order type
+
 // Helper Interface
 interface UserData {
     phoneNumber: string;
@@ -22,6 +24,8 @@ interface UserContextType {
     user: User | null;
     loading: boolean;
     userData: UserData;
+    orders: VendorOrder[]; // Added orders for the user
+    refreshOrders: () => Promise<void>; // Added manual refresh
     setUserData: (data: Partial<UserData>) => void;
     updatePhoneNumber: (phone: string) => void;
     updateProfile: (name: string, gender: string, dob: string, phone?: string, experience?: string, farmSize?: string, bio?: string, profileImage?: string) => Promise<void>;
@@ -37,6 +41,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [session, setSession] = useState<Session | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [orders, setOrders] = useState<VendorOrder[]>([]); // User orders
 
     const [userData, setUserDataState] = useState<UserData>({
         phoneNumber: '',
@@ -47,80 +52,66 @@ export function UserProvider({ children }: { children: ReactNode }) {
         profileImage: ''
     });
 
+    // Standalone Refresh Function
+    const refreshOrders = async () => {
+        if (!session?.user) return;
+        const userId = session.user.id;
+
+        console.log('🔄 [UserContext] Manually refreshing orders...');
+        const { data: userOrders } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (userOrders) {
+            const mappedOrders = userOrders.map((dbOrder: any) => ({
+                id: dbOrder.id,
+                userId: dbOrder.user_id,
+                vendorId: dbOrder.vendor_id,
+                customerId: dbOrder.user_id,
+                customerName: 'Me',
+                items: dbOrder.items || [],
+                totalAmount: Number(dbOrder.total_amount || 0),
+                status: dbOrder.status,
+                date: dbOrder.created_at,
+                paymentStatus: dbOrder.payment_status,
+                customerPhone: dbOrder.customer_phone,
+                paymentMethod: dbOrder.payment_method,
+                shippingFee: Number(dbOrder.shipping_fee || 0),
+                deliveryAddress: dbOrder.delivery_address || ''
+            }));
+            setOrders(mappedOrders);
+        }
+    };
+
+    // 1. Initialize Session & Auth Listener
     useEffect(() => {
         let mounted = true;
 
-        // Init Supabase Session
         const initializeSession = async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
-
                 if (mounted) {
                     console.log("UserContext: Session retrieved", { hasSession: !!session });
                     setSession(session);
                     setUser(session?.user ?? null);
-
-                    if (session?.user) {
-                        // Fetch existing profile
-                        const { data: profile } = await supabase
-                            .from('profiles')
-                            .select('*')
-                            .eq('id', session.user.id)
-                            .single();
-
-                        if (mounted && profile) {
-                            setUserDataState(prev => ({
-                                ...prev,
-                                phoneNumber: session.user.phone || '',
-                                fullName: profile.full_name || '',
-                                gender: profile.gender || 'Male',
-                                dob: profile.dob || '',
-                                userType: profile.user_type || 'User',
-                                experience: profile.experience,
-                                farmSize: profile.farm_size,
-                                bio: profile.bio,
-                                profileImage: profile.profile_image
-                            }));
-                        }
-                    }
+                    if (session?.user) setLoading(false);
                 }
             } catch (error) {
                 console.error("Session init error:", error);
             } finally {
-                if (mounted) setLoading(false);
+                if (mounted && !session) setLoading(false);
             }
         };
 
         initializeSession();
 
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (mounted) {
                 setSession(session);
                 setUser(session?.user ?? null);
-
-                if (session?.user) {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', session.user.id)
-                        .single();
-
-                    if (mounted && profile) {
-                        setUserDataState(prev => ({
-                            ...prev,
-                            phoneNumber: session.user.phone || '',
-                            fullName: profile.full_name || '',
-                            gender: profile.gender || 'Male',
-                            dob: profile.dob || '',
-                            userType: profile.user_type || 'User',
-                            experience: profile.experience,
-                            farmSize: profile.farm_size,
-                            bio: profile.bio,
-                            profileImage: profile.profile_image
-                        }));
-                    }
-                }
+                if (!session) setLoading(false);
             }
         });
 
@@ -129,6 +120,107 @@ export function UserProvider({ children }: { children: ReactNode }) {
             subscription.unsubscribe();
         };
     }, []);
+
+    // 2. Fetch User Data & Orders + Realtime Subscription (Depends on Session)
+    useEffect(() => {
+        if (!session?.user) {
+            // Clear user data on logout
+            setUserDataState({
+                phoneNumber: '',
+                fullName: '',
+                gender: 'Male',
+                dob: '10 August 1999',
+                userType: 'User',
+                profileImage: ''
+            });
+            setOrders([]);
+            return;
+        }
+
+        let mounted = true;
+        let orderSubscription: any = null;
+        const userId = session.user.id;
+
+        const loadUserResources = async () => {
+            // A. Fetch Profile
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+            if (mounted && profile) {
+                setUserDataState(prev => ({
+                    ...prev,
+                    phoneNumber: session.user.phone || '',
+                    fullName: profile.full_name || '',
+                    gender: profile.gender || 'Male',
+                    dob: profile.dob || '',
+                    userType: profile.user_type || 'User',
+                    experience: profile.experience,
+                    farmSize: profile.farm_size,
+                    bio: profile.bio,
+                    profileImage: profile.profile_image
+                }));
+            }
+
+            // B. Fetch Orders via shared function logic 
+            // We call the internal fetch logic or just the refresh function. 
+            // Note: calling refreshOrders relies on 'session' state which is in dependency array, 
+            // but effectively we can duplicate or call it.
+            // Since refreshOrders reads 'session' from closure, and this effect runs when session changes, 
+            // it might be slightly stale if using stale closure, but 'session' is in dep array so strict mode renders might be tricky.
+            // Safest to just copy the fetch logic here or use a ref for session.
+            // But let's try calling the fetch directly here to be safe and explicit on mount.
+
+            const fetchOrders = async () => {
+                const { data: userOrders } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false });
+
+                if (mounted && userOrders) {
+                    const mappedOrders = userOrders.map((dbOrder: any) => ({
+                        id: dbOrder.id,
+                        userId: dbOrder.user_id,
+                        vendorId: dbOrder.vendor_id,
+                        customerId: dbOrder.user_id,
+                        customerName: 'Me',
+                        items: dbOrder.items || [],
+                        totalAmount: Number(dbOrder.total_amount || 0),
+                        status: dbOrder.status,
+                        date: dbOrder.created_at,
+                        paymentStatus: dbOrder.payment_status,
+                        customerPhone: dbOrder.customer_phone,
+                        paymentMethod: dbOrder.payment_method,
+                        shippingFee: Number(dbOrder.shipping_fee || 0),
+                        deliveryAddress: dbOrder.delivery_address || ''
+                    }));
+                    setOrders(mappedOrders);
+                }
+            };
+
+            await fetchOrders();
+
+            // C. Subscribe to Order Changes
+            console.log(`🔔 [UserContext] Subscribing to orders for user: ${userId}`);
+            orderSubscription = supabase
+                .channel(`public:orders:${userId}`)
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${userId}` },
+                    (payload) => {
+                        console.log('🔔 [UserContext] Order update received:', payload.eventType);
+                        fetchOrders(); // Re-fetch on any change
+                    }
+                )
+                .subscribe((status) => {
+                    console.log(`🔔 [UserContext] Subscription status for ${userId}:`, status);
+                });
+        };
+
+        loadUserResources();
+
+        return () => {
+            mounted = false;
+            if (orderSubscription) supabase.removeChannel(orderSubscription);
+        };
+    }, [session?.user?.id]);
 
     // Context Actions
     const setUserData = (data: Partial<UserData>) => {
@@ -253,6 +345,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return (
         <UserContext.Provider value={{
             session, user, loading, userData,
+            orders, // Added orders
+            refreshOrders, // Added
             setUserData, updatePhoneNumber, updateProfile,
             sendOtp, verifyOtp, signOut, switchUserRole
         }}>

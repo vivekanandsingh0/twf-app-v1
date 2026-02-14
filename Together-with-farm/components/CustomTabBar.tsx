@@ -92,28 +92,26 @@ const styles = StyleSheet.create({
     content: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 12, // Reduced padding
-        paddingTop: 12,
-        paddingBottom: 4,
-        gap: 4, // Reduced gap between items
+        justifyContent: 'space-between', // Distribute space evenly between items
+        paddingHorizontal: 24, // Comfortable side margins
+        paddingVertical: 12,
+        width: '100%',
     },
     tabItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
         borderRadius: 30,
-        minWidth: 50, // Minimum touch target
+        height: 48,
     },
     activeTabItem: {
         backgroundColor: '#1F5E2E',
-        flex: 1, // Take up all remaining space
+        paddingHorizontal: 20, // More breathing room for active state
     },
     inactiveTabItem: {
         backgroundColor: 'transparent',
-        flex: 0, // Do not grow
     },
     activeLabel: {
         color: '#FFFFFF',
