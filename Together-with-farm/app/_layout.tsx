@@ -11,6 +11,7 @@ import SplashScreen from '@/components/SplashScreen';
 import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleSelectionScreen from '@/components/RoleSelectionScreen';
 import LoginScreen from '@/components/LoginScreen';
+import NameInputScreen from '@/components/NameInputScreen';
 import { FavouritesProvider } from '@/contexts/FavouritesContext';
 import { AddressProvider } from '@/contexts/AddressContext';
 import { UserProvider, useUser } from '@/contexts/UserContext';
@@ -51,15 +52,18 @@ function AppContent() {
       setShowLogin(false);
       setHasNavigated(false);
     } else if (session && !loading && !hasNavigated) {
-      // User is logged in - Navigate only once
-      if (userData.userType === 'Vendor') {
-        router.replace('/(vendor-tabs)');
-      } else {
-        router.replace('/(tabs)');
+      // Check for valid name before redirecting
+      if (userData.fullName && userData.fullName !== 'Anonymous') {
+        // User is logged in - Navigate only once
+        if (userData.userType === 'Vendor') {
+          router.replace('/(vendor-tabs)');
+        } else {
+          router.replace('/(tabs)');
+        }
+        setHasNavigated(true);
       }
-      setHasNavigated(true);
     }
-  }, [session, loading, userData.userType, hasNavigated]);
+  }, [session, loading, userData.userType, userData.fullName, hasNavigated]);
 
   // Determine Main Content
   let content = null;
@@ -73,45 +77,56 @@ function AppContent() {
     );
   } else if (session) {
     // Authenticated Stack
-    content = (
-      <CartProvider>
-        <AddressProvider>
-          <FavouritesProvider>
-            <MarketProvider>
-              <VendorProvider>
-                <NotificationProvider>
-                  <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                    <Stack screenOptions={{ headerShown: false }}>
-                      <Stack.Screen name="(tabs)" />
-                      <Stack.Screen name="(vendor-tabs)" />
-                      <Stack.Screen name="add-product-vendor" />
-                      <Stack.Screen name="vendor-payouts" />
-                      <Stack.Screen name="notifications" />
-                      <Stack.Screen name="vendor-order-details" />
-                      <Stack.Screen name="product/[id]" />
-                      <Stack.Screen name="farmer/[id]" />
-                      <Stack.Screen name="profile-edit" />
-                      <Stack.Screen name="edit-profile-vendor" />
-                      <Stack.Screen name="favourites" />
-                      <Stack.Screen name="addresses" />
-                      <Stack.Screen name="settings" />
-                      <Stack.Screen name="cart" />
-                      <Stack.Screen name="checkout" />
-                      <Stack.Screen name="confirm-address" />
-                      <Stack.Screen name="business-dashboard" />
-                      <Stack.Screen name="vendor-payment-methods" />
-                      <Stack.Screen name="support" />
-                      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
-                    </Stack>
-                    <StatusBar style="auto" />
-                  </ThemeProvider>
-                </NotificationProvider>
-              </VendorProvider>
-            </MarketProvider>
-          </FavouritesProvider>
-        </AddressProvider>
-      </CartProvider>
-    );
+    // Check if name is missing or Anonymous (Mandatory Name Step)
+    if (!userData.fullName || userData.fullName === 'Anonymous') {
+      content = (
+        <NameInputScreen onFinish={() => {
+          // userData will update, causing re-render.
+          // Reset navigation flag to allow router.replace to run again if needed
+          setHasNavigated(false);
+        }} />
+      );
+    } else {
+      content = (
+        <CartProvider>
+          <AddressProvider>
+            <FavouritesProvider>
+              <MarketProvider>
+                <VendorProvider>
+                  <NotificationProvider>
+                    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                      <Stack screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="(tabs)" />
+                        <Stack.Screen name="(vendor-tabs)" />
+                        <Stack.Screen name="add-product-vendor" />
+                        <Stack.Screen name="vendor-payouts" />
+                        <Stack.Screen name="notifications" />
+                        <Stack.Screen name="vendor-order-details" />
+                        <Stack.Screen name="product/[id]" />
+                        <Stack.Screen name="farmer/[id]" />
+                        <Stack.Screen name="profile-edit" />
+                        <Stack.Screen name="edit-profile-vendor" />
+                        <Stack.Screen name="favourites" />
+                        <Stack.Screen name="addresses" />
+                        <Stack.Screen name="settings" />
+                        <Stack.Screen name="cart" />
+                        <Stack.Screen name="checkout" />
+                        <Stack.Screen name="confirm-address" />
+                        <Stack.Screen name="business-dashboard" />
+                        <Stack.Screen name="vendor-payment-methods" />
+                        <Stack.Screen name="support" />
+                        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
+                      </Stack>
+                      <StatusBar style="auto" />
+                    </ThemeProvider>
+                  </NotificationProvider>
+                </VendorProvider>
+              </MarketProvider>
+            </FavouritesProvider>
+          </AddressProvider>
+        </CartProvider>
+      );
+    }
   } else {
     // Auth Flow
     if (showOnboarding) {

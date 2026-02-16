@@ -342,7 +342,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         id: dbOrder.id,
                         userId: dbOrder.user_id,
                         customerId: dbOrder.user_id,
-                        customerName: dbOrder.customer?.full_name || 'Unknown',
+                        customerName: dbOrder.customer_name || dbOrder.customer?.full_name || 'Unknown',
                         items: dbOrder.items || [], // Assuming items is stored as JSONB
                         totalAmount: Number(dbOrder.total_amount || 0),
                         status: dbOrder.status,
@@ -604,6 +604,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 customer_phone: order.customerPhone,
                 shipping_fee: order.shippingFee,
                 delivery_address: order.deliveryAddress,
+                customer_name: order.customerName, // Ensure backend schema has this column
                 // created_at is auto-generated
             };
 

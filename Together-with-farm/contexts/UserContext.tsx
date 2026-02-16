@@ -96,12 +96,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     console.log("UserContext: Session retrieved", { hasSession: !!session });
                     setSession(session);
                     setUser(session?.user ?? null);
-                    if (session?.user) setLoading(false);
+                    if (session?.user) setLoading(false); // Reverted: Set loading false immediately
                 }
             } catch (error) {
                 console.error("Session init error:", error);
-            } finally {
-                if (mounted && !session) setLoading(false);
+                setLoading(false);
             }
         };
 
@@ -134,6 +133,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 profileImage: ''
             });
             setOrders([]);
+            // Loading is set to false in auth listener if !session
             return;
         }
 
@@ -142,78 +142,80 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const userId = session.user.id;
 
         const loadUserResources = async () => {
-            // A. Fetch Profile
-            const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-            if (mounted && profile) {
-                setUserDataState(prev => ({
-                    ...prev,
-                    phoneNumber: session.user.phone || '',
-                    fullName: profile.full_name || '',
-                    gender: profile.gender || 'Male',
-                    dob: profile.dob || '',
-                    userType: profile.user_type || 'User',
-                    experience: profile.experience,
-                    farmSize: profile.farm_size,
-                    bio: profile.bio,
-                    profileImage: profile.profile_image
-                }));
-            }
-
-            // B. Fetch Orders via shared function logic 
-            // We call the internal fetch logic or just the refresh function. 
-            // Note: calling refreshOrders relies on 'session' state which is in dependency array, 
-            // but effectively we can duplicate or call it.
-            // Since refreshOrders reads 'session' from closure, and this effect runs when session changes, 
-            // it might be slightly stale if using stale closure, but 'session' is in dep array so strict mode renders might be tricky.
-            // Safest to just copy the fetch logic here or use a ref for session.
-            // But let's try calling the fetch directly here to be safe and explicit on mount.
-
-            const fetchOrders = async () => {
-                const { data: userOrders } = await supabase
-                    .from('orders')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false });
-
-                if (mounted && userOrders) {
-                    const mappedOrders = userOrders.map((dbOrder: any) => ({
-                        id: dbOrder.id,
-                        userId: dbOrder.user_id,
-                        vendorId: dbOrder.vendor_id,
-                        customerId: dbOrder.user_id,
-                        customerName: 'Me',
-                        items: dbOrder.items || [],
-                        totalAmount: Number(dbOrder.total_amount || 0),
-                        status: dbOrder.status,
-                        date: dbOrder.created_at,
-                        paymentStatus: dbOrder.payment_status,
-                        customerPhone: dbOrder.customer_phone,
-                        paymentMethod: dbOrder.payment_method,
-                        shippingFee: Number(dbOrder.shipping_fee || 0),
-                        deliveryAddress: dbOrder.delivery_address || ''
+            try {
+                // A. Fetch Profile
+                const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+                if (mounted && profile) {
+                    setUserDataState(prev => ({
+                        ...prev,
+                        phoneNumber: session.user.phone || '',
+                        fullName: profile.full_name || '',
+                        gender: profile.gender || 'Male',
+                        dob: profile.dob || '',
+                        userType: profile.user_type || 'User',
+                        experience: profile.experience,
+                        farmSize: profile.farm_size,
+                        bio: profile.bio,
+                        profileImage: profile.profile_image
                     }));
-                    setOrders(mappedOrders);
                 }
-            };
 
-            await fetchOrders();
+                // B. Fetch Orders
+                const fetchOrders = async () => {
+                    const { data: userOrders } = await supabase
+                        .from('orders')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false });
 
-            // C. Subscribe to Order Changes
-            console.log(`🔔 [UserContext] Subscribing to orders for user: ${userId}`);
-            orderSubscription = supabase
-                .channel(`public:orders:${userId}`)
-                .on('postgres_changes',
-                    { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${userId}` },
-                    (payload) => {
-                        console.log('🔔 [UserContext] Order update received:', payload.eventType);
-                        fetchOrders(); // Re-fetch on any change
+                    if (mounted && userOrders) {
+                        const mappedOrders = userOrders.map((dbOrder: any) => ({
+                            id: dbOrder.id,
+                            userId: dbOrder.user_id,
+                            vendorId: dbOrder.vendor_id,
+                            customerId: dbOrder.user_id,
+                            customerName: 'Me',
+                            items: dbOrder.items || [],
+                            totalAmount: Number(dbOrder.total_amount || 0),
+                            status: dbOrder.status,
+                            date: dbOrder.created_at,
+                            paymentStatus: dbOrder.payment_status,
+                            customerPhone: dbOrder.customer_phone,
+                            paymentMethod: dbOrder.payment_method,
+                            shippingFee: Number(dbOrder.shipping_fee || 0),
+                            deliveryAddress: dbOrder.delivery_address || ''
+                        }));
+                        setOrders(mappedOrders);
                     }
-                )
-                .subscribe((status) => {
-                    console.log(`🔔 [UserContext] Subscription status for ${userId}:`, status);
-                });
+                };
+
+                await fetchOrders();
+
+                // C. Subscribe to Order Changes
+                console.log(`🔔 [UserContext] Subscribing to orders for user: ${userId}`);
+                orderSubscription = supabase
+                    .channel(`public:orders:${userId}`)
+                    .on('postgres_changes',
+                        { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${userId}` },
+                        (payload) => {
+                            console.log('🔔 [UserContext] Order update received:', payload.eventType);
+                            fetchOrders(); // Re-fetch on any change
+                        }
+                    )
+                    .subscribe((status) => {
+                        console.log(`🔔 [UserContext] Subscription status for ${userId}:`, status);
+                    });
+
+            } catch (err) {
+                console.error("Error loading user resources:", err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
         };
 
+        // If userData is already populated (e.g. from verifyOtp), we might want to skip fetching?
+        // But verifyOtp sets userData, it doesn't prevent this effect from running.
+        // It's safer to re-fetch to be sure.
         loadUserResources();
 
         return () => {
@@ -291,12 +293,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setSession(data.session);
             setUser(data.user);
 
-            // Sync/Create Profile immediately
+            // Check for existing profile to avoid overwriting name
+            let existingName = 'Anonymous';
+            const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', data.user.id)
+                .single();
+
+            if (existingProfile && existingProfile.full_name) {
+                existingName = existingProfile.full_name;
+            }
+
+            // Sync/Create Profile
+            // Only overwrite name if we have a better one in userData or if existing is Anonymous
+            // Actually, if we are in this flow, userData.fullName is likely empty.
+            // So we prefer existingName.
+            const finalName = existingName !== 'Anonymous' ? existingName : (userData.fullName || 'Anonymous');
+
             const updates = {
                 id: data.user.id,
                 phone_number: phone,
                 user_type: userType,
-                full_name: userData.fullName || 'Anonymous',
+                full_name: finalName,
                 updated_at: new Date().toISOString(),
             };
 
@@ -306,7 +325,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setUserDataState(prev => ({
                 ...prev,
                 phoneNumber: phone,
-                userType: userType
+                userType: userType,
+                fullName: finalName
             }));
 
             return { session: data.session, error: null };

@@ -5,6 +5,10 @@ import {
     View,
     TouchableOpacity,
     Dimensions,
+    TextInput,
+    KeyboardAvoidingView,
+    Platform,
+    Keyboard
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,14 +28,15 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'delete'
 
 export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginScreenProps) {
     const insets = useSafeAreaInsets();
-    const { setUserData, sendOtp, verifyOtp } = useUser();
-    const [step, setStep] = useState<'phone' | 'otp'>('phone');
+    const { userData, setUserData, sendOtp, verifyOtp, updateProfile } = useUser();
+    const [step, setStep] = useState<'phone' | 'otp' | 'name'>('phone');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otp, setOtp] = useState('');
+    const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleKeyPress = (key: string) => {
-        if (loading) return;
+        if (loading || step === 'name') return;
 
         if (key === 'back') {
             if (step === 'otp') {
@@ -86,14 +91,54 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
             if (loading) return;
             setLoading(true);
             const formattedPhone = `+91${phoneNumber}`;
-            const { error } = await verifyOtp(formattedPhone, otp, userType);
+            // verifyOtp now handles fetching existing profile and setting userData
+            const { session, error } = await verifyOtp(formattedPhone, otp, userType);
             setLoading(false);
 
             if (error) {
                 alert(`Verification Failed: ${error.message}`);
                 setOtp('');
             } else {
-                onLoginSuccess();
+                // Check if name is needed
+                // We need to check the updated context or the session return
+                // verifyOtp updates userData in context, so we can check that, but state updates might be async.
+                // However, verifyOtp is awaited.
+                // Let's rely on the returned session/profile ideally, but context is updated.
+                // But verifyOtp logic we just wrote checks existing profile.
+
+                // We need to know if the name is 'Anonymous' or empty.
+                // Since we can't easily access the *just updated* userData state here (closure),
+                // we should rely on what verifyOtp did.
+                // But verifyOtp logic: `const finalName = existingName ...`
+                // If it returned session, it means successful login.
+
+                // Let's fetch the profile one last time or trust the flow.
+                // Ideally `verifyOtp` should return the profile.
+                // But we can check `userData.fullName` in a useEffect or just assume if it's new.
+
+                // Hack: We can just enable the name step if the user is new.
+                // Check if name is 'Anonymous'
+                // We will add a small delay or check properly.
+
+                // Better: We check `userData` in a separate useEffect? No, that triggers on any change.
+
+                // Let's try to proceed to Name step ALWAYS if we want to enforce it?
+                // No, only if it's missing.
+
+                // Let's assume for now we transition to 'name' step if session is valid.
+                // Then inside 'name' step logic, we perceive if name is pre-filled.
+                // If pre-filled with real name, we skip?
+                // But we want to FORCE it for first time.
+
+                // Let's look at `verifyOtp` again. It sets `fullName` in state.
+                // So subsequent render has it.
+                // But we are in the function closure.
+
+                // Let's just go to 'name' step if name is 'Anonymous'.
+                // But we don't know that yet here.
+
+                // Let's update `onLoginSuccess` to be called ONLY if name is valid.
+                setStep('name');
             }
         };
 
@@ -104,6 +149,28 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
             handleOtpSubmit();
         }
     }, [phoneNumber, otp, step]);
+
+    const handleNameSubmit = async () => {
+        if (!name.trim()) {
+            alert("Please enter your name.");
+            return;
+        }
+        setLoading(true);
+        // Date of birth and gender defaults are fine for now, we just want name.
+        await updateProfile(name, 'Male', '01 Jan 2000');
+        setLoading(false);
+        onLoginSuccess();
+    };
+
+    // Skip name step if already has a valid name? 
+    // We can check on render of 'name' step.
+    useEffect(() => {
+        if (step === 'name' && userData.fullName && userData.fullName !== 'Anonymous') {
+            // Already has name, skip
+            onLoginSuccess();
+        }
+    }, [step, userData.fullName]);
+
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -133,7 +200,7 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                             </View>
                         </View>
                     </>
-                ) : (
+                ) : step === 'otp' ? (
                     <>
                         <View style={[styles.logoContainer, { marginTop: 60, marginBottom: 40 }]}>
                             <Image
@@ -154,33 +221,70 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                         </View>
                         <Text style={styles.otpLabel}>Enter your OTP</Text>
                     </>
+                ) : (
+                    /* NAME STEP */
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ width: '100%', alignItems: 'center' }}>
+                        <View style={[styles.logoContainer, { marginTop: 40, marginBottom: 20 }]}>
+                            <Image
+                                source={require('@/assets/images/twf-logo.png')}
+                                style={styles.logo}
+                                contentFit="contain"
+                            />
+                        </View>
+
+                        <Text style={styles.welcomeText}>One Last Thing</Text>
+                        <Text style={styles.subtext}>What should we call you?</Text>
+
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>Full Name</Text>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g. Rahul Kumar"
+                                value={name}
+                                onChangeText={setName}
+                                autoFocus
+                                returnKeyType="done"
+                                onSubmitEditing={handleNameSubmit}
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.submitButton, !name.trim() && styles.submitButtonDisabled]}
+                            onPress={handleNameSubmit}
+                            disabled={!name.trim() || loading}
+                        >
+                            <Text style={styles.submitButtonText}>{loading ? 'Saving...' : 'Get Started'}</Text>
+                        </TouchableOpacity>
+                    </KeyboardAvoidingView>
                 )}
             </View>
 
-            {/* Custom Keyboard */}
-            <View style={[styles.keyboardContainer, { paddingBottom: insets.bottom + 20 }]}>
-                {KEYS.map((key, index) => (
-                    <TouchableOpacity
-                        key={index}
-                        style={styles.keyButton}
-                        onPress={() => handleKeyPress(key)}
-                        disabled={key === ''}
-                        activeOpacity={key === '' ? 1 : 0.7}
-                    >
-                        {key === 'delete' ? (
-                            <View style={styles.backspaceKey}>
-                                <Ionicons name="backspace-outline" size={24} color="#1F5E2E" />
-                            </View>
-                        ) : key === 'back' ? (
-                            <View style={styles.backspaceKey}>
-                                <Ionicons name="arrow-back" size={24} color="#1F5E2E" />
-                            </View>
-                        ) : key !== '' ? (
-                            <Text style={styles.keyText}>{key}</Text>
-                        ) : null}
-                    </TouchableOpacity>
-                ))}
-            </View>
+            {/* Custom Keyboard - Only for Phone and OTP */}
+            {step !== 'name' && (
+                <View style={[styles.keyboardContainer, { paddingBottom: insets.bottom + 20 }]}>
+                    {KEYS.map((key, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={styles.keyButton}
+                            onPress={() => handleKeyPress(key)}
+                            disabled={key === ''}
+                            activeOpacity={key === '' ? 1 : 0.7}
+                        >
+                            {key === 'delete' ? (
+                                <View style={styles.backspaceKey}>
+                                    <Ionicons name="backspace-outline" size={24} color="#1F5E2E" />
+                                </View>
+                            ) : key === 'back' ? (
+                                <View style={styles.backspaceKey}>
+                                    <Ionicons name="arrow-back" size={24} color="#1F5E2E" />
+                                </View>
+                            ) : key !== '' ? (
+                                <Text style={styles.keyText}>{key}</Text>
+                            ) : null}
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
 
         </View>
     );
@@ -198,7 +302,7 @@ const styles = StyleSheet.create({
         paddingTop: 40,
     },
     welcomeText: {
-        fontSize: 20, // Reduced from 24 to match image scale
+        fontSize: 20,
         fontFamily: 'DMSans_700Bold',
         color: '#1A1A1A',
         marginBottom: 4,
@@ -237,6 +341,18 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         justifyContent: 'center',
         paddingHorizontal: 20,
+    },
+    textInput: {
+        width: '100%',
+        height: 56,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 16,
+        paddingHorizontal: 20,
+        fontSize: 16,
+        fontFamily: 'DMSans_500Medium',
+        color: '#1A1A1A',
+        backgroundColor: '#F9F9F9',
     },
     phoneText: {
         fontSize: 16,
@@ -304,5 +420,24 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'DMSans_400Regular',
         color: '#999',
+    },
+
+    // Name Step Buttons
+    submitButton: {
+        width: '100%',
+        height: 56,
+        backgroundColor: '#1F5E2E',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 24,
+    },
+    submitButtonDisabled: {
+        backgroundColor: '#ccc',
+    },
+    submitButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
     },
 });

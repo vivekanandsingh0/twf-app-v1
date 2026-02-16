@@ -3,6 +3,15 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
+
+// Since we had issue with imports, I'll initialize here or better yet, create a shared client file to avoid dups.
+// But for now, let's initialize here to be safe and quick as I did in TicketThread.
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://ftnkpsaxxdbdnrkxtvkt.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmtwc2F4eGRiZG5ya3h0dmt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTE3OTgsImV4cCI6MjA4NDU2Nzc5OH0.mCEbcvs0gucOC2IBoYxS8CLAWfwDVDRdsaiD8G4dWrs';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 export default function TicketAlerter() {
     const [openTickets, setOpenTickets] = useState<any[]>([]);
     const pathname = usePathname();
@@ -10,13 +19,14 @@ export default function TicketAlerter() {
     useEffect(() => {
         const checkTickets = async () => {
             try {
-                const res = await fetch('/api/tickets');
-                if (res.ok) {
-                    const tickets = await res.json();
-                    // Find tickets that are Open and NOT created by Admin (though Admin doesn't create tickets usually)
-                    // Simply check status 'Open'
-                    const pending = tickets.filter((t: any) => t.status === 'Open');
-                    setOpenTickets(pending);
+                // Fetch only Open tickets
+                const { data, error } = await supabase
+                    .from('tickets')
+                    .select('*')
+                    .eq('status', 'Open');
+
+                if (data) {
+                    setOpenTickets(data);
                 }
             } catch (e) {
                 // ignore errors
@@ -43,7 +53,7 @@ export default function TicketAlerter() {
                     </p>
                     <div className="flex gap-2">
                         {/* Link to the first user with an open ticket as a shortcut */}
-                        <a href={`/users/${openTickets[0].userId}/manage`} className="text-xs font-bold text-white bg-emerald-600 px-3 py-1.5 rounded hover:bg-emerald-700 transition-colors">
+                        <a href={`/users/${openTickets[0].user_id}`} className="text-xs font-bold text-white bg-emerald-600 px-3 py-1.5 rounded hover:bg-emerald-700 transition-colors">
                             Reply to Recent
                         </a>
                         <button onClick={() => setOpenTickets([])} className="text-xs font-bold text-slate-500 hover:text-slate-700 px-2">

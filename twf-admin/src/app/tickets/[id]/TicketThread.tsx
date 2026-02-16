@@ -70,8 +70,8 @@ export default function TicketThread({ ticket }: { ticket: any }) {
                                 : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
                                 }`}>
                                 <p className="text-sm">{msg.text}</p>
-                                <p className={`text-[10px] mt-1 text-right ${isAdmin ? 'text-emerald-100' : 'text-slate-400'}`}>
-                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <p suppressHydrationWarning className={`text-[10px] mt-1 text-right ${isAdmin ? 'text-emerald-100' : 'text-slate-400'}`}>
+                                    {new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             </div>
                         </div>
