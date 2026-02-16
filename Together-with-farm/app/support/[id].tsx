@@ -8,6 +8,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { useUser } from '@/contexts/UserContext';
 
+import { supabase } from '@/lib/supabase';
+
+// Helper Type
+interface TicketMessage {
+    sender: 'User' | 'Admin'; // or other roles
+    text: string;
+    timestamp: string;
+}
+
 export default function TicketDetailScreen() {
     const { id } = useLocalSearchParams();
     const insets = useSafeAreaInsets();
@@ -20,21 +29,16 @@ export default function TicketDetailScreen() {
     // Auto-scroll to bottom
     const scrollViewRef = useRef<ScrollView>(null);
 
-    const getApiUrl = () => {
-        const debuggerHost = Constants.expoConfig?.hostUri;
-        const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-        const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
-        return `http://${host}:3000`;
-    };
-
     const fetchTicket = async () => {
         try {
-            const API_URL = getApiUrl();
-            const res = await fetch(`${API_URL}/api/tickets/${id}`);
-            if (res.ok) {
-                const data = await res.json();
-                setTicket(data);
-            }
+            const { data, error } = await supabase
+                .from('tickets')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            if (data) setTicket(data);
         } catch (e) {
             console.error("Failed to fetch ticket", e);
         }
@@ -42,8 +46,22 @@ export default function TicketDetailScreen() {
 
     useEffect(() => {
         fetchTicket();
-        const interval = setInterval(fetchTicket, 3000); // Fast poll for chat
-        return () => clearInterval(interval);
+
+        // Realtime subscription for this specific ticket
+        const channel = supabase
+            .channel(`ticket_${id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tickets', filter: `id=eq.${id}` },
+                (payload) => {
+                    fetchTicket();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [id]);
 
     // Scroll to bottom when messages update
@@ -60,20 +78,31 @@ export default function TicketDetailScreen() {
         setSending(true);
 
         try {
-            const API_URL = getApiUrl();
-            const res = await fetch(`${API_URL}/api/tickets/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: reply,
-                    sender: 'User'
-                })
-            });
+            // Append new message to existing array
+            const newMessage: TicketMessage = {
+                sender: 'User',
+                text: reply,
+                timestamp: new Date().toISOString()
+            };
 
-            if (res.ok) {
-                setReply('');
-                fetchTicket();
-            }
+            const currentMessages = ticket?.messages || [];
+            const updatedMessages = [...currentMessages, newMessage];
+
+            const { error } = await supabase
+                .from('tickets')
+                .update({
+                    messages: updatedMessages,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            setReply('');
+            // fetchTicket will be triggered by realtime, but optimistic update is good practice
+            // For now, we rely on fetchTicket or realtime
+            fetchTicket();
+
         } catch (e) {
             console.error("Failed to send reply", e);
         } finally {
@@ -128,7 +157,7 @@ export default function TicketDetailScreen() {
                             <View style={[styles.msgBubble, isUser ? styles.msgBubbleUser : styles.msgBubbleAdmin]}>
                                 <Text style={[styles.msgText, isUser ? styles.msgTextUser : styles.msgTextAdmin]}>{msg.text}</Text>
                                 <Text style={[styles.msgTime, isUser ? styles.msgTimeUser : styles.msgTimeAdmin]}>
-                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </Text>
                             </View>
                         </View>

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import UserInfoCard from "./UserInfoCard";
+import UserTickets from "./UserTickets";
 
 export default async function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -66,6 +67,14 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                 {/* Personal Info */}
                 <div className="md:col-span-2 space-y-8">
                     <UserInfoCard user={user} />
+
+                    {/* Support Tickets Section */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg text-slate-900">Support Tickets</h3>
+                        </div>
+                        <UserTickets userId={user.id} />
+                    </div>
 
                     {/* Address Card */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">

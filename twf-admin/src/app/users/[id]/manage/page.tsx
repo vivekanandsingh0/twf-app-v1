@@ -42,12 +42,7 @@ export default function ManageUserPage({ params }: { params: Promise<{ id: strin
                             💳 Payments
                         </button>
 
-                        <button
-                            onClick={() => setActiveTab('support')}
-                            className={`text-left px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'support' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
-                        >
-                            💬 Support Tickets
-                        </button>
+
                         <div className="my-2 border-t border-slate-100"></div>
                         <button className="text-left px-4 py-3 rounded-xl font-bold text-sm text-red-600 hover:bg-red-50 transition-colors">
                             🚫 Block User
@@ -67,9 +62,7 @@ export default function ManageUserPage({ params }: { params: Promise<{ id: strin
                             <PaymentsView />
                         )}
 
-                        {activeTab === 'support' && (
-                            <SupportView userId={id} />
-                        )}
+
 
                     </div>
                 </div>
@@ -169,160 +162,4 @@ function PaymentsView() {
     );
 }
 
-function SupportView({ userId }: { userId: string }) {
-    const [tickets, setTickets] = useState<any[]>([]);
-    const [selectedTicket, setSelectedTicket] = useState<any>(null);
-    const [reply, setReply] = useState('');
-    const [loading, setLoading] = useState(false);
 
-    const fetchTickets = async () => {
-        try {
-            const res = await fetch(`/api/tickets?user_id=${userId}`);
-            if (res.ok) {
-                const data = await res.json();
-                setTickets(data);
-                // Refresh selected ticket if open
-                if (selectedTicket) {
-                    const updated = data.find((t: any) => t.id === selectedTicket.id);
-                    if (updated) setSelectedTicket(updated);
-                }
-            }
-        } catch (e) {
-            console.error("Failed to fetch tickets", e);
-        }
-    };
-
-    useEffect(() => {
-        fetchTickets();
-        const interval = setInterval(fetchTickets, 3000);
-        return () => clearInterval(interval);
-    }, [userId, selectedTicket?.id]);
-
-    const handleSendReply = async () => {
-        if (!reply.trim() || !selectedTicket) return;
-
-        try {
-            const res = await fetch(`/api/tickets/${selectedTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: reply,
-                    sender: 'Admin',
-                    status: 'Open' // Admin reply usually means waiting for user, or remains Open
-                })
-            });
-
-            if (res.ok) {
-                setReply('');
-                fetchTickets();
-            }
-        } catch (e) {
-            alert("Failed to send reply");
-        }
-    };
-
-    const handleCloseTicket = async () => {
-        if (!selectedTicket) return;
-        try {
-            await fetch(`/api/tickets/${selectedTicket.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'Closed' })
-            });
-            fetchTickets();
-        } catch (e) {
-            alert("Failed to close ticket");
-        }
-    };
-
-    return (
-        <div className="flex h-[600px] border rounded-xl overflow-hidden">
-            {/* Ticket List */}
-            <div className="w-1/3 border-r bg-slate-50 overflow-y-auto">
-                <div className="p-4 border-b font-bold text-slate-600 bg-white sticky top-0">Tickets</div>
-                {tickets.length === 0 ? (
-                    <div className="p-6 text-center text-slate-400">No tickets found.</div>
-                ) : (
-                    tickets.map(ticket => (
-                        <div
-                            key={ticket.id}
-                            onClick={() => setSelectedTicket(ticket)}
-                            className={`p-4 border-b cursor-pointer hover:bg-white transition-colors ${selectedTicket?.id === ticket.id ? 'bg-white border-l-4 border-l-emerald-600 shadow-sm' : ''}`}
-                        >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${ticket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
-                                    {ticket.status}
-                                </span>
-                                <span className="text-xs text-slate-400">{new Date(ticket.last_updated).toLocaleDateString()}</span>
-                            </div>
-                            <div className="font-bold text-sm text-slate-800 mb-1 truncate">{ticket.subject}</div>
-                            <div className="text-xs text-slate-500 truncate">{ticket.messages[ticket.messages.length - 1].text}</div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* Chat Area */}
-            <div className="w-2/3 flex flex-col bg-white">
-                {selectedTicket ? (
-                    <>
-                        {/* Chat Header */}
-                        <div className="p-4 border-b flex justify-between items-center bg-white">
-                            <div>
-                                <h3 className="font-bold text-slate-900">{selectedTicket.subject}</h3>
-                                <p className="text-xs text-slate-500">Ticket ID: {selectedTicket.id}</p>
-                            </div>
-                            {selectedTicket.status !== 'Closed' && (
-                                <button onClick={handleCloseTicket} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-full font-bold transition-colors">
-                                    Mark Closed
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-                            {selectedTicket.messages.map((msg: any, idx: number) => {
-                                const isAdmin = msg.sender === 'Admin';
-                                return (
-                                    <div key={idx} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isAdmin ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'}`}>
-                                            <div className="text-sm">{msg.text}</div>
-                                            <div className={`text-[10px] mt-1 text-right ${isAdmin ? 'text-emerald-200' : 'text-slate-400'}`}>
-                                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Reply Box */}
-                        <div className="p-4 border-t bg-white">
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500"
-                                    placeholder="Type a reply..."
-                                    value={reply}
-                                    onChange={e => setReply(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleSendReply()}
-                                />
-                                <button
-                                    onClick={handleSendReply}
-                                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-emerald-700 transition-colors"
-                                >
-                                    Send
-                                </button>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
-                        <span className="text-4xl mb-4">👋</span>
-                        <p>Select a ticket to start chatting.</p>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}

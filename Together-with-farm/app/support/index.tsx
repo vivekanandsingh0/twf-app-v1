@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { useUser } from '@/contexts/UserContext';
+import { supabase } from '@/lib/supabase';
 
 export default function SupportScreen() {
     const insets = useSafeAreaInsets();
@@ -20,23 +21,45 @@ export default function SupportScreen() {
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
 
-    const getApiUrl = () => {
-        const debuggerHost = Constants.expoConfig?.hostUri;
-        const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-        const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
-        return `http://${host}:3000`;
-    };
+    // Supabase is already imported from UserContext via useUser hook or we can import the client directly
+    // Since useUser exposes user, we need to import supabase from lib if valid.
+    // The previous implementation used user.id. 
+    // We will use the supabase client directly.
+
+    // We need to import the supabase client.
+    // However, I will check if I can import it. The current imports don't show it.
+    // I will modify imports first if needed, but let's see. 
+    // Wait, I will use `supabase` from `@/lib/supabase` (need to add import).
+
+    // Actually, I should update imports first.
+    // But since I can only replace a chunk, I'll update the logic assuming imports are there or I'll add imports.
+    // Ah, imports are at the top. I need a multi-edit or separate edits.
+    // I'll update the component logic first.
+
+    // Wait, let's use MULTI REPLACE to update imports and logic at once.
+    // Ah, I am using `replace_file_content`.
+    // I will replace the component body.
 
     const fetchTickets = async () => {
         if (!user) return;
         setLoading(true);
         try {
-            const API_URL = getApiUrl();
-            const res = await fetch(`${API_URL}/api/tickets?user_id=${user.id}`);
-            if (res.ok) {
-                const data = await res.json();
-                setTickets(data);
-            }
+            // Updated to use Supabase
+            // Import supabase from '@lib/supabase' needed at top. I will add it via import update later or now.
+            // Using require or assuming import exists? No.
+            // I'll inject the logic but I MUST add the import.
+            // I will use a separate tool call for imports or assume the next step.
+
+            // Actually, I'll update the logic to use `supabase` which I will import.
+            const { data, error } = await supabase
+                .from('tickets')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false });
+
+            if (error) throw error;
+            if (data) setTickets(data);
+
         } catch (e) {
             console.error("Failed to fetch tickets", e);
         } finally {
@@ -46,9 +69,22 @@ export default function SupportScreen() {
 
     useEffect(() => {
         fetchTickets();
-        // Poll for updates every 10 seconds
-        const interval = setInterval(fetchTickets, 10000);
-        return () => clearInterval(interval);
+
+        // Optional: Realtime subscription
+        const channel = supabase
+            .channel('tickets_channel')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tickets', filter: `user_id=eq.${user?.id}` },
+                (payload) => {
+                    fetchTickets();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [user]);
 
     const handleCreateTicket = async () => {
@@ -57,28 +93,35 @@ export default function SupportScreen() {
             return;
         }
 
-        try {
-            const API_URL = getApiUrl();
-            const res = await fetch(`${API_URL}/api/tickets`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user?.id,
-                    subject,
-                    message
-                })
-            });
+        if (!user) return;
 
-            if (res.ok) {
+        try {
+            const newTicket = {
+                user_id: user.id,
+                subject,
+                messages: [{
+                    sender: 'User',
+                    text: message,
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            const { data, error } = await supabase
+                .from('tickets')
+                .insert([newTicket])
+                .select();
+
+            if (error) throw error;
+
+            if (data) {
                 setSubject('');
                 setMessage('');
                 setCreating(false);
                 fetchTickets(); // Refresh list
                 alert("Ticket created successfully!");
-            } else {
-                alert("Failed to create ticket.");
             }
         } catch (e) {
+            console.error(e);
             alert("Error creating ticket.");
         }
     };
@@ -104,7 +147,7 @@ export default function SupportScreen() {
                 {item.messages && item.messages.length > 0 ? item.messages[item.messages.length - 1].text : 'No messages'}
             </Text>
             <View style={styles.ticketFooter}>
-                <Text style={styles.ticketDate}>{new Date(item.last_updated).toLocaleDateString()}</Text>
+                <Text style={styles.ticketDate}>{new Date(item.last_updated || item.created_at || Date.now()).toLocaleDateString()}</Text>
                 <Ionicons name="chevron-forward" size={16} color="#999" />
             </View>
         </TouchableOpacity>

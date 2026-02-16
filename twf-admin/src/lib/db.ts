@@ -204,7 +204,20 @@ export const db = {
                 totalRevenue: totalRevenue
             };
         }
+    },
+    tickets: {
+        getAll: async (userId?: string) => {
+            let query = supabase.from('tickets').select('*');
+            if (userId) {
+                query = query.eq('user_id', userId);
+            }
+            const { data, error } = await query.order('updated_at', { ascending: false });
+            return { data, error };
+        },
+        getById: async (id: string) => {
+            const { data, error } = await supabase.from('tickets').select('*').eq('id', id).single();
+            return { data, error };
+        }
     }
-    // You might need to add other entities like 'addresses' if used independently
 };
 
