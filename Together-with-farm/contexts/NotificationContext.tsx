@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 import { useUser } from './UserContext';
+import { supabase } from '../lib/supabase';
 
 export interface Notification {
     id: string;
@@ -34,33 +33,59 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (!user) return;
 
         try {
-            const debuggerHost = Constants.expoConfig?.hostUri;
-            const localhost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-            const host = debuggerHost ? debuggerHost.split(':')[0] : localhost;
-            const API_URL = `http://${host}:3000`;
+            // Build query based on user type and ID
+            let query = supabase
+                .from('notifications')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-            const res = await fetch(`${API_URL}/api/notifications?userId=${user.id}&userType=${userData.userType}`);
-            if (res.ok) {
-                const data = await res.json();
+            // We need OR condition: target_type='All' OR (target_type='Specific' AND target_id=user.id) OR (target_type='AllUsers'/'AllVendors')
+            // Supabase .or() syntax: 'column.eq.value, column.eq.value'
+            // But we have mixed AND/OR logic. Simplest is to fetch all potential relevant ones or use multiple queries.
+            // Using .or(): target_type.eq.All, target_type.eq.AllUsers (if user), target_type.eq.Specific.and.target_id.eq.UserID
 
-                // Process notifications for App UI
-                const processed = data.map((n: any) => ({
+            // Constructing the OR string
+            let orCondition = `target_type.eq.All`;
+
+            if (userData?.userType === 'User') {
+                orCondition += `,target_type.eq.AllUsers`;
+            } else if (userData?.userType === 'Vendor') {
+                orCondition += `,target_type.eq.AllVendors`;
+            }
+
+            // For Specific, we need (target_type=Specific AND target_id=user.id)
+            // Supabase OR with AND inside is tricky in one string.
+            // Easier: Fetch ALL potential types then filter in memory? No, wasteful.
+            // Better: `target_type.eq.All, target_type.eq.element, and(target_type.eq.Specific, target_id.eq.${user.id})`
+            // Syntax: or(target_type.eq.All, target_type.eq.AllUsers, and(target_type.eq.Specific, target_id.eq.123))
+
+            // The 'and' inside 'or' syntax: `target_type.eq.Specific.and(target_id.eq.${user.id})` NO
+            // Correct syntax: `target_type.eq.All, target_type.eq.AllUsers, and(target_type.eq.Specific,target_id.eq.${user.id})`
+
+            orCondition += `,and(target_type.eq.Specific,target_id.eq.${user.id})`;
+
+            const { data, error } = await query.or(orCondition);
+
+            if (error) throw error;
+
+            if (data) {
+                const processed: Notification[] = data.map((n: any) => ({
                     id: n.id,
                     title: n.title,
-                    description: n.body,
+                    body: n.body,
+                    description: n.body, // Mapping body to description as well for UI compatibility if needed
                     type: n.type,
-                    createdAt: n.createdAt,
-                    read: n.read || false,
+                    createdAt: n.created_at,
+                    read: n.is_read || false,
                     // UI Helpers
-                    section: isToday(new Date(n.createdAt)) ? 'Today' : 'Yesterday',
+                    section: isToday(new Date(n.created_at)) ? 'Today' : 'Yesterday',
                     icon: getIconForType(n.type),
-                    highlight: !n.read,
-                    time: formatTimeAgo(new Date(n.createdAt)),
-                    voucherCode: n.promoCode
+                    highlight: !n.is_read,
+                    voucherCode: n.promo_code
                 }));
 
                 setNotifications(processed);
-                setUnreadCount(processed.filter((n: any) => !n.read).length);
+                setUnreadCount(processed.filter((n: any) => !n.read).length); // Logic simplified
             }
         } catch (e) {
             console.log("Failed to fetch notifications", e);

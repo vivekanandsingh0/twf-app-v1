@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { localDb } from '@/lib/local-db';
+import { supabase } from '@/lib/supabase'; // Using the supabase client from lib
 
 const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -13,30 +13,36 @@ export async function OPTIONS() {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const userType = searchParams.get('userType'); // 'User' | 'Vendor'
 
-    const notifications = await localDb.notifications.getAll();
+    // If Admin requesting list for dashboard (usually admin=true or no user params)
+    // The previous logic had filtering for App simulation here. 
+    // Since App now fetches directly from Supabase, this endpoint is mainly for the Admin Panel itself to list created notifications.
 
-    // If Admin request, return all
-    if (searchParams.get('admin') === 'true') {
-        return NextResponse.json(notifications, { headers });
+    // Fetch all notifications (Admin View)
+    const { data: notifications, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500, headers });
     }
 
-    // Filter Logic
-    const filtered = notifications.filter((n: any) => {
-        // Notification for specific user
-        if (n.targetType === 'Specific' && n.targetId === userId) return true;
+    // Map back to camelCase for Admin UI consistency if needed, or update Admin UI to use snake_case
+    // Assuming Admin UI expects camelCase based on previous localDb structure
+    const mapped = notifications?.map(n => ({
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        type: n.type,
+        targetType: n.target_type,
+        targetId: n.target_id,
+        promoCode: n.promo_code,
+        createdAt: n.created_at,
+        read: n.is_read
+    }));
 
-        // Broadcasts
-        if (n.targetType === 'All') return true;
-        if (n.targetType === 'AllUsers' && userType === 'User') return true;
-        if (n.targetType === 'AllVendors' && userType === 'Vendor') return true;
-
-        return false;
-    });
-
-    return NextResponse.json(filtered, { headers });
+    return NextResponse.json(mapped, { headers });
 }
 
 export async function POST(request: Request) {
@@ -44,21 +50,34 @@ export async function POST(request: Request) {
         const body = await request.json();
 
         const newNotification = {
-            id: `notif_${Date.now()}`,
             title: body.title,
             body: body.body,
-            type: body.type || 'info', // info, alert, promo
-            targetType: body.targetType, // Specific, All, AllUsers, AllVendors
-            targetId: body.targetId, // userId if Specific
-            promoCode: body.promoCode,
-            createdAt: new Date().toISOString(),
-            read: false
+            type: body.type || 'info',
+            target_type: body.targetType, // Map camelCase to snake_case
+            target_id: body.targetId || null,
+            promo_code: body.promoCode || null,
+            // id and created_at handled by DB defaults
         };
 
-        const saved = await localDb.notifications.create(newNotification);
-        return NextResponse.json(saved, { status: 201, headers });
-    } catch (e) {
-        return NextResponse.json({ error: 'Failed to create notification' }, { status: 500, headers });
+        const { data, error } = await supabase
+            .from('notifications')
+            .insert([newNotification])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Map back for response
+        const responseData = {
+            ...data,
+            targetType: data.target_type,
+            promoCode: data.promo_code,
+            createdAt: data.created_at
+        };
+
+        return NextResponse.json(responseData, { status: 201, headers });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message || 'Failed to create notification' }, { status: 500, headers });
     }
 }
 
@@ -69,9 +88,15 @@ export async function DELETE(request: Request) {
 
         if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400, headers });
 
-        await localDb.notifications.delete(id);
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
         return NextResponse.json({ success: true }, { headers });
-    } catch (e) {
-        return NextResponse.json({ error: 'Failed to delete' }, { status: 500, headers });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message || 'Failed to delete' }, { status: 500, headers });
     }
 }
