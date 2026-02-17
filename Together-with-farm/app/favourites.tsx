@@ -14,36 +14,42 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFavourites } from '@/contexts/FavouritesContext';
 import { useMarket } from '@/contexts/MarketContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function FavouritesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { unreadCount } = useNotifications();
     const { favourites, toggleFavourite, isFavourite } = useFavourites();
     const { products } = useMarket();
+    const { isDark } = useTheme();
 
     const favouriteProducts = products.filter(p => isFavourite(p.id));
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top + 10 }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { borderBottomColor: '#333' }]}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Favourites</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>My Favourites</Text>
                 <View style={styles.headerRight}>
                     <TouchableOpacity
-                        style={[styles.notificationBtn, { marginLeft: 8 }]}
+                        style={[styles.notificationBtn, { marginLeft: 8 }, isDark && { backgroundColor: '#333' }]}
                         onPress={() => router.push('/notifications')}
                     >
-                        <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                        <View style={styles.notificationBadge}>
-                            <Text style={styles.badgeText}>2</Text>
-                        </View>
+                        <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+                        {unreadCount > 0 && (
+                            <View style={styles.notificationBadge}>
+                                <Text style={styles.badgeText}>{unreadCount}</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -54,20 +60,20 @@ export default function FavouritesScreen() {
             >
                 {favouriteProducts.length === 0 ? (
                     <View style={styles.emptyState}>
-                        <Ionicons name="heart-outline" size={64} color="#CCC" />
-                        <Text style={styles.emptyText}>No favourites yet</Text>
-                        <Text style={styles.emptySubtext}>Start adding products you love!</Text>
+                        <Ionicons name="heart-outline" size={64} color={isDark ? '#555' : '#CCC'} />
+                        <Text style={[styles.emptyText, isDark && { color: '#FFF' }]}>No favourites yet</Text>
+                        <Text style={[styles.emptySubtext, isDark && { color: '#AAA' }]}>Start adding products you love!</Text>
                     </View>
                 ) : (
                     <View style={styles.productsGrid}>
                         {favouriteProducts.map((item) => (
                             <TouchableOpacity
                                 key={item.id}
-                                style={styles.productCard}
+                                style={[styles.productCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
                                 onPress={() => router.push(`/product/${item.id}`)}
                                 activeOpacity={0.9}
                             >
-                                <View style={styles.productImageContainer}>
+                                <View style={[styles.productImageContainer, isDark && { backgroundColor: '#333' }]}>
                                     <Image
                                         source={item.image}
                                         style={styles.productImage}
@@ -94,13 +100,13 @@ export default function FavouritesScreen() {
                                 </View>
 
                                 <View style={styles.productInfo}>
-                                    <Text style={styles.tagText}>{item.tag || item.type}</Text>
-                                    <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
+                                    <Text style={[styles.tagText, isDark && { color: '#AAA' }]}>{item.tag || item.type}</Text>
+                                    <Text style={[styles.productTitle, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.name}</Text>
 
                                     <View style={styles.priceRow}>
                                         <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                                            <Text style={styles.priceText}>₹{item.price}</Text>
-                                            <Text style={styles.unitText}>/{item.unit}</Text>
+                                            <Text style={[styles.priceText, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                                            <Text style={[styles.unitText, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
                                         </View>
 
                                         <TouchableOpacity style={styles.addButton}>

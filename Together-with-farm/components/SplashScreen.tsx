@@ -10,6 +10,8 @@ import Animated, {
     runOnJS,
 } from 'react-native-reanimated';
 import { Image } from 'expo-image';
+import { useTheme } from '@/contexts/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
 
 const { width } = Dimensions.get('window');
 
@@ -22,6 +24,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     const logoOpacity = useSharedValue(0);
     const logoScale = useSharedValue(0.95);
     const progressWidth = useSharedValue(0);
+    const { isDark } = useTheme();
 
     useEffect(() => {
         // Elegant fade-in with subtle scale
@@ -67,7 +70,8 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     }));
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
             {/* Logo with subtle animation */}
             <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
                 <Image
@@ -78,8 +82,8 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
             </Animated.View>
 
             {/* Minimal progress bar */}
-            <View style={styles.progressBarContainer}>
-                <Animated.View style={[styles.progressBar, progressAnimatedStyle]} />
+            <View style={[styles.progressBarContainer, isDark && { backgroundColor: '#333' }]}>
+                <Animated.View style={[styles.progressBar, progressAnimatedStyle, isDark && { backgroundColor: '#81C784' }]} />
             </View>
         </View>
     );

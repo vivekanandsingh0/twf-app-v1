@@ -9,6 +9,7 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -19,10 +20,11 @@ interface RoleSelectionScreenProps {
 
 export default function RoleSelectionScreen({ onSelectUser, onSelectVendor }: RoleSelectionScreenProps) {
     const insets = useSafeAreaInsets();
+    const { isDark } = useTheme();
 
     return (
-        <View style={styles.container}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Background Image Container */}
             <View style={[styles.imageContainer, { top: insets.top + 20 }]}>
@@ -36,11 +38,11 @@ export default function RoleSelectionScreen({ onSelectUser, onSelectVendor }: Ro
             {/* White Content Container with Curved Top */}
             <View style={styles.contentWrapper}>
                 {/* Curve Background */}
-                <View style={styles.curveBackground} />
+                <View style={[styles.curveBackground, isDark && { backgroundColor: '#1E1E1E' }]} />
 
                 {/* Foreground Content */}
                 <View style={styles.foregroundContent}>
-                    <Text style={styles.title}>Continue as,</Text>
+                    <Text style={[styles.title, isDark && { color: '#FFF' }]}>Continue as,</Text>
 
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
@@ -52,11 +54,11 @@ export default function RoleSelectionScreen({ onSelectUser, onSelectVendor }: Ro
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.button, styles.vendorButton]}
+                            style={[styles.button, styles.vendorButton, isDark && { backgroundColor: '#333' }]}
                             onPress={onSelectVendor}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.vendorButtonText}>Farmer</Text>
+                            <Text style={[styles.vendorButtonText, isDark && { color: '#FFF' }]}>Farmer</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

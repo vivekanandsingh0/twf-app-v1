@@ -16,11 +16,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/contexts/UserContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ProfileEditScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { userData, updateProfile, setUserData } = useUser();
+    const { isDark } = useTheme();
 
     const [fullName, setFullName] = useState(userData.fullName);
     const [phone, setPhone] = useState(userData.phoneNumber || '+91 23456 7890');
@@ -65,17 +67,17 @@ export default function ProfileEditScreen() {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top + 10 }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { borderBottomColor: '#333' }]}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
-                <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/notifications')}>
-                    <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Edit Profile</Text>
+                <TouchableOpacity style={[styles.notificationBtn, isDark && { backgroundColor: '#333' }]} onPress={() => router.push('/notifications')}>
+                    <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                     <View style={styles.notificationBadge}>
                         <Text style={styles.badgeText}>2</Text>
                     </View>
@@ -91,8 +93,8 @@ export default function ProfileEditScreen() {
                             style={styles.avatar}
                             contentFit="cover"
                         />
-                        <View style={styles.cameraButton}>
-                            <Ionicons name="camera-outline" size={20} color="#1A1A1A" />
+                        <View style={[styles.cameraButton, isDark && { backgroundColor: '#333', borderColor: '#444' }]}>
+                            <Ionicons name="camera-outline" size={20} color={isDark ? '#FFF' : '#1A1A1A'} />
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -100,18 +102,20 @@ export default function ProfileEditScreen() {
                 {/* Form Fields */}
                 <View style={styles.formContainer}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Full Name</Text>
+                        <Text style={[styles.label, isDark && { color: '#FFF' }]}>Full Name</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
+                            placeholderTextColor={isDark ? '#888' : '#999'}
                             value={fullName}
                             onChangeText={setFullName}
                         />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Phone Number</Text>
+                        <Text style={[styles.label, isDark && { color: '#FFF' }]}>Phone Number</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
+                            placeholderTextColor={isDark ? '#888' : '#999'}
                             value={phone}
                             onChangeText={setPhone}
                             keyboardType="phone-pad"
@@ -126,19 +130,25 @@ export default function ProfileEditScreen() {
                                     key={option}
                                     style={[
                                         styles.genderOption,
-                                        gender === option && styles.genderOptionSelected
+                                        isDark && { borderColor: '#444', backgroundColor: '#333' },
+                                        gender === option && styles.genderOptionSelected,
+                                        isDark && gender === option && { backgroundColor: '#1E3E2E', borderColor: '#1F5E2E' }
                                     ]}
                                     onPress={() => setGender(option)}
                                 >
                                     <View style={[
                                         styles.radioOuter,
-                                        gender === option && styles.radioOuterSelected
+                                        isDark && { borderColor: '#888' },
+                                        gender === option && styles.radioOuterSelected,
+                                        isDark && gender === option && { borderColor: '#1F5E2E' }
                                     ]}>
-                                        {gender === option && <View style={styles.radioInner} />}
+                                        {gender === option && <View style={[styles.radioInner, isDark && { backgroundColor: '#1F5E2E' }]} />}
                                     </View>
                                     <Text style={[
                                         styles.genderText,
-                                        gender === option && styles.genderTextSelected
+                                        isDark && { color: '#AAA' },
+                                        gender === option && styles.genderTextSelected,
+                                        isDark && gender === option && { color: '#FFF' }
                                     ]}>
                                         {option}
                                     </Text>
@@ -148,9 +158,10 @@ export default function ProfileEditScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Date of Birth</Text>
+                        <Text style={[styles.label, isDark && { color: '#FFF' }]}>Date of Birth</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
+                            placeholderTextColor={isDark ? '#888' : '#999'}
                             value={dob}
                             onChangeText={setDob}
                         />

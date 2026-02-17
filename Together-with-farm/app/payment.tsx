@@ -9,6 +9,7 @@ import { useVendor, VendorOrder } from '@/contexts/VendorContext';
 import { useMarket } from '@/contexts/MarketContext';
 import { useUser } from '@/contexts/UserContext';
 import { useAddresses } from '@/contexts/AddressContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Types for Payment Methods
 type PaymentMethod = {
@@ -35,6 +36,7 @@ export default function PaymentScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const [selectedId, setSelectedId] = useState<string>('phonepe_1');
+    const { isDark } = useTheme();
 
     const { quantities, clearCart } = useCart();
     const { addOrder } = useVendor();
@@ -122,29 +124,29 @@ export default function PaymentScreen() {
         return (
             <TouchableOpacity
                 key={item.id}
-                style={[styles.methodCard, isSelected && styles.methodCardSelected]}
+                style={[styles.methodCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }, isSelected && (isDark ? { backgroundColor: '#1E3E2E', borderColor: '#1F5E2E' } : styles.methodCardSelected)]}
                 onPress={() => setSelectedId(item.id)}
                 activeOpacity={0.7}
             >
                 <View style={styles.row}>
                     {/* Icon */}
-                    <View style={styles.iconContainer}>
+                    <View style={[styles.iconContainer, isDark && { backgroundColor: '#333', borderColor: '#444' }]}>
                         {/* Custom handling for icons based on type */}
                         {item.id.includes('phonepe') && <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#5f259f' }}>Pe</Text>}
                         {item.id.includes('paytm') && <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#00b9f5' }}>Paytm</Text>}
-                        {item.type === 'cod' && <Ionicons name="cash-outline" size={24} color="#1A1A1A" />}
-                        {item.type === 'card' && <FontAwesome5 name="credit-card" size={20} color="#1A1A1A" />}
+                        {item.type === 'cod' && <Ionicons name="cash-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />}
+                        {item.type === 'card' && <FontAwesome5 name="credit-card" size={20} color={isDark ? '#FFF' : '#1A1A1A'} />}
                     </View>
 
                     {/* Text */}
                     <View style={styles.textContainer}>
-                        <Text style={styles.methodTitle}>{item.title}</Text>
-                        {item.subtitle && <Text style={styles.methodSubtitle}>{item.subtitle}</Text>}
+                        <Text style={[styles.methodTitle, isDark && { color: '#FFF' }]}>{item.title}</Text>
+                        {item.subtitle && <Text style={[styles.methodSubtitle, isDark && { color: '#AAA' }]}>{item.subtitle}</Text>}
                     </View>
 
                     {/* Radio Button */}
-                    <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
-                        {isSelected && <View style={styles.radioInner} />}
+                    <View style={[styles.radioOuter, isDark && { borderColor: '#FFF' }, isSelected && styles.radioOuterSelected]}>
+                        {isSelected && <View style={[styles.radioInner, isDark && { backgroundColor: '#FFF' }]} />}
                     </View>
                 </View>
             </TouchableOpacity>
@@ -152,18 +154,18 @@ export default function PaymentScreen() {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { backgroundColor: '#121212' }]}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, isDark && { backgroundColor: '#333', borderRadius: 12 }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Select Payment</Text>
-                <TouchableOpacity style={styles.notificationBadge} onPress={() => router.push('/notifications')}>
-                    <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Select Payment</Text>
+                <TouchableOpacity style={[styles.notificationBadge, isDark && { backgroundColor: '#333', borderRadius: 12 }]} onPress={() => router.push('/notifications')}>
+                    <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                     <View style={styles.badgeDot}><Text style={styles.badgeText}>2</Text></View>
                 </TouchableOpacity>
             </View>
@@ -171,34 +173,36 @@ export default function PaymentScreen() {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 {/* Linked Methods */}
-                <Text style={styles.sectionTitle}>Linked Methods</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Linked Methods</Text>
                 {LINKED_METHODS.map(renderMethodItem)}
 
                 {/* Saved Methods */}
                 <View style={{ height: 24 }} />
-                <Text style={styles.sectionTitle}>Saved Methods</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Saved Methods</Text>
                 {SAVED_METHODS.map(renderMethodItem)}
 
                 {/* Add Methods */}
                 <View style={{ height: 24 }} />
-                <Text style={styles.sectionTitle}>Add Methods</Text>
-                <TouchableOpacity style={styles.methodCard}>
+                {/* Add Methods */}
+                <View style={{ height: 24 }} />
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Add Methods</Text>
+                <TouchableOpacity style={[styles.methodCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                     <View style={styles.row}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#fff', borderWidth: 0 }]}>
-                            <Ionicons name="add" size={24} color="#1A1A1A" />
+                        <View style={[styles.iconContainer, { backgroundColor: '#fff', borderWidth: 0 }, isDark && { backgroundColor: '#333' }]}>
+                            <Ionicons name="add" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                         </View>
                         <View style={styles.textContainer}>
-                            <Text style={styles.methodTitle}>Add New Method</Text>
-                            <Text style={styles.methodSubtitle}>UPI, Netbanking, etc</Text>
+                            <Text style={[styles.methodTitle, isDark && { color: '#FFF' }]}>Add New Method</Text>
+                            <Text style={[styles.methodSubtitle, isDark && { color: '#AAA' }]}>UPI, Netbanking, etc</Text>
                         </View>
-                        <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+                        <Ionicons name="ellipsis-horizontal" size={20} color={isDark ? '#FFF' : '#666'} />
                     </View>
                 </TouchableOpacity>
 
             </ScrollView>
 
             {/* Pay Button Footer */}
-            <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
                 <TouchableOpacity style={styles.payBtn} onPress={handlePayment}>
                     <Text style={styles.payBtnText}>Pay & Place Order</Text>
                 </TouchableOpacity>

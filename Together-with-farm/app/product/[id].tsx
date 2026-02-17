@@ -22,6 +22,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useMarket, MarketProduct } from '@/contexts/MarketContext';
 import { useFavourites } from '@/contexts/FavouritesContext';
 import CartPopup from '@/components/CartPopup';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ export default function ProductDetailsScreen() {
     const { updateQuantity, getItemQuantity } = useCart();
     const { products, vendors } = useMarket();
     const { toggleFavourite, isFavourite } = useFavourites();
+    const { isDark } = useTheme();
 
     const productId = Array.isArray(id) ? id[0] : id; // Handle string | string[]
     const product = products.find(p => p.id === productId);
@@ -53,8 +55,8 @@ export default function ProductDetailsScreen() {
 
     if (!product) {
         return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text>Product not found.</Text>
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }, isDark && { backgroundColor: '#121212' }]}>
+                <Text style={isDark && { color: '#FFF' }}>Product not found.</Text>
                 <TouchableOpacity onPress={() => router.back()}>
                     <Text style={{ color: '#1F5E2E', marginTop: 10 }}>Go Back</Text>
                 </TouchableOpacity>
@@ -114,28 +116,28 @@ export default function ProductDetailsScreen() {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isDark && { backgroundColor: '#121212' }]}>
             <Stack.Screen options={{ headerShown: false }} />
-            <StatusBar style="dark" />
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 10 }]}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 10 }, isDark && { backgroundColor: '#121212' }]}>
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
                 <View style={styles.headerRight}>
                     <TouchableOpacity
-                        style={styles.iconButton}
+                        style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}
                         onPress={() => product && toggleFavourite(product.id)}
                     >
                         <Ionicons
                             name={product && isFavourite(product.id) ? "heart" : "heart-outline"}
                             size={24}
-                            color={product && isFavourite(product.id) ? "#FF4B4B" : "#1A1A1A"}
+                            color={product && isFavourite(product.id) ? "#FF4B4B" : (isDark ? "#FFF" : "#1A1A1A")}
                         />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton} onPress={onShare}>
-                        <Ionicons name="share-outline" size={24} color="#1A1A1A" />
+                    <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={onShare}>
+                        <Ionicons name="share-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -145,7 +147,7 @@ export default function ProductDetailsScreen() {
                 contentContainerStyle={styles.scrollContent}
             >
                 {/* Product Image Section */}
-                <View style={styles.imageSection}>
+                <View style={[styles.imageSection, isDark && { backgroundColor: '#121212' }]}>
                     {/* Organic Tag */}
                     <View style={styles.tagPill}>
                         <Ionicons name="leaf" size={12} color="#fff" style={{ marginRight: 4 }} />
@@ -175,73 +177,73 @@ export default function ProductDetailsScreen() {
                         {productImages.map((_, index) => (
                             <View
                                 key={index}
-                                style={[styles.dot, activeImageIndex === index && styles.activeDot]}
+                                style={[styles.dot, activeImageIndex === index ? styles.activeDot : (isDark ? { backgroundColor: '#555' } : null), activeImageIndex === index && isDark && { backgroundColor: '#FFF' }]}
                             />
                         ))}
                     </View>
                 </View>
 
                 {/* Details Section */}
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.categoryText}>{product.type}</Text>
+                <View style={[styles.detailsContainer, isDark && { backgroundColor: '#1E1E1E' }]}>
+                    <Text style={[styles.categoryText, isDark && { color: '#AAA' }]}>{product.type}</Text>
                     <View style={styles.titleRow}>
-                        <Text style={styles.titleText}>{displayTitle}</Text>
+                        <Text style={[styles.titleText, isDark && { color: '#FFF' }]}>{displayTitle}</Text>
                         <View style={styles.priceContainer}>
-                            <Text style={styles.mainPriceText}>₹{displayPrice}</Text>
-                            <Text style={styles.mainUnitText}>{displayUnit}</Text>
+                            <Text style={[styles.mainPriceText, isDark && { color: '#81C784' }]}>₹{displayPrice}</Text>
+                            <Text style={[styles.mainUnitText, isDark && { color: '#AAA' }]}>{displayUnit}</Text>
                         </View>
                     </View>
-                    <Text style={styles.subtitleText}>{displaySub}</Text>
+                    <Text style={[styles.subtitleText, isDark && { color: '#CCC' }]}>{displaySub}</Text>
 
                     {/* Feature Boxes */}
-                    <Text style={styles.sectionHeader}>Product Details</Text>
+                    <Text style={[styles.sectionHeader, isDark && { color: '#81C784' }]}>Product Details</Text>
                     <View style={styles.featureRow}>
-                        <View style={styles.featureBox}>
-                            <Text style={styles.featureTitle}>Fresh</Text>
-                            <Text style={styles.featureSub}>Guarantee</Text>
+                        <View style={[styles.featureBox, isDark && { backgroundColor: '#333' }]}>
+                            <Text style={[styles.featureTitle, isDark && { color: '#FFF' }]}>Fresh</Text>
+                            <Text style={[styles.featureSub, isDark && { color: '#AAA' }]}>Guarantee</Text>
                         </View>
-                        <View style={styles.featureBox}>
-                            <Text style={styles.featureTitle}>Organic</Text>
-                            <Text style={styles.featureSub}>Certified</Text>
+                        <View style={[styles.featureBox, isDark && { backgroundColor: '#333' }]}>
+                            <Text style={[styles.featureTitle, isDark && { color: '#FFF' }]}>Organic</Text>
+                            <Text style={[styles.featureSub, isDark && { color: '#AAA' }]}>Certified</Text>
                         </View>
-                        <View style={styles.featureBox}>
-                            <Text style={styles.featureTitle}>Fast</Text>
-                            <Text style={styles.featureSub}>Delivery</Text>
+                        <View style={[styles.featureBox, isDark && { backgroundColor: '#333' }]}>
+                            <Text style={[styles.featureTitle, isDark && { color: '#FFF' }]}>Fast</Text>
+                            <Text style={[styles.featureSub, isDark && { color: '#AAA' }]}>Delivery</Text>
                         </View>
                     </View>
 
                     {/* Highlights */}
                     {product.highlights && product.highlights.length > 0 && (
-                        <View style={styles.highlightsContainer}>
-                            <Text style={styles.subHeader}>Highlights</Text>
+                        <View style={[styles.highlightsContainer, isDark && { backgroundColor: '#333' }]}>
+                            <Text style={[styles.subHeader, isDark && { color: '#FFF' }]}>Highlights</Text>
                             {product.highlights.map((h: any, i: number) => (
                                 <View key={i} style={styles.highlightRow}>
-                                    <Text style={styles.highlightLabel}>{h.title}</Text>
-                                    <Text style={styles.highlightValue}>{h.value}</Text>
+                                    <Text style={[styles.highlightLabel, isDark && { color: '#CCC' }]}>{h.title}</Text>
+                                    <Text style={[styles.highlightValue, isDark && { color: '#DDD' }]}>{h.value}</Text>
                                 </View>
                             ))}
                         </View>
                     )}
 
                     {/* Info */}
-                    <View style={styles.infoContainer}>
-                        <Text style={styles.subHeader}>Info</Text>
+                    <View style={[styles.infoContainer, isDark && { backgroundColor: '#333' }]}>
+                        <Text style={[styles.subHeader, isDark && { color: '#FFF' }]}>Info</Text>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Description</Text>
-                            <Text style={styles.descriptionText}>{displayDesc}</Text>
+                            <Text style={[styles.infoLabel, isDark && { color: '#CCC' }]}>Description</Text>
+                            <Text style={[styles.descriptionText, isDark && { color: '#DDD' }]}>{displayDesc}</Text>
                         </View>
                     </View>
 
                     {/* Meet the Farmer */}
                     {vendor && (
                         <>
-                            <Text style={styles.sectionHeader}>Meet the Farmer</Text>
-                            <View style={styles.farmerCard}>
+                            <Text style={[styles.sectionHeader, isDark && { color: '#81C784' }]}>Meet the Farmer</Text>
+                            <View style={[styles.farmerCard, isDark && { borderColor: '#444' }]}>
                                 <View style={styles.farmerInfo}>
-                                    <Text style={styles.farmerName}>{vendor.name}</Text>
-                                    <Text style={styles.farmerLocation}>{vendor.location}</Text>
+                                    <Text style={[styles.farmerName, isDark && { color: '#FFF' }]}>{vendor.name}</Text>
+                                    <Text style={[styles.farmerLocation, isDark && { color: '#CCC' }]}>{vendor.location}</Text>
                                     <TouchableOpacity onPress={() => router.push(`/farmer/${vendor.id}`)}>
-                                        <Text style={styles.showMoreLink}>Show More About Farmer</Text>
+                                        <Text style={[styles.showMoreLink, isDark && { color: '#81C784' }]}>Show More About Farmer</Text>
                                     </TouchableOpacity>
                                 </View>
                                 <Image
@@ -252,14 +254,14 @@ export default function ProductDetailsScreen() {
                         </>
                     )}
 
-                    <Text style={styles.sectionHeader}>
+                    <Text style={[styles.sectionHeader, isDark && { color: '#81C784' }]}>
                         {vendor ? `More from ${vendor.name}` : 'Explore more products'}
                     </Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.relatedScroll}>
                         {displayRelated.map((item) => (
                             <TouchableOpacity
                                 key={item.id}
-                                style={styles.relatedCard}
+                                style={[styles.relatedCard, isDark && { backgroundColor: '#333', borderColor: '#444' }]}
                                 onPress={() => router.push(`/product/${item.id}`)}
                             >
                                 <View style={styles.discountBadge}>
@@ -268,14 +270,14 @@ export default function ProductDetailsScreen() {
                                 <View style={styles.relatedImageContainer}>
                                     <Image source={item.image} style={styles.relatedImage} resizeMode="contain" />
                                 </View>
-                                <View style={styles.favIconSmall}>
-                                    <Ionicons name="heart-outline" size={16} color="#1A1A1A" />
+                                <View style={[styles.favIconSmall, isDark && { backgroundColor: '#444' }]}>
+                                    <Ionicons name="heart-outline" size={16} color={isDark ? '#FFF' : '#1A1A1A'} />
                                 </View>
 
-                                <Text style={styles.relatedTag}>{item.tag || item.type}</Text>
-                                <Text style={styles.relatedTitle} numberOfLines={1}>{item.name}</Text>
+                                <Text style={[styles.relatedTag, isDark && { color: '#AAA' }]}>{item.tag || item.type}</Text>
+                                <Text style={[styles.relatedTitle, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.name}</Text>
                                 <View style={styles.relatedPriceRow}>
-                                    <Text style={styles.relatedPrice}>₹{item.price}<Text style={styles.relatedUnit}>/{item.unit}</Text></Text>
+                                    <Text style={[styles.relatedPrice, isDark && { color: '#81C784' }]}>₹{item.price}<Text style={[styles.relatedUnit, isDark && { color: '#AAA' }]}>/{item.unit}</Text></Text>
                                     <View style={styles.addButtonSmall}>
                                         <Ionicons name="add" size={16} color="#fff" />
                                     </View>
@@ -289,11 +291,11 @@ export default function ProductDetailsScreen() {
             </ScrollView>
 
             {/* Bottom Action Bar */}
-            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
                 <View>
-                    <Text style={styles.weightText}>300 g</Text>
-                    <Text style={styles.bottomPrice}>₹{displayPrice}<Text style={styles.bottomUnit}>{displayUnit}</Text></Text>
-                    <Text style={styles.taxText}>Incl. of all taxes</Text>
+                    <Text style={[styles.weightText, isDark && { color: '#FFF' }]}>300 g</Text>
+                    <Text style={[styles.bottomPrice, isDark && { color: '#81C784' }]}>₹{displayPrice}<Text style={[styles.bottomUnit, isDark && { color: '#AAA' }]}>{displayUnit}</Text></Text>
+                    <Text style={[styles.taxText, isDark && { color: '#888' }]}>Incl. of all taxes</Text>
                 </View>
 
                 {qty === 0 ? (

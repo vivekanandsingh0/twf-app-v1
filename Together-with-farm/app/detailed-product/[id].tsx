@@ -7,6 +7,7 @@ import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
 import { useUser } from '@/contexts/UserContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 
 export default function OrderDetailScreen() {
@@ -14,6 +15,7 @@ export default function OrderDetailScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
     const { orders } = useUser();
+    const { isDark } = useTheme();
 
     // Find Order
     const order = orders.find(o => o.id.includes(id as string));
@@ -30,11 +32,11 @@ export default function OrderDetailScreen() {
 
     if (!order) {
         return (
-            <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+            <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }, isDark && { backgroundColor: '#121212' }]}>
                 <Stack.Screen options={{ headerShown: false }} />
-                <Text style={{ fontSize: 18, color: '#666' }}>Order not found</Text>
+                <Text style={{ fontSize: 18, color: isDark ? '#AAA' : '#666' }}>Order not found</Text>
                 <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20, padding: 10 }}>
-                    <Text style={{ color: '#1F5E2E', fontWeight: 'bold' }}>Go Back</Text>
+                    <Text style={{ color: isDark ? '#81C784' : '#1F5E2E', fontWeight: 'bold' }}>Go Back</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -67,36 +69,33 @@ export default function OrderDetailScreen() {
         : { uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60' };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, isDark && { backgroundColor: '#333', borderRadius: 12 }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>#{id}</Text>
-                <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/notifications')}>
-                    <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                    <View style={styles.badge}><Text style={styles.badgeText}>2</Text></View>
-                </TouchableOpacity>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>#{id}</Text>
+                <View style={{ width: 32 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
                 {/* Status Header */}
-                <Text style={styles.arrivingText}>{order.status === 'Delivered' ? 'Delivered' : `Arriving Today, 5:30-6:30 PM`}</Text>
+                <Text style={[styles.arrivingText, isDark && { color: '#FFF' }]}>{order.status === 'Delivered' ? 'Delivered' : `Arriving Today, 5:30-6:30 PM`}</Text>
 
                 {/* Timeline */}
-                <View style={styles.timelineContainer}>
-                    <View style={styles.timelineLine} />
+                <View style={[styles.timelineContainer, isDark && { backgroundColor: '#1E1E1E' }]}>
+                    <View style={[styles.timelineLine, isDark && { backgroundColor: '#444' }]} />
                     {steps.map((step, index) => (
                         <View key={index} style={styles.stepContainer}>
-                            <View style={[styles.stepCircle, step.done ? styles.stepCircleDone : styles.stepCirclePending]}>
+                            <View style={[styles.stepCircle, step.done ? styles.stepCircleDone : styles.stepCirclePending, isDark && !step.done && { backgroundColor: '#333', borderColor: '#444' }]}>
                                 {step.done && <Ionicons name="checkmark" size={16} color="#fff" />}
                             </View>
-                            <Text style={styles.stepLabel}>{step.label}</Text>
+                            <Text style={[styles.stepLabel, isDark && { color: '#AAA' }]}>{step.label}</Text>
                         </View>
                     ))}
                 </View>
@@ -104,19 +103,19 @@ export default function OrderDetailScreen() {
 
 
                 {/* Order Items */}
-                <Text style={styles.sectionTitle}>Order Items</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Order Items</Text>
                 {order.items.map((item, idx) => (
-                    <View key={idx} style={styles.itemCard}>
+                    <View key={idx} style={[styles.itemCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                         <Image
                             source={item.image || { uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60' }}
                             style={styles.itemImage}
                         />
                         <View style={styles.itemInfo}>
                             <View style={styles.rowBetween}>
-                                <Text style={styles.itemOrderNum}>{item.productName}</Text>
+                                <Text style={[styles.itemOrderNum, isDark && { color: '#FFF' }]}>{item.productName}</Text>
                                 {/* <View style={styles.statusChip}><Text style={styles.statusChipText}>{order.status}</Text></View> */}
                             </View>
-                            <Text style={styles.itemDesc}>Quantity: {item.quantity} • ₹{item.price}</Text>
+                            <Text style={[styles.itemDesc, isDark && { color: '#AAA' }]}>Quantity: {item.quantity} • ₹{item.price}</Text>
                         </View>
                         <View style={styles.badgeContainer}>
                             <View style={styles.quantityBadge}><Text style={styles.quantityText}>{item.quantity}</Text></View>
@@ -125,28 +124,28 @@ export default function OrderDetailScreen() {
                 ))}
 
                 {/* Delivery Address */}
-                <Text style={styles.sectionTitle}>Delivery Address</Text>
-                <View style={styles.addressCard}>
-                    <View style={styles.addressIcon}>
-                        <Ionicons name="location-outline" size={24} color="#1A1A1A" />
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Delivery Address</Text>
+                <View style={[styles.addressCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+                    <View style={[styles.addressIcon, isDark && { backgroundColor: '#333' }]}>
+                        <Ionicons name="location-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.addressType}>Delivery Location</Text>
-                        <Text style={styles.addressText}>{order.deliveryAddress || 'Address not provided'}</Text>
+                        <Text style={[styles.addressType, isDark && { color: '#FFF' }]}>Delivery Location</Text>
+                        <Text style={[styles.addressText, isDark && { color: '#AAA' }]}>{order.deliveryAddress || 'Address not provided'}</Text>
                     </View>
                 </View>
 
                 {/* Payment Summary */}
-                <Text style={styles.sectionTitle}>Payment Summary</Text>
-                <View style={styles.paymentCard}>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Payment Summary</Text>
+                <View style={[styles.paymentCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                     <View style={styles.paymentRow}>
-                        <Text style={styles.paymentLabel}>Order ID</Text>
+                        <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Order ID</Text>
                         <TouchableOpacity
                             onPress={handleCopyOrderId}
                             style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 10 }}
                         >
                             <Text
-                                style={[styles.paymentValue, { flex: 1, textAlign: 'right', marginRight: 4 }]}
+                                style={[styles.paymentValue, { flex: 1, textAlign: 'right', marginRight: 4 }, isDark && { color: '#FFF' }]}
                                 numberOfLines={1}
                                 ellipsizeMode="tail"
                             >
@@ -156,28 +155,28 @@ export default function OrderDetailScreen() {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.paymentRow}>
-                        <Text style={styles.paymentLabel}>Status</Text>
-                        <Text style={styles.paymentValue}>{order.status}</Text>
+                        <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Status</Text>
+                        <Text style={[styles.paymentValue, isDark && { color: '#FFF' }]}>{order.status}</Text>
                     </View>
                     <View style={styles.paymentRow}>
-                        <Text style={styles.paymentLabel}>Payment Method</Text>
-                        <Text style={styles.paymentValue}>{order.paymentMethod || 'Online'}</Text>
+                        <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Payment Method</Text>
+                        <Text style={[styles.paymentValue, isDark && { color: '#FFF' }]}>{order.paymentMethod || 'Online'}</Text>
                     </View>
                     <View style={[styles.paymentRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-                        <Text style={styles.paymentLabel}>Total</Text>
-                        <Text style={styles.paymentTotal}>₹{order.totalAmount}</Text>
+                        <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Total</Text>
+                        <Text style={[styles.paymentTotal, isDark && { color: '#81C784' }]}>₹{order.totalAmount}</Text>
                     </View>
                 </View>
 
                 {/* Your Driver */}
-                <Text style={styles.sectionTitle}>Your Driver</Text>
-                <View style={styles.driverCard}>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Your Driver</Text>
+                <View style={[styles.driverCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                     <View style={styles.driverInfo}>
-                        <View style={styles.driverAvatar}>
-                            <Ionicons name="person" size={20} color="#555" />
+                        <View style={[styles.driverAvatar, isDark && { backgroundColor: '#333' }]}>
+                            <Ionicons name="person" size={20} color={isDark ? '#FFF' : '#555'} />
                         </View>
                         <View>
-                            <Text style={styles.driverName}>Amit Kumar</Text>
+                            <Text style={[styles.driverName, isDark && { color: '#FFF' }]}>Amit Kumar</Text>
                         </View>
                     </View>
                     <View style={styles.driverActions}>

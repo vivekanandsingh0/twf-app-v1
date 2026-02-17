@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/contexts/UserContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,6 +30,7 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'delete'
 export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginScreenProps) {
     const insets = useSafeAreaInsets();
     const { userData, setUserData, sendOtp, verifyOtp, updateProfile } = useUser();
+    const { isDark } = useTheme();
     const [step, setStep] = useState<'phone' | 'otp' | 'name'>('phone');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otp, setOtp] = useState('');
@@ -173,15 +175,15 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
 
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header Content */}
             <View style={styles.contentContainer}>
                 {step === 'phone' ? (
                     <>
-                        <Text style={styles.welcomeText}>Welcome Back</Text>
-                        <Text style={styles.subtext}>Continue Journey As {userType === 'Vendor' ? 'Farmer' : userType}</Text>
+                        <Text style={[styles.welcomeText, isDark && { color: '#FFF' }]}>Welcome Back</Text>
+                        <Text style={[styles.subtext, isDark && { color: '#AAA' }]}>Continue Journey As {userType === 'Vendor' ? 'Farmer' : userType}</Text>
 
                         <View style={styles.logoContainer}>
                             <Image
@@ -192,9 +194,9 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                         </View>
 
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Enter Your Phone number</Text>
-                            <View style={styles.phoneInputBox}>
-                                <Text style={[styles.phoneText, !phoneNumber && styles.placeholderText]}>
+                            <Text style={[styles.inputLabel, isDark && { color: '#FFF' }]}>Enter Your Phone number</Text>
+                            <View style={[styles.phoneInputBox, isDark && { borderColor: '#333', backgroundColor: '#1E1E1E' }]}>
+                                <Text style={[styles.phoneText, isDark && { color: '#FFF' }, !phoneNumber && styles.placeholderText]}>
                                     {phoneNumber ? `+91-${phoneNumber}` : '+91-9113950801'}
                                 </Text>
                             </View>
@@ -212,8 +214,8 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
 
                         <View style={styles.otpContainer}>
                             {Array.from({ length: 6 }).map((_, index) => (
-                                <View key={index} style={[styles.otpBox, otp.length > index && styles.otpBoxFilled]}>
-                                    <Text style={styles.otpText}>
+                                <View key={index} style={[styles.otpBox, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }, otp.length > index && (isDark ? { backgroundColor: '#1E3E2E', borderColor: '#1F5E2E' } : styles.otpBoxFilled)]}>
+                                    <Text style={[styles.otpText, isDark && { color: '#FFF' }]}>
                                         {otp[index] || ''}
                                     </Text>
                                 </View>
@@ -232,14 +234,15 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                             />
                         </View>
 
-                        <Text style={styles.welcomeText}>One Last Thing</Text>
-                        <Text style={styles.subtext}>What should we call you?</Text>
+                        <Text style={[styles.welcomeText, isDark && { color: '#FFF' }]}>One Last Thing</Text>
+                        <Text style={[styles.subtext, isDark && { color: '#AAA' }]}>What should we call you?</Text>
 
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Full Name</Text>
+                            <Text style={[styles.inputLabel, isDark && { color: '#FFF' }]}>Full Name</Text>
                             <TextInput
-                                style={styles.textInput}
+                                style={[styles.textInput, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333', color: '#FFF' }]}
                                 placeholder="e.g. Rahul Kumar"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={name}
                                 onChangeText={setName}
                                 autoFocus
@@ -271,15 +274,15 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                             activeOpacity={key === '' ? 1 : 0.7}
                         >
                             {key === 'delete' ? (
-                                <View style={styles.backspaceKey}>
-                                    <Ionicons name="backspace-outline" size={24} color="#1F5E2E" />
+                                <View style={[styles.backspaceKey, isDark && { borderColor: '#FFF' }]}>
+                                    <Ionicons name="backspace-outline" size={24} color={isDark ? '#FFF' : '#1F5E2E'} />
                                 </View>
                             ) : key === 'back' ? (
-                                <View style={styles.backspaceKey}>
-                                    <Ionicons name="arrow-back" size={24} color="#1F5E2E" />
+                                <View style={[styles.backspaceKey, isDark && { borderColor: '#FFF' }]}>
+                                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1F5E2E'} />
                                 </View>
                             ) : key !== '' ? (
-                                <Text style={styles.keyText}>{key}</Text>
+                                <Text style={[styles.keyText, isDark && { color: '#FFF' }]}>{key}</Text>
                             ) : null}
                         </TouchableOpacity>
                     ))}

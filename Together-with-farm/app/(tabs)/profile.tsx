@@ -6,11 +6,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ProfileScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { userData, signOut, switchUserRole } = useUser();
+    const { unreadCount } = useNotifications();
+    const { isDark } = useTheme();
 
     const handleSwitchRole = async () => {
         // Dev Only: Immediate switch for testing without dialogs that might be blocked
@@ -61,34 +66,36 @@ export default function ProfileScreen() {
     };
 
     const renderMenuItem = (icon: keyof typeof Ionicons.glyphMap, title: string, onPress?: () => void) => (
-        <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
+        <TouchableOpacity style={[styles.menuItem, isDark && { backgroundColor: '#1E1E1E', shadowColor: 'transparent' }]} onPress={onPress} activeOpacity={0.7}>
             <View style={styles.menuIconContainer}>
-                <Ionicons name={icon} size={22} color="#1A1A1A" />
+                <Ionicons name={icon} size={22} color={isDark ? '#FFF' : '#1A1A1A'} />
             </View>
-            <Text style={styles.menuText}>{title}</Text>
-            <Ionicons name="chevron-forward" size={20} color="#1A1A1A" />
+            <Text style={[styles.menuText, isDark && { color: '#FFF' }]}>{title}</Text>
+            <Ionicons name="chevron-forward" size={20} color={isDark ? '#555' : '#1A1A1A'} />
         </TouchableOpacity>
     );
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Profile</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Profile</Text>
                 <View style={styles.headerRight}>
                     <TouchableOpacity
-                        style={[styles.iconButton, { marginLeft: 8 }]}
+                        style={[styles.iconButton, { marginLeft: 8 }, isDark && { backgroundColor: '#333' }]}
                         onPress={() => router.push('/notifications')}
                     >
-                        <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                        <View style={styles.notificationBadge}>
-                            <Text style={styles.badgeText}>2</Text>
-                        </View>
+                        <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+                        {unreadCount > 0 && (
+                            <View style={styles.notificationBadge}>
+                                <Text style={styles.badgeText}>{unreadCount}</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -98,23 +105,23 @@ export default function ProfileScreen() {
                 contentContainerStyle={styles.content}
             >
                 {/* User Profile Card */}
-                <View style={styles.profileCard}>
+                <View style={[styles.profileCard, isDark && { backgroundColor: '#1E1E1E' }]}>
                     <Image
                         source={userData.profileImage ? { uri: userData.profileImage } : { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop' }}
                         style={styles.avatar}
                         contentFit="cover"
                     />
                     <View style={styles.userInfo}>
-                        <Text style={styles.userName}>{userData.fullName}</Text>
-                        <Text style={styles.userPhone}>{userData.phoneNumber || '+91 23456 7890'}</Text>
+                        <Text style={[styles.userName, isDark && { color: '#FFF' }]}>{userData.fullName}</Text>
+                        <Text style={[styles.userPhone, isDark && { color: '#AAA' }]}>{userData.phoneNumber || '+91 23456 7890'}</Text>
                     </View>
                     <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile-edit')}>
-                        <Ionicons name="create-outline" size={20} color="#1A1A1A" />
+                        <Ionicons name="create-outline" size={20} color={isDark ? '#FFF' : '#1A1A1A'} />
                     </TouchableOpacity>
                 </View>
 
                 {/* My Activity Section */}
-                <Text style={styles.sectionTitle}>My Activity</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>My Activity</Text>
                 <View style={styles.menuGroup}>
                     {renderMenuItem('cart-outline', 'Your Orders', () => router.push('/orders'))}
                     {renderMenuItem('heart-outline', 'My Favourites', () => router.push('/favourites'))}
@@ -122,13 +129,12 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Account Settings Section */}
-                <Text style={styles.sectionTitle}>Account Settings</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Account Settings</Text>
                 <View style={styles.menuGroup}>
                     {renderMenuItem('location-outline', 'Addresses', () => router.push('/addresses'))}
-                    {renderMenuItem('card-outline', 'Payment Methods')}
                     {renderMenuItem('help-circle-outline', 'Help & Support', () => router.push('/support'))}
                     {renderMenuItem('settings-outline', 'Settings', () => router.push('/settings'))}
-                    <TouchableOpacity style={styles.menuItem} onPress={handleSwitchRole} activeOpacity={0.7}>
+                    <TouchableOpacity style={[styles.menuItem, isDark && { backgroundColor: '#1E1E1E', shadowColor: 'transparent' }]} onPress={handleSwitchRole} activeOpacity={0.7}>
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="construct-outline" size={22} color="#E65100" />
                         </View>
@@ -138,11 +144,11 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Logout Button */}
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Text style={styles.logoutText}>Log Out</Text>
+                <TouchableOpacity style={[styles.logoutButton, isDark && { backgroundColor: '#3c1f1f' }]} onPress={handleLogout}>
+                    <Text style={[styles.logoutText, isDark && { color: '#FF453A' }]}>Log Out</Text>
                 </TouchableOpacity>
 
-                <View style={{ height: 100 }} />
+
             </ScrollView>
         </View>
     );

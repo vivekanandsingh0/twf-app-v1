@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
 import { useCart } from '@/contexts/CartContext';
 import { useMarket, MarketProduct } from '@/contexts/MarketContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import CartPopup from '@/components/CartPopup';
 
 const { width } = Dimensions.get('window');
@@ -72,6 +73,7 @@ export default function CategoryScreen() {
     const { toggleFavourite, isFavourite } = useFavourites();
     const { updateQuantity, getItemQuantity } = useCart();
     const { products } = useMarket();
+    const { isDark } = useTheme();
 
     const [selectedCategoryId, setSelectedCategoryId] = useState('vegetables');
     const [searchQuery, setSearchQuery] = useState('');
@@ -127,17 +129,17 @@ export default function CategoryScreen() {
         return (
             <TouchableOpacity
                 key={item.id}
-                style={[styles.categoryItemSidebar, isActive && styles.activeCategorySidebar]}
+                style={[styles.categoryItemSidebar, isActive ? styles.activeCategorySidebar : null, isActive && isDark ? { backgroundColor: '#1E1E1E' } : null]}
                 onPress={() => setSelectedCategoryId(item.id)}
                 activeOpacity={0.8}
             >
-                <View style={[styles.categoryIconContainer, isActive && styles.activeCategoryIconContainer]}>
+                <View style={[styles.categoryIconContainer, isActive && styles.activeCategoryIconContainer, isDark && { backgroundColor: '#333', borderColor: '#444' }, isActive && isDark && { borderColor: '#1E1E1E' }]}>
                     <Image source={{ uri: item.image }} style={styles.categoryImage} contentFit="cover" />
                 </View>
-                <Text style={[styles.categorySidebarText, isActive && styles.activeCategorySidebarText]}>
+                <Text style={[styles.categorySidebarText, isActive && styles.activeCategorySidebarText, isDark && { color: '#AAA' }, isActive && isDark && { color: '#FFF' }]}>
                     {item.name}
                 </Text>
-                {isActive && <View style={styles.activeIndicator} />}
+                {isActive && <View style={[styles.activeIndicator, isDark && { backgroundColor: '#81C784' }]} />}
             </TouchableOpacity>
         );
     };
@@ -147,11 +149,11 @@ export default function CategoryScreen() {
 
         return (
             <TouchableOpacity
-                style={styles.productCard}
+                style={[styles.productCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
                 onPress={() => router.push(`/product/${item.id}`)}
                 activeOpacity={0.9}
             >
-                <View style={styles.productImageContainer}>
+                <View style={[styles.productImageContainer, isDark && { backgroundColor: '#333' }]}>
                     <Image source={item.image} style={styles.productImage} contentFit="cover" />
                     {item.discount && (
                         <View style={styles.discountBadge}>
@@ -159,7 +161,7 @@ export default function CategoryScreen() {
                         </View>
                     )}
                     <TouchableOpacity
-                        style={styles.favoriteButton}
+                        style={[styles.favoriteButton, isDark && { backgroundColor: '#333' }]}
                         onPress={(e) => {
                             e.stopPropagation();
                             toggleFavourite(item.id);
@@ -168,29 +170,29 @@ export default function CategoryScreen() {
                         <Ionicons
                             name={isFavourite(item.id) ? "heart" : "heart-outline"}
                             size={18}
-                            color={isFavourite(item.id) ? "#FF4B4B" : "#1A1A1A"}
+                            color={isFavourite(item.id) ? "#FF4B4B" : (isDark ? "#FFF" : "#1A1A1A")}
                         />
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.productInfo}>
-                    <Text style={styles.tagText}>{item.tag || item.type}</Text>
-                    <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
+                    <Text style={[styles.tagText, isDark && { color: '#AAA' }]}>{item.tag || item.type}</Text>
+                    <Text style={[styles.productTitle, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.name}</Text>
 
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
-                        <Text style={styles.priceText}>₹{item.price}</Text>
-                        <Text style={styles.unitText}>/{item.unit}</Text>
+                        <Text style={[styles.priceText, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                        <Text style={[styles.unitText, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
                     </View>
 
                     {qty === 0 ? (
                         <TouchableOpacity
-                            style={styles.addButton}
+                            style={[styles.addButton, isDark && { backgroundColor: '#3E5E3E' }]}
                             onPress={() => updateQuantity(item.id, 1)}
                         >
                             <Ionicons name="add" size={20} color="#fff" />
                         </TouchableOpacity>
                     ) : (
-                        <View style={styles.qtyControl}>
+                        <View style={[styles.qtyControl, isDark && { backgroundColor: '#3E5E3E' }]}>
                             <TouchableOpacity
                                 style={styles.qtyBtn}
                                 onPress={() => updateQuantity(item.id, -1)}
@@ -212,20 +214,20 @@ export default function CategoryScreen() {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { backgroundColor: '#1E1E1E' }]}>
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Categories</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Categories</Text>
                 <TouchableOpacity
-                    style={styles.iconButton}
+                    style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}
                     onPress={() => setShowFilterModal(true)}
                 >
-                    <Ionicons name="options-outline" size={24} color="#1A1A1A" />
+                    <Ionicons name="options-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                     {activeFilterCount > 0 && (
                         <View style={styles.filterBadge}>
                             <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -235,12 +237,12 @@ export default function CategoryScreen() {
             </View>
 
             {/* Search Bar */}
-            <View style={styles.searchContainer}>
-                <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+            <View style={[styles.searchContainer, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+                <Ionicons name="search-outline" size={20} color={isDark ? '#AAA' : '#666'} style={styles.searchIcon} />
                 <TextInput
                     placeholder="Search veggies"
-                    placeholderTextColor="#999"
-                    style={styles.searchInput}
+                    placeholderTextColor={isDark ? '#888' : '#999'}
+                    style={[styles.searchInput, isDark && { color: '#FFF' }]}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
@@ -249,7 +251,7 @@ export default function CategoryScreen() {
             {/* Main Content Split View */}
             <View style={styles.mainContent}>
                 {/* Left Sidebar */}
-                <View style={styles.sidebarContainer}>
+                <View style={[styles.sidebarContainer, isDark && { backgroundColor: '#121212', borderRightWidth: 1, borderRightColor: '#333' }]}>
                     <ScrollView
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.sidebarContent}
@@ -259,7 +261,7 @@ export default function CategoryScreen() {
                 </View>
 
                 {/* Right Product Grid */}
-                <View style={styles.gridContainer}>
+                <View style={[styles.gridContainer, isDark && { backgroundColor: '#121212' }]}>
                     <FlatList
                         data={activeCategoryProducts}
                         renderItem={renderProductItem}
@@ -270,7 +272,7 @@ export default function CategoryScreen() {
                         showsVerticalScrollIndicator={false}
                         ListEmptyComponent={() => (
                             <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>No products found.</Text>
+                                <Text style={[styles.emptyText, isDark && { color: '#AAA' }]}>No products found.</Text>
                             </View>
                         )}
                         // Add extra padding at bottom for floating cart
@@ -289,146 +291,74 @@ export default function CategoryScreen() {
                 transparent={true}
                 onRequestClose={() => setShowFilterModal(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+                <View style={[styles.modalOverlay, isDark && { backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+                    <View style={[styles.modalContent, isDark && { backgroundColor: '#1E1E1E' }]}>
                         {/* Modal Header */}
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Filters & Sort</Text>
+                        <View style={[styles.modalHeader, isDark && { borderBottomColor: '#333' }]}>
+                            <Text style={[styles.modalTitle, isDark && { color: '#FFF' }]}>Filters & Sort</Text>
                             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                                <Ionicons name="close" size={28} color="#1A1A1A" />
+                                <Ionicons name="close" size={28} color={isDark ? '#FFF' : '#1A1A1A'} />
                             </TouchableOpacity>
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             {/* Sort By Section */}
-                            <View style={styles.filterSection}>
-                                <Text style={styles.filterSectionTitle}>Sort By</Text>
+                            <View style={[styles.filterSection, isDark && { borderBottomColor: '#333' }]}>
+                                <Text style={[styles.filterSectionTitle, isDark && { color: '#AAA' }]}>Sort By</Text>
                                 <View style={styles.filterOptions}>
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, sortBy === 'popular' && styles.filterOptionActive]}
-                                        onPress={() => setSortBy('popular')}
-                                    >
-                                        <Ionicons
-                                            name={sortBy === 'popular' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={sortBy === 'popular' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, sortBy === 'popular' && styles.filterOptionTextActive]}>
-                                            Most Popular
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, sortBy === 'price-low' && styles.filterOptionActive]}
-                                        onPress={() => setSortBy('price-low')}
-                                    >
-                                        <Ionicons
-                                            name={sortBy === 'price-low' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={sortBy === 'price-low' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, sortBy === 'price-low' && styles.filterOptionTextActive]}>
-                                            Price: Low to High
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, sortBy === 'price-high' && styles.filterOptionActive]}
-                                        onPress={() => setSortBy('price-high')}
-                                    >
-                                        <Ionicons
-                                            name={sortBy === 'price-high' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={sortBy === 'price-high' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, sortBy === 'price-high' && styles.filterOptionTextActive]}>
-                                            Price: High to Low
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, sortBy === 'name' && styles.filterOptionActive]}
-                                        onPress={() => setSortBy('name')}
-                                    >
-                                        <Ionicons
-                                            name={sortBy === 'name' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={sortBy === 'name' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, sortBy === 'name' && styles.filterOptionTextActive]}>
-                                            Name (A-Z)
-                                        </Text>
-                                    </TouchableOpacity>
+                                    {['popular', 'price-low', 'price-high', 'name'].map((option) => (
+                                        <TouchableOpacity
+                                            key={option}
+                                            style={[styles.filterOption, sortBy === option && styles.filterOptionActive, isDark && { backgroundColor: '#333', borderColor: '#444' }, sortBy === option && isDark && { borderColor: '#1F5E2E', backgroundColor: '#333' }]}
+                                            onPress={() => setSortBy(option as any)}
+                                        >
+                                            <Ionicons
+                                                name={sortBy === option ? "radio-button-on" : "radio-button-off"}
+                                                size={20}
+                                                color={sortBy === option ? "#1F5E2E" : "#999"}
+                                            />
+                                            <Text style={[styles.filterOptionText, sortBy === option && styles.filterOptionTextActive, isDark && { color: '#FFF' }]}>
+                                                {option === 'popular' && 'Most Popular'}
+                                                {option === 'price-low' && 'Price: Low to High'}
+                                                {option === 'price-high' && 'Price: High to Low'}
+                                                {option === 'name' && 'Name (A-Z)'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
                             </View>
 
                             {/* Price Range Section */}
-                            <View style={styles.filterSection}>
-                                <Text style={styles.filterSectionTitle}>Price Range</Text>
+                            <View style={[styles.filterSection, isDark && { borderBottomColor: '#333' }]}>
+                                <Text style={[styles.filterSectionTitle, isDark && { color: '#AAA' }]}>Price Range</Text>
                                 <View style={styles.filterOptions}>
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, priceRange === 'all' && styles.filterOptionActive]}
-                                        onPress={() => setPriceRange('all')}
-                                    >
-                                        <Ionicons
-                                            name={priceRange === 'all' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={priceRange === 'all' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, priceRange === 'all' && styles.filterOptionTextActive]}>
-                                            All Prices
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, priceRange === 'under-50' && styles.filterOptionActive]}
-                                        onPress={() => setPriceRange('under-50')}
-                                    >
-                                        <Ionicons
-                                            name={priceRange === 'under-50' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={priceRange === 'under-50' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, priceRange === 'under-50' && styles.filterOptionTextActive]}>
-                                            Under ₹50
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, priceRange === '50-100' && styles.filterOptionActive]}
-                                        onPress={() => setPriceRange('50-100')}
-                                    >
-                                        <Ionicons
-                                            name={priceRange === '50-100' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={priceRange === '50-100' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, priceRange === '50-100' && styles.filterOptionTextActive]}>
-                                            ₹50 - ₹100
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        style={[styles.filterOption, priceRange === 'above-100' && styles.filterOptionActive]}
-                                        onPress={() => setPriceRange('above-100')}
-                                    >
-                                        <Ionicons
-                                            name={priceRange === 'above-100' ? "radio-button-on" : "radio-button-off"}
-                                            size={20}
-                                            color={priceRange === 'above-100' ? "#1F5E2E" : "#999"}
-                                        />
-                                        <Text style={[styles.filterOptionText, priceRange === 'above-100' && styles.filterOptionTextActive]}>
-                                            Above ₹100
-                                        </Text>
-                                    </TouchableOpacity>
+                                    {['all', 'under-50', '50-100', 'above-100'].map((range) => (
+                                        <TouchableOpacity
+                                            key={range}
+                                            style={[styles.filterOption, priceRange === range && styles.filterOptionActive, isDark && { backgroundColor: '#333', borderColor: '#444' }, priceRange === range && isDark && { borderColor: '#1F5E2E', backgroundColor: '#333' }]}
+                                            onPress={() => setPriceRange(range as any)}
+                                        >
+                                            <Ionicons
+                                                name={priceRange === range ? "radio-button-on" : "radio-button-off"}
+                                                size={20}
+                                                color={priceRange === range ? "#1F5E2E" : "#999"}
+                                            />
+                                            <Text style={[styles.filterOptionText, priceRange === range && styles.filterOptionTextActive, isDark && { color: '#FFF' }]}>
+                                                {range === 'all' && 'All Prices'}
+                                                {range === 'under-50' && 'Under ₹50'}
+                                                {range === '50-100' && '₹50 - ₹100'}
+                                                {range === 'above-100' && 'Above ₹100'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
                             </View>
 
                             {/* Other Filters */}
                             <View style={styles.filterSection}>
-                                <Text style={styles.filterSectionTitle}>Other Filters</Text>
+                                <Text style={[styles.filterSectionTitle, isDark && { color: '#AAA' }]}>Other Filters</Text>
                                 <TouchableOpacity
-                                    style={[styles.filterOption, showDiscountOnly && styles.filterOptionActive]}
+                                    style={[styles.filterOption, showDiscountOnly && styles.filterOptionActive, isDark && { backgroundColor: '#333', borderColor: '#444' }, showDiscountOnly && isDark && { borderColor: '#1F5E2E', backgroundColor: '#333' }]}
                                     onPress={() => setShowDiscountOnly(!showDiscountOnly)}
                                 >
                                     <Ionicons
@@ -436,7 +366,7 @@ export default function CategoryScreen() {
                                         size={20}
                                         color={showDiscountOnly ? "#1F5E2E" : "#999"}
                                     />
-                                    <Text style={[styles.filterOptionText, showDiscountOnly && styles.filterOptionTextActive]}>
+                                    <Text style={[styles.filterOptionText, showDiscountOnly && styles.filterOptionTextActive, isDark && { color: '#FFF' }]}>
                                         Show Discounted Items Only
                                     </Text>
                                 </TouchableOpacity>

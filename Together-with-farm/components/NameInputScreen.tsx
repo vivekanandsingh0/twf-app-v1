@@ -11,12 +11,15 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useUser } from '@/contexts/UserContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function NameInputScreen({ onFinish }: { onFinish: () => void }) {
     const insets = useSafeAreaInsets();
     const { updateProfile } = useUser();
+    const { isDark } = useTheme();
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -33,7 +36,8 @@ export default function NameInputScreen({ onFinish }: { onFinish: () => void }) 
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.contentContainer}
@@ -46,14 +50,15 @@ export default function NameInputScreen({ onFinish }: { onFinish: () => void }) 
                     />
                 </View>
 
-                <Text style={styles.welcomeText}>One Last Thing</Text>
-                <Text style={styles.subtext}>What should we call you?</Text>
+                <Text style={[styles.welcomeText, isDark && { color: '#FFF' }]}>One Last Thing</Text>
+                <Text style={[styles.subtext, isDark && { color: '#AAA' }]}>What should we call you?</Text>
 
                 <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Full Name</Text>
+                    <Text style={[styles.inputLabel, isDark && { color: '#FFF' }]}>Full Name</Text>
                     <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                         placeholder="e.g. Rahul Kumar"
+                        placeholderTextColor={isDark ? '#888' : '#999'}
                         value={name}
                         onChangeText={setName}
                         autoFocus

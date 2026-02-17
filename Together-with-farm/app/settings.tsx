@@ -11,11 +11,14 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function SettingsScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const [darkMode, setDarkMode] = useState(false);
+    const { unreadCount } = useNotifications();
+    const { isDark, toggleTheme } = useTheme();
 
     const renderSettingItem = (
         icon: any,
@@ -28,17 +31,17 @@ export default function SettingsScreen() {
         onSwitchChange?: (value: boolean) => void
     ) => (
         <TouchableOpacity
-            style={styles.settingItem}
+            style={[styles.settingItem, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
             onPress={onPress}
             activeOpacity={showSwitch ? 1 : 0.7}
             disabled={showSwitch}
         >
             <View style={styles.settingLeft}>
-                <View style={styles.iconContainer}>
-                    <Ionicons name={icon} size={20} color="#1A1A1A" />
+                <View style={[styles.iconContainer, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name={icon} size={20} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </View>
                 <View style={styles.settingTextContainer}>
-                    <Text style={styles.settingTitle}>{title}</Text>
+                    <Text style={[styles.settingTitle, isDark && { color: '#FFF' }]}>{title}</Text>
                     {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
                 </View>
             </View>
@@ -46,33 +49,35 @@ export default function SettingsScreen() {
                 <Switch
                     value={switchValue}
                     onValueChange={onSwitchChange}
-                    trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
+                    trackColor={{ false: '#E0E0E0', true: '#81C784' }} // Light green track
                     thumbColor={switchValue ? '#1F5E2E' : '#f4f3f4'}
                 />
             ) : showArrow ? (
-                <Ionicons name="chevron-forward" size={20} color="#999" />
+                <Ionicons name="chevron-forward" size={20} color={isDark ? '#555' : '#999'} />
             ) : null}
         </TouchableOpacity>
     );
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top + 10 }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { backgroundColor: '#121212', borderBottomColor: '#333' }]}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Settings</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Settings</Text>
                 <TouchableOpacity
-                    style={styles.notificationBtn}
+                    style={[styles.notificationBtn, isDark && { backgroundColor: '#333' }]}
                     onPress={() => router.push('/notifications')}
                 >
-                    <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                    <View style={styles.notificationBadge}>
-                        <Text style={styles.badgeText}>2</Text>
-                    </View>
+                    <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+                    {unreadCount > 0 && (
+                        <View style={styles.notificationBadge}>
+                            <Text style={styles.badgeText}>{unreadCount}</Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
             </View>
 
@@ -81,13 +86,7 @@ export default function SettingsScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Preferences Section */}
-                <Text style={styles.sectionTitle}>Preferences</Text>
-                {renderSettingItem(
-                    'language-outline',
-                    'Language',
-                    'English',
-                    () => console.log('Language pressed')
-                )}
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Preferences</Text>
                 {renderSettingItem(
                     'moon-outline',
                     'Dark Mode',
@@ -95,17 +94,17 @@ export default function SettingsScreen() {
                     undefined,
                     false,
                     true,
-                    darkMode,
-                    setDarkMode
+                    isDark,
+                    toggleTheme
                 )}
 
                 {/* Security Section */}
-                <Text style={styles.sectionTitle}>Security</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Security</Text>
                 {renderSettingItem(
-                    'lock-closed-outline',
-                    'Change Password',
+                    'phone-portrait-outline',
+                    'Change Mobile Number',
                     undefined,
-                    () => console.log('Change Password pressed')
+                    () => console.log('Change Mobile Number pressed')
                 )}
                 {renderSettingItem(
                     'shield-checkmark-outline',
@@ -115,7 +114,7 @@ export default function SettingsScreen() {
                 )}
 
                 {/* About Section */}
-                <Text style={styles.sectionTitle}>About</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>About</Text>
                 {renderSettingItem(
                     'document-text-outline',
                     'Terms & Conditions',
@@ -135,6 +134,14 @@ export default function SettingsScreen() {
                     undefined,
                     true
                 )}
+
+                <TouchableOpacity style={[
+                    styles.deleteButton,
+                    isDark && { backgroundColor: '#3c1f1f' } // Darker red bg for dark mode
+                ]} onPress={() => console.log('Delete Account Pressed')}>
+                    <Ionicons name="trash-outline" size={20} color="#FF453A" />
+                    <Text style={[styles.deleteButtonText, isDark && { color: '#FF453A' }]}>Delete Account</Text>
+                </TouchableOpacity>
             </ScrollView>
         </View>
     );
@@ -252,5 +259,20 @@ const styles = StyleSheet.create({
         fontFamily: 'DMSans_400Regular',
         color: '#999',
         marginTop: 2,
+    },
+    deleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFEBEA',
+        paddingVertical: 16,
+        borderRadius: 16,
+        marginTop: 40,
+        gap: 8,
+    },
+    deleteButtonText: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#FF3B30',
     },
 });

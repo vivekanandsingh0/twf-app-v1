@@ -8,11 +8,13 @@ import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function SupportScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { user } = useUser();
+    const { isDark } = useTheme();
     const [tickets, setTickets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -128,64 +130,66 @@ export default function SupportScreen() {
 
     const renderTicket = ({ item }: { item: any }) => (
         <TouchableOpacity
-            style={styles.ticketCard}
+            style={[styles.ticketCard, isDark && { backgroundColor: '#1E1E1E', shadowColor: 'transparent' }]}
             onPress={() => router.push(`/support/${item.id}`)}
         >
             <View style={styles.ticketHeader}>
-                <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject}</Text>
+                <Text style={[styles.ticketSubject, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.subject}</Text>
                 <View style={[styles.statusBadge,
-                item.status === 'Open' ? styles.statusOpen :
-                    item.status === 'Closed' ? styles.statusClosed : styles.statusPending
+                item.status === 'Open' ? (isDark ? { backgroundColor: '#1E3E2E' } : styles.statusOpen) :
+                    item.status === 'Closed' ? (isDark ? { backgroundColor: '#333' } : styles.statusClosed) : (isDark ? { backgroundColor: '#3E2723' } : styles.statusPending)
                 ]}>
                     <Text style={[styles.statusText,
-                    item.status === 'Open' ? styles.statusTextOpen :
-                        item.status === 'Closed' ? styles.statusTextClosed : styles.statusTextPending
+                    item.status === 'Open' ? (isDark ? { color: '#81C784' } : styles.statusTextOpen) :
+                        item.status === 'Closed' ? (isDark ? { color: '#AAA' } : styles.statusTextClosed) : (isDark ? { color: '#FFCC80' } : styles.statusTextPending)
                     ]}>{item.status}</Text>
                 </View>
             </View>
-            <Text style={styles.ticketPreview} numberOfLines={2}>
+            <Text style={[styles.ticketPreview, isDark && { color: '#AAA' }]} numberOfLines={2}>
                 {item.messages && item.messages.length > 0 ? item.messages[item.messages.length - 1].text : 'No messages'}
             </Text>
-            <View style={styles.ticketFooter}>
-                <Text style={styles.ticketDate}>{new Date(item.last_updated || item.created_at || Date.now()).toLocaleDateString()}</Text>
-                <Ionicons name="chevron-forward" size={16} color="#999" />
+            <View style={[styles.ticketFooter, isDark && { borderTopColor: '#333' }]}>
+                <Text style={[styles.ticketDate, isDark && { color: '#666' }]}>{new Date(item.last_updated || item.created_at || Date.now()).toLocaleDateString()}</Text>
+                <Ionicons name="chevron-forward" size={16} color={isDark ? '#666' : '#999'} />
             </View>
         </TouchableOpacity>
     );
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { backgroundColor: '#1E1E1E', borderBottomColor: '#333' }]}>
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Help & Support</Text>
-                <TouchableOpacity style={styles.iconButton} onPress={() => setCreating(!creating)}>
-                    <Ionicons name={creating ? "close" : "add"} size={24} color="#1A1A1A" />
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Help & Support</Text>
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={() => setCreating(!creating)}>
+                    <Ionicons name={creating ? "close" : "add"} size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
             </View>
 
             {creating && (
-                <View style={styles.createForm}>
-                    <Text style={styles.formTitle}>New Support Ticket</Text>
+                <View style={[styles.createForm, isDark && { backgroundColor: '#1E1E1E' }]}>
+                    <Text style={[styles.formTitle, isDark && { color: '#FFF' }]}>New Support Ticket</Text>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                         placeholder="Subject (e.g., Order Issue)"
+                        placeholderTextColor={isDark ? '#888' : '#999'}
                         value={subject}
                         onChangeText={setSubject}
                     />
                     <TextInput
-                        style={[styles.input, styles.textArea]}
+                        style={[styles.input, styles.textArea, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                         placeholder="Describe your issue..."
+                        placeholderTextColor={isDark ? '#888' : '#999'}
                         multiline
                         numberOfLines={4}
                         value={message}
                         onChangeText={setMessage}
                     />
-                    <TouchableOpacity style={styles.submitButton} onPress={handleCreateTicket}>
+                    <TouchableOpacity style={[styles.submitButton, isDark && { backgroundColor: '#4CAF50' }]} onPress={handleCreateTicket}>
                         <Text style={styles.submitButtonText}>Submit Ticket</Text>
                     </TouchableOpacity>
                 </View>
@@ -202,9 +206,9 @@ export default function SupportScreen() {
                 ListEmptyComponent={
                     !loading ? (
                         <View style={styles.emptyState}>
-                            <Ionicons name="chatbubbles-outline" size={48} color="#ccc" />
-                            <Text style={styles.emptyText}>No support tickets yet.</Text>
-                            <Text style={styles.emptySubtext}>Tap the + button to create one.</Text>
+                            <Ionicons name="chatbubbles-outline" size={48} color={isDark ? '#444' : '#ccc'} />
+                            <Text style={[styles.emptyText, isDark && { color: '#FFF' }]}>No support tickets yet.</Text>
+                            <Text style={[styles.emptySubtext, isDark && { color: '#888' }]}>Tap the + button to create one.</Text>
                         </View>
                     ) : null
                 }

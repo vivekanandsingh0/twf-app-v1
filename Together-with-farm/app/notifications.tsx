@@ -7,15 +7,21 @@ import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const FILTERS = ['All', 'Promo', 'Order', 'Alert', 'Success'];
 
 export default function NotificationsScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { notifications, unreadCount, refreshNotifications } = useNotifications();
+    const { notifications, unreadCount, refreshNotifications, markAllAsRead } = useNotifications();
+    const { isDark } = useTheme();
     const [activeFilter, setActiveFilter] = useState('All');
     const [selectedPromo, setSelectedPromo] = useState<any>(null);
+
+    React.useEffect(() => {
+        markAllAsRead();
+    }, []);
 
     const handleNotificationPress = (item: any) => {
         if (item.type === 'promo') {
@@ -42,23 +48,24 @@ export default function NotificationsScreen() {
             key={item.id}
             style={[
                 styles.notificationCard,
-                { backgroundColor: item.highlight ? '#F0FDF4' : '#fff' },
-                item.highlight ? styles.activeCard : null
+                { backgroundColor: item.highlight ? (isDark ? '#1E3E2E' : '#F0FDF4') : (isDark ? '#1E1E1E' : '#fff') },
+                item.highlight ? styles.activeCard : null,
+                isDark && { borderColor: '#333' }
             ]}
             onPress={() => handleNotificationPress(item)}
         >
-            <View style={[styles.iconContainer, item.type === 'success' ? { backgroundColor: '#000' } : { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#000' }]}>
+            <View style={[styles.iconContainer, item.type === 'success' ? { backgroundColor: isDark ? '#FFF' : '#000' } : { backgroundColor: 'transparent', borderWidth: 2, borderColor: isDark ? '#FFF' : '#000' }]}>
                 <Ionicons
                     name={item.icon}
                     size={24}
-                    color={item.type === 'success' ? '#fff' : '#000'}
+                    color={item.type === 'success' ? (isDark ? '#000' : '#fff') : (isDark ? '#FFF' : '#000')}
                 />
             </View>
             <View style={styles.textContainer}>
-                <Text style={styles.notifTitle}>{item.title}</Text>
-                <Text style={styles.notifDesc}>{item.description}</Text>
+                <Text style={[styles.notifTitle, isDark && { color: '#FFF' }]}>{item.title}</Text>
+                <Text style={[styles.notifDesc, isDark && { color: '#AAA' }]}>{item.description}</Text>
                 {item.voucherCode && (
-                    <Text style={{ fontSize: 11, color: '#1F5E2E', fontFamily: 'DMSans_700Bold', marginTop: 2 }}>
+                    <Text style={{ fontSize: 11, color: '#4CAF50', fontFamily: 'DMSans_700Bold', marginTop: 2 }}>
                         Use Code: {item.voucherCode}
                     </Text>
                 )}
@@ -69,45 +76,41 @@ export default function NotificationsScreen() {
     );
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Notifications</Text>
                 <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.iconButton} onPress={refreshNotifications}>
-                        <Ionicons name="refresh-outline" size={24} color="#1A1A1A" />
+                    <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={refreshNotifications}>
+                        <Ionicons name="refresh-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                        {unreadCount > 0 && (
-                            <View style={styles.notificationBadge}>
-                                <Text style={styles.badgeText}>{unreadCount}</Text>
-                            </View>
-                        )}
+                    <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                        <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+                        {/* Badge Removed on Notification Screen as we mark read on entry */}
                     </TouchableOpacity>
                 </View>
             </View>
 
             {/* Filter Tabs */}
-            <View style={styles.filterContainer}>
+            <View style={[styles.filterContainer, isDark && { borderBottomColor: '#333' }]}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
                     {FILTERS.map((filter) => (
                         <TouchableOpacity
                             key={filter}
                             style={[
                                 styles.filterChip,
-                                activeFilter === filter ? styles.activeFilterChip : styles.inactiveFilterChip
+                                activeFilter === filter ? styles.activeFilterChip : [styles.inactiveFilterChip, isDark && { backgroundColor: '#333', borderColor: '#444' }]
                             ]}
                             onPress={() => setActiveFilter(filter)}
                         >
                             <Text style={[
                                 styles.filterText,
-                                activeFilter === filter ? styles.activeFilterText : styles.inactiveFilterText
+                                activeFilter === filter ? styles.activeFilterText : [styles.inactiveFilterText, isDark && { color: '#AAA' }]
                             ]}>
                                 {filter}
                             </Text>
@@ -127,7 +130,7 @@ export default function NotificationsScreen() {
                         {/* Today Section */}
                         {filteredNotifications.some(n => n.section === 'Today') && (
                             <>
-                                <Text style={styles.sectionHeader}>Today</Text>
+                                <Text style={[styles.sectionHeader, isDark && { color: '#FFF' }]}>Today</Text>
                                 {filteredNotifications.filter(n => n.section === 'Today').map(renderNotificationItem)}
                             </>
                         )}
@@ -135,7 +138,7 @@ export default function NotificationsScreen() {
                         {/* Yesterday Section */}
                         {filteredNotifications.some(n => n.section === 'Yesterday') && (
                             <>
-                                <Text style={styles.sectionHeader}>Yesterday</Text>
+                                <Text style={[styles.sectionHeader, isDark && { color: '#FFF' }]}>Yesterday</Text>
                                 {filteredNotifications.filter(n => n.section === 'Yesterday').map(renderNotificationItem)}
                             </>
                         )}
@@ -152,24 +155,24 @@ export default function NotificationsScreen() {
             >
                 <View style={styles.modalOverlay}>
                     <TouchableOpacity
-                        style={styles.modalBackdrop}
+                        style={[styles.modalBackdrop, isDark && { backgroundColor: 'rgba(0,0,0,0.9)' }]}
                         activeOpacity={1}
                         onPress={() => setSelectedPromo(null)}
                     />
-                    <View style={styles.voucherCard}>
-                        <View style={styles.voucherIconContainer}>
-                            <Ionicons name="ticket-outline" size={64} color="#1F5E2E" />
+                    <View style={[styles.voucherCard, isDark && { backgroundColor: '#1E1E1E', padding: 20, borderRadius: 20 }]}>
+                        <View style={[styles.voucherIconContainer, isDark && { backgroundColor: '#333' }]}>
+                            <Ionicons name="ticket-outline" size={64} color="#4CAF50" />
                         </View>
 
-                        <Text style={styles.voucherTitle}>{selectedPromo?.title}</Text>
-                        <Text style={styles.voucherDesc}>
+                        <Text style={[styles.voucherTitle, isDark && { color: '#FFF' }]}>{selectedPromo?.title}</Text>
+                        <Text style={[styles.voucherDesc, isDark && { color: '#AAA' }]}>
                             {selectedPromo?.promoDetails || selectedPromo?.description}
                         </Text>
 
-                        <View style={styles.codeContainer}>
-                            <Text style={styles.codeLabel}>Promo Code</Text>
-                            <Text style={styles.codeText}>{selectedPromo?.voucherCode}</Text>
-                            <Text style={styles.validityText}>{selectedPromo?.validity}</Text>
+                        <View style={[styles.codeContainer, isDark && { backgroundColor: '#333' }]}>
+                            <Text style={[styles.codeLabel, isDark && { color: '#FFF' }]}>Promo Code</Text>
+                            <Text style={[styles.codeText, isDark && { color: '#81C784' }]}>{selectedPromo?.voucherCode}</Text>
+                            <Text style={[styles.validityText, isDark && { color: '#AAA' }]}>{selectedPromo?.validity}</Text>
                         </View>
 
                         <TouchableOpacity style={styles.redeemButton} onPress={handleCopyCode}>

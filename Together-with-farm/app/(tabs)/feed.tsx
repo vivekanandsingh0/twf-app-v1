@@ -16,11 +16,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useMarket, MarketVendor } from '@/contexts/MarketContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const CATEGORIES = ['All', 'Nutrition', 'Storage Tips', 'Recipes', 'Tips'];
 
 export default function FeedScreen() {
   const { vendors, articles } = useMarket();
+  const { unreadCount } = useNotifications();
+  const { isDark } = useTheme();
   const [activeCategory, setActiveCategory] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
@@ -42,24 +46,26 @@ export default function FeedScreen() {
   }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+        <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333', borderRadius: 12 }]}>
+          <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Social Feed</Text>
+        <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Social Feed</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            style={styles.iconButton}
+            style={[styles.iconButton, isDark && { backgroundColor: '#333', borderRadius: 12 }]}
             onPress={() => router.push('/notifications')}
           >
-            <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>2</Text>
-            </View>
+            <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -72,18 +78,18 @@ export default function FeedScreen() {
         }
       >
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+        <View style={[styles.searchContainer, isDark && { backgroundColor: '#333' }]}>
+          <Ionicons name="search-outline" size={20} color={isDark ? '#AAA' : '#666'} style={styles.searchIcon} />
           <TextInput
             placeholder="Search fresh products or brands"
-            placeholderTextColor="#999"
-            style={styles.searchInput}
+            placeholderTextColor={isDark ? '#888' : '#999'}
+            style={[styles.searchInput, isDark && { color: '#FFF' }]}
           />
         </View>
 
         {/* Spotlight Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Spotlight</Text>
+          <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Spotlight</Text>
         </View>
         <ScrollView
           horizontal
@@ -96,7 +102,7 @@ export default function FeedScreen() {
               style={styles.spotlightItem}
               onPress={() => router.push(`/farmer/${farmer.id}`)}
             >
-              <View style={[styles.spotlightImageContainer]}>
+              <View style={[styles.spotlightImageContainer, isDark && { borderColor: '#444' }]}>
                 <Image source={farmer.image} style={styles.spotlightImage} contentFit="cover" />
               </View>
               {/* <Text style={styles.spotlightName} numberOfLines={1}>{farmer.name}</Text> */}
@@ -131,7 +137,7 @@ export default function FeedScreen() {
 
         {/* All Articles Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>All Articles</Text>
+          <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>All Articles</Text>
         </View>
 
         <ScrollView
@@ -140,20 +146,20 @@ export default function FeedScreen() {
           contentContainerStyle={styles.articlesContainer}
         >
           {recentArticles.map((article) => (
-            <View key={article.id} style={styles.articleCard}>
+            <View key={article.id} style={[styles.articleCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
               <Image source={article.image} style={styles.articleImage} contentFit="cover" />
 
               <View style={styles.imageOverlay}>
-                <View style={styles.tagBadge}>
-                  <Text style={styles.tagText}>{article.category}</Text>
+                <View style={[styles.tagBadge, isDark && { backgroundColor: 'rgba(31, 94, 46, 0.8)', borderColor: '#1F5E2E' }]}>
+                  <Text style={[styles.tagText, isDark && { color: '#FFF' }]}>{article.category}</Text>
                 </View>
-                <View style={styles.timeBadge}>
-                  <Text style={styles.timeText}>{article.time}</Text>
+                <View style={[styles.timeBadge, isDark && { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                  <Text style={[styles.timeText, isDark && { color: '#FFF' }]}>{article.time}</Text>
                 </View>
               </View>
 
               <View style={styles.articleContent}>
-                <Text style={styles.articleTitle} numberOfLines={2}>
+                <Text style={[styles.articleTitle, isDark && { color: '#FFF' }]} numberOfLines={2}>
                   {article.title}
                 </Text>
                 <TouchableOpacity style={styles.readMoreLink}>
@@ -167,12 +173,12 @@ export default function FeedScreen() {
 
         {/* Admin Insights Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Admin Insights</Text>
+          <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Admin Insights</Text>
         </View>
 
         <View style={styles.insightsContainer}>
           {insights.map((item) => (
-            <View key={item.id} style={styles.insightCard}>
+            <View key={item.id} style={[styles.insightCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
               <Image source={item.image} style={styles.insightImage} contentFit="cover" />
               <View style={styles.insightContent}>
                 <View style={styles.insightMetaRow}>
@@ -181,7 +187,7 @@ export default function FeedScreen() {
                   </View>
                   <Text style={styles.insightTime}>{item.time}</Text>
                 </View>
-                <Text style={styles.insightTitle} numberOfLines={2}>
+                <Text style={[styles.insightTitle, isDark && { color: '#FFF' }]} numberOfLines={2}>
                   {item.title}
                 </Text>
                 <TouchableOpacity style={styles.readMoreLink}>

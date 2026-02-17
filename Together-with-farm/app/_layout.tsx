@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState, useEffect } from 'react';
@@ -19,10 +19,22 @@ import { CartProvider } from '@/contexts/CartContext';
 import { VendorProvider } from '@/contexts/VendorContext';
 import { MarketProvider } from '@/contexts/MarketContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/ThemeContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
+
+// Helper component to consume theme context and provide it to Navigation
+function NavigationThemeWrapper({ children }: { children: React.ReactNode }) {
+  const { theme, isDark } = useTheme();
+  return (
+    <NavigationThemeProvider value={theme}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      {children}
+    </NavigationThemeProvider>
+  );
+}
 
 function AppContent() {
   const router = useRouter(); // Initialize router
@@ -94,7 +106,7 @@ function AppContent() {
               <MarketProvider>
                 <VendorProvider>
                   <NotificationProvider>
-                    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <NavigationThemeWrapper>
                       <Stack screenOptions={{ headerShown: false }}>
                         <Stack.Screen name="(tabs)" />
                         <Stack.Screen name="(vendor-tabs)" />
@@ -117,8 +129,7 @@ function AppContent() {
                         <Stack.Screen name="support" />
                         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
                       </Stack>
-                      <StatusBar style="auto" />
-                    </ThemeProvider>
+                    </NavigationThemeWrapper>
                   </NotificationProvider>
                 </VendorProvider>
               </MarketProvider>
@@ -181,7 +192,9 @@ function AppContent() {
 export default function RootLayout() {
   return (
     <UserProvider>
-      <AppContent />
+      <CustomThemeProvider>
+        <AppContent />
+      </CustomThemeProvider>
     </UserProvider>
   );
 }

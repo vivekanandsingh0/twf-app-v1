@@ -4,10 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function OrderSuccessScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { isDark } = useTheme();
 
     // Only animate the icon
     const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -49,36 +51,36 @@ export default function OrderSuccessScreen() {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
             <Stack.Screen options={{ headerShown: false }} />
 
             <View style={styles.centerContent}>
                 {/* Animated Success Icon - Only this part animates */}
                 <Animated.View style={[styles.successIconContainer, { transform: [{ scale: scaleAnim }] }]}>
-                    <View style={styles.successCircle}>
+                    <View style={[styles.successCircle, isDark && { backgroundColor: '#1E3E2E', borderColor: '#1F5E2E' }]}>
                         <Ionicons name="checkmark" size={60} color="#fff" style={{ fontWeight: 'bold' }} />
                     </View>
                 </Animated.View>
 
                 {/* Static Content */}
                 <View style={{ width: '100%', alignItems: 'center' }}>
-                    <Text style={styles.title}>Your harvest is on it's{'\n'}way.</Text>
-                    <Text style={styles.subtitle}>Your order have been Placed Sucessfully.</Text>
+                    <Text style={[styles.title, isDark && { color: '#FFF' }]}>Your harvest is on it's{'\n'}way.</Text>
+                    <Text style={[styles.subtitle, isDark && { color: '#AAA' }]}>Your order have been Placed Sucessfully.</Text>
 
                     {/* Order Details Card */}
-                    <View style={styles.detailCard}>
+                    <View style={[styles.detailCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                         <View style={styles.row}>
-                            <Text style={styles.label}>Order ID</Text>
-                            <Text style={styles.value}>#6537352823</Text>
+                            <Text style={[styles.label, isDark && { color: '#AAA' }]}>Order ID</Text>
+                            <Text style={[styles.value, isDark && { color: '#FFF' }]}>#6537352823</Text>
                         </View>
                         <View style={styles.row}>
-                            <Text style={styles.label}>Expected Delivery</Text>
-                            <Text style={styles.value}>Arriving in 25 mins</Text>
+                            <Text style={[styles.label, isDark && { color: '#AAA' }]}>Expected Delivery</Text>
+                            <Text style={[styles.value, isDark && { color: '#FFF' }]}>Arriving in 25 mins</Text>
                         </View>
                         <View style={[styles.row, { borderBottomWidth: 0 }]}>
-                            <Text style={styles.label}>Payment</Text>
-                            <Text style={styles.value}>PhonePe</Text>
+                            <Text style={[styles.label, isDark && { color: '#AAA' }]}>Payment</Text>
+                            <Text style={[styles.value, isDark && { color: '#FFF' }]}>PhonePe</Text>
                         </View>
                     </View>
                 </View>

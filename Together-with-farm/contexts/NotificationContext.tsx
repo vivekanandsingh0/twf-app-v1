@@ -16,10 +16,15 @@ export interface Notification {
     voucherCode?: string;
 }
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ... Notification Interface ...
+
 interface NotificationContextType {
     notifications: Notification[];
     unreadCount: number;
     refreshNotifications: () => Promise<void>;
+    markAllAsRead: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -33,35 +38,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (!user) return;
 
         try {
+            // Get local read/seen state
+            const readStorage = await AsyncStorage.getItem(`read_notifications_${user.id}`);
+            const readIds = readStorage ? JSON.parse(readStorage) : [];
+
             // Build query based on user type and ID
             let query = supabase
                 .from('notifications')
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            // We need OR condition: target_type='All' OR (target_type='Specific' AND target_id=user.id) OR (target_type='AllUsers'/'AllVendors')
-            // Supabase .or() syntax: 'column.eq.value, column.eq.value'
-            // But we have mixed AND/OR logic. Simplest is to fetch all potential relevant ones or use multiple queries.
-            // Using .or(): target_type.eq.All, target_type.eq.AllUsers (if user), target_type.eq.Specific.and.target_id.eq.UserID
-
-            // Constructing the OR string
             let orCondition = `target_type.eq.All`;
-
             if (userData?.userType === 'User') {
                 orCondition += `,target_type.eq.AllUsers`;
             } else if (userData?.userType === 'Vendor') {
                 orCondition += `,target_type.eq.AllVendors`;
             }
-
-            // For Specific, we need (target_type=Specific AND target_id=user.id)
-            // Supabase OR with AND inside is tricky in one string.
-            // Easier: Fetch ALL potential types then filter in memory? No, wasteful.
-            // Better: `target_type.eq.All, target_type.eq.element, and(target_type.eq.Specific, target_id.eq.${user.id})`
-            // Syntax: or(target_type.eq.All, target_type.eq.AllUsers, and(target_type.eq.Specific, target_id.eq.123))
-
-            // The 'and' inside 'or' syntax: `target_type.eq.Specific.and(target_id.eq.${user.id})` NO
-            // Correct syntax: `target_type.eq.All, target_type.eq.AllUsers, and(target_type.eq.Specific,target_id.eq.${user.id})`
-
             orCondition += `,and(target_type.eq.Specific,target_id.eq.${user.id})`;
 
             const { data, error } = await query.or(orCondition);
@@ -69,26 +61,48 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             if (error) throw error;
 
             if (data) {
-                const processed: Notification[] = data.map((n: any) => ({
-                    id: n.id,
-                    title: n.title,
-                    body: n.body,
-                    description: n.body, // Mapping body to description as well for UI compatibility if needed
-                    type: n.type,
-                    createdAt: n.created_at,
-                    read: n.is_read || false,
-                    // UI Helpers
-                    section: isToday(new Date(n.created_at)) ? 'Today' : 'Yesterday',
-                    icon: getIconForType(n.type),
-                    highlight: !n.is_read,
-                    voucherCode: n.promo_code
-                }));
+                const processed: Notification[] = data.map((n: any) => {
+                    const isReadLocally = readIds.includes(n.id);
+                    const isRead = n.is_read || isReadLocally || false;
+
+                    return {
+                        id: n.id,
+                        title: n.title,
+                        body: n.body,
+                        description: n.body,
+                        type: n.type,
+                        createdAt: n.created_at,
+                        read: isRead,
+                        section: isToday(new Date(n.created_at)) ? 'Today' : 'Yesterday',
+                        icon: getIconForType(n.type),
+                        highlight: !isRead,
+                        voucherCode: n.promo_code,
+                        time: formatTimeAgo(new Date(n.created_at)) // Helper needs to be available
+                    };
+                });
 
                 setNotifications(processed);
-                setUnreadCount(processed.filter((n: any) => !n.read).length); // Logic simplified
+                setUnreadCount(processed.filter(n => !n.read).length);
             }
         } catch (e) {
             console.log("Failed to fetch notifications", e);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        if (!user) return;
+
+        // 1. Optimistic update
+        const updated = notifications.map(n => ({ ...n, read: true, highlight: false }));
+        setNotifications(updated);
+        setUnreadCount(0);
+
+        // 2. Persist to AsyncStorage
+        try {
+            const allIds = updated.map(n => n.id);
+            await AsyncStorage.setItem(`read_notifications_${user.id}`, JSON.stringify(allIds));
+        } catch (e) {
+            console.error("Failed to save read state", e);
         }
     };
 
@@ -119,16 +133,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 10000); // 10s Poll
-        return () => clearInterval(interval);
+        if (user) {
+            fetchNotifications();
+            // Poll less frequently to avoid spamming
+            const interval = setInterval(fetchNotifications, 15000);
+            return () => clearInterval(interval);
+        }
     }, [user]);
 
     return (
         <NotificationContext.Provider value={{
             notifications,
             unreadCount,
-            refreshNotifications: fetchNotifications
+            refreshNotifications: fetchNotifications,
+            markAllAsRead
         }}>
             {children}
         </NotificationContext.Provider>

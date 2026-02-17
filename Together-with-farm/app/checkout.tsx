@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useCart } from '@/contexts/CartContext';
 import { useAddresses } from '@/contexts/AddressContext';
 import { useMarket } from '@/contexts/MarketContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function CheckoutScreen() {
     const insets = useSafeAreaInsets();
@@ -15,6 +16,7 @@ export default function CheckoutScreen() {
     const { quantities, updateQuantity, totalCartItems } = useCart();
     const { selectedAddress, addresses, setSelectedAddress, updateAddress } = useAddresses();
     const { products: marketProducts } = useMarket();
+    const { isDark } = useTheme();
 
     // Local State
     const [tipAmount, setTipAmount] = useState<number>(0);
@@ -48,15 +50,15 @@ export default function CheckoutScreen() {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                <TouchableOpacity onPress={() => router.back()} style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Checkout</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Checkout</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -72,10 +74,10 @@ export default function CheckoutScreen() {
                         activeOpacity={0.8}
                     >
                         <View style={styles.addressHeaderRow}>
-                            <Text style={styles.addressTitle}>{selectedAddress?.type || 'Home'}</Text>
-                            <Ionicons name={showLocationPicker ? "chevron-up" : "chevron-down"} size={16} color="#1A1A1A" />
+                            <Text style={[styles.addressTitle, isDark && { color: '#FFF' }]}>{selectedAddress?.type || 'Home'}</Text>
+                            <Ionicons name={showLocationPicker ? "chevron-up" : "chevron-down"} size={16} color={isDark ? '#FFF' : '#1A1A1A'} />
                         </View>
-                        <Text style={styles.addressSubtitle} numberOfLines={1}>
+                        <Text style={[styles.addressSubtitle, isDark && { color: '#AAA' }]} numberOfLines={1}>
                             {selectedAddress?.address || 'Patna, Bihar'}
                         </Text>
                     </TouchableOpacity>
@@ -84,29 +86,29 @@ export default function CheckoutScreen() {
                 {/* Cart Items */}
                 <View style={styles.listContainer}>
                     {cartItems.map((item) => (
-                        <View key={item.id} style={styles.itemCard}>
-                            <View style={styles.imageContainer}>
+                        <View key={item.id} style={[styles.itemCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+                            <View style={[styles.imageContainer, isDark && { backgroundColor: '#333', borderColor: '#444' }]}>
                                 <Image source={item.image} style={styles.image} resizeMode="cover" />
                             </View>
 
                             <View style={styles.itemDetails}>
-                                <Text style={styles.itemTitle}>{item.name}</Text>
+                                <Text style={[styles.itemTitle, isDark && { color: '#FFF' }]}>{item.name}</Text>
                                 <View style={styles.priceRow}>
-                                    <Text style={styles.itemPrice}>₹{item.price}</Text>
-                                    <Text style={styles.itemUnit}>/{item.unit}</Text>
+                                    <Text style={[styles.itemPrice, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                                    <Text style={[styles.itemUnit, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
                                 </View>
                             </View>
 
                             <View style={styles.qtyContainer}>
                                 <TouchableOpacity
-                                    style={styles.qtyBtn} // Minus Icon not outlined in screenshot, just grey bg maybe? 
+                                    style={[styles.qtyBtn, isDark && { backgroundColor: '#333' }]} // Minus Icon not outlined in screenshot, just grey bg maybe? 
                                     // Screenshot shows simple line for minus
                                     onPress={() => updateQuantity(item.id, -1)}
                                 >
-                                    <Ionicons name="remove" size={18} color="#1A1A1A" />
+                                    <Ionicons name="remove" size={18} color={isDark ? '#FFF' : '#1A1A1A'} />
                                 </TouchableOpacity>
 
-                                <Text style={styles.qtyText}>{quantities[item.id]}</Text>
+                                <Text style={[styles.qtyText, isDark && { color: '#FFF' }]}>{quantities[item.id]}</Text>
 
                                 <TouchableOpacity
                                     style={[styles.qtyBtn, styles.qtyBtnAdd]}
@@ -120,10 +122,10 @@ export default function CheckoutScreen() {
                 </View>
 
                 {/* Add More Section */}
-                <View style={styles.addMoreCard}>
+                <View style={[styles.addMoreCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                     <View>
-                        <Text style={styles.addMoreTitle}>Need anything else?</Text>
-                        <Text style={styles.addMoreSubtitle}>Add other product, if you want.</Text>
+                        <Text style={[styles.addMoreTitle, isDark && { color: '#FFF' }]}>Need anything else?</Text>
+                        <Text style={[styles.addMoreSubtitle, isDark && { color: '#AAA' }]}>Add other product, if you want.</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.addMoreBtn}
@@ -134,15 +136,15 @@ export default function CheckoutScreen() {
                 </View>
 
                 {/* Coupons Section */}
-                <View style={styles.sectionCard}>
-                    <Text style={styles.sectionHeaderTitle}>Coupons</Text>
+                <View style={[styles.sectionCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+                    <Text style={[styles.sectionHeaderTitle, isDark && { color: '#FFF' }]}>Coupons</Text>
                     <View style={styles.couponRow}>
                         <View style={styles.couponIcon}>
                             <Ionicons name="pricetag-outline" size={20} color="#fff" />
                         </View>
                         <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={styles.couponText}>Get Rs.50 cashback on</Text>
-                            <Text style={styles.couponText}>Bihar Pride</Text>
+                            <Text style={[styles.couponText, isDark && { color: '#FFF' }]}>Get Rs.50 cashback on</Text>
+                            <Text style={[styles.couponText, isDark && { color: '#FFF' }]}>Bihar Pride</Text>
                         </View>
                         <TouchableOpacity onPress={() => setCouponApplied(!couponApplied)}>
                             <Text style={styles.applyText}>{couponApplied ? 'Remove' : 'Apply'}</Text>
@@ -151,10 +153,10 @@ export default function CheckoutScreen() {
                 </View>
 
                 {/* Delivery Tip Section */}
-                <View style={styles.sectionCard}>
+                <View style={[styles.sectionCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                     <View style={styles.tipHeaderRow}>
-                        <Ionicons name="heart-outline" size={20} color="#1A1A1A" style={{ marginRight: 8 }} />
-                        <Text style={styles.sectionHeaderTitle}>Delivery Partner Tip</Text>
+                        <Ionicons name="heart-outline" size={20} color={isDark ? '#FFF' : '#1A1A1A'} style={{ marginRight: 8 }} />
+                        <Text style={[styles.sectionHeaderTitle, isDark && { color: '#FFF' }]}>Delivery Partner Tip</Text>
                     </View>
                     <Text style={styles.tipSubtitle}>
                         100% of the tip goes to your delivery partner. They help deliver fresh foods to bihar homes.
@@ -164,40 +166,40 @@ export default function CheckoutScreen() {
                         {[10, 100, 200].map((amount) => (
                             <TouchableOpacity
                                 key={amount}
-                                style={[styles.tipOption, tipAmount === amount && styles.tipOptionSelected]}
+                                style={[styles.tipOption, isDark && { borderColor: '#444' }, tipAmount === amount && styles.tipOptionSelected]}
                                 onPress={() => setTipAmount(amount)}
                             >
-                                <Text style={[styles.tipText, tipAmount === amount && styles.tipTextSelected]}>
+                                <Text style={[styles.tipText, isDark && { color: '#FFF' }, tipAmount === amount && styles.tipTextSelected]}>
                                     ₹{amount}
                                 </Text>
                             </TouchableOpacity>
                         ))}
-                        <TouchableOpacity style={styles.tipOption}>
-                            <Text style={styles.tipText}>Custom</Text>
+                        <TouchableOpacity style={[styles.tipOption, isDark && { borderColor: '#444' }]}>
+                            <Text style={[styles.tipText, isDark && { color: '#FFF' }]}>Custom</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Order Summary */}
-                <View style={styles.sectionCard}>
-                    <Text style={[styles.sectionHeaderTitle, { marginBottom: 16 }]}>Order Summary</Text>
+                <View style={[styles.sectionCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+                    <Text style={[styles.sectionHeaderTitle, { marginBottom: 16 }, isDark && { color: '#FFF' }]}>Order Summary</Text>
 
                     <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Subtotal ({totalCartItems}items)</Text>
-                        <Text style={styles.summaryValue}>₹{subtotal.toFixed(2)}</Text>
+                        <Text style={[styles.summaryLabel, isDark && { color: '#AAA' }]}>Subtotal ({totalCartItems}items)</Text>
+                        <Text style={[styles.summaryValue, isDark && { color: '#81C784' }]}>₹{subtotal.toFixed(2)}</Text>
                     </View>
                     <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Shipping fee</Text>
-                        <Text style={styles.summaryValue}>₹{shippingFee.toFixed(2)}</Text>
+                        <Text style={[styles.summaryLabel, isDark && { color: '#AAA' }]}>Shipping fee</Text>
+                        <Text style={[styles.summaryValue, isDark && { color: '#81C784' }]}>₹{shippingFee.toFixed(2)}</Text>
                     </View>
                     <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Voucher Discount</Text>
-                        <Text style={styles.summaryValue}>₹{discount.toFixed(2)}</Text>
+                        <Text style={[styles.summaryLabel, isDark && { color: '#AAA' }]}>Voucher Discount</Text>
+                        <Text style={[styles.summaryValue, isDark && { color: '#81C784' }]}>₹{discount.toFixed(2)}</Text>
                     </View>
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, isDark && { backgroundColor: '#333' }]} />
                     <View style={styles.summaryRow}>
-                        <Text style={styles.totalLabel}>Total</Text>
-                        <Text style={styles.totalValue}>₹{total.toFixed(2)}</Text>
+                        <Text style={[styles.totalLabel, isDark && { color: '#FFF' }]}>Total</Text>
+                        <Text style={[styles.totalValue, isDark && { color: '#81C784' }]}>₹{total.toFixed(2)}</Text>
                     </View>
                 </View>
 
@@ -205,10 +207,10 @@ export default function CheckoutScreen() {
             </ScrollView>
 
             {/* Bottom Bar */}
-            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
                 <View>
-                    <Text style={styles.bottomPrice}>₹{total.toFixed(2)}</Text>
-                    <Text style={styles.bottomItems}>{totalCartItems} items</Text>
+                    <Text style={[styles.bottomPrice, isDark && { color: '#FFF' }]}>₹{total.toFixed(2)}</Text>
+                    <Text style={[styles.bottomItems, isDark && { color: '#AAA' }]}>{totalCartItems} items</Text>
                 </View>
                 <TouchableOpacity
                     style={styles.placeOrderBtn}
@@ -227,11 +229,11 @@ export default function CheckoutScreen() {
                         activeOpacity={1}
                         onPress={() => setShowLocationPicker(false)}
                     />
-                    <View style={[styles.locationDropdown, { top: insets.top + 80 }]}>
+                    <View style={[styles.locationDropdown, { top: insets.top + 80 }, isDark && { backgroundColor: '#333', borderColor: '#444' }]}>
                         {addresses.map((addr) => (
                             <TouchableOpacity
                                 key={addr.id}
-                                style={styles.locationOption}
+                                style={[styles.locationOption, isDark && { borderBottomColor: '#444' }]}
                                 onPress={() => {
                                     setSelectedAddress(addr);
                                     setShowLocationPicker(false);
@@ -243,10 +245,10 @@ export default function CheckoutScreen() {
                                     color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
                                 />
                                 <View style={{ marginLeft: 12, flex: 1 }}>
-                                    <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#1F5E2E' }]}>
+                                    <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#81C784' }, isDark && selectedAddress?.id !== addr.id && { color: '#FFF' }]}>
                                         {addr.type}
                                     </Text>
-                                    <Text style={styles.locationOptionAddress} numberOfLines={2}>
+                                    <Text style={[styles.locationOptionAddress, isDark && { color: '#AAA' }]} numberOfLines={2}>
                                         {addr.address}, {addr.city}
                                     </Text>
                                 </View>

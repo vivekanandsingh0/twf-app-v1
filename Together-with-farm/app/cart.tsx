@@ -7,12 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCart } from '@/contexts/CartContext';
 import { useMarket } from '@/contexts/MarketContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function CartScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { quantities, updateQuantity, totalCartItems } = useCart();
     const { products: marketProducts } = useMarket();
+    const { isDark } = useTheme();
 
     // Get all products that are currently in the cart
     const cartItems = marketProducts.filter(p => quantities[p.id] && quantities[p.id] > 0);
@@ -22,23 +24,23 @@ export default function CartScreen() {
     }, 0);
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                <TouchableOpacity onPress={() => router.back()} style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Your Carts</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Your Carts</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {cartItems.length === 0 ? (
                     <View style={styles.emptyState}>
-                        <Ionicons name="cart-outline" size={64} color="#CCC" />
-                        <Text style={styles.emptyText}>Your cart is empty</Text>
+                        <Ionicons name="cart-outline" size={64} color={isDark ? '#555' : '#CCC'} />
+                        <Text style={[styles.emptyText, isDark && { color: '#AAA' }]}>Your cart is empty</Text>
                         <TouchableOpacity style={styles.continueBtn} onPress={() => router.back()}>
                             <Text style={styles.continueBtnText}>Start Shopping</Text>
                         </TouchableOpacity>
@@ -46,28 +48,28 @@ export default function CartScreen() {
                 ) : (
                     <View style={styles.listContainer}>
                         {cartItems.map((item) => (
-                            <View key={item.id} style={styles.cartItem}>
-                                <View style={styles.imageContainer}>
+                            <View key={item.id} style={[styles.cartItem, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+                                <View style={[styles.imageContainer, isDark && { backgroundColor: '#333' }]}>
                                     <Image source={item.image} style={styles.image} resizeMode="cover" />
                                 </View>
 
                                 <View style={styles.itemDetails}>
-                                    <Text style={styles.itemTitle}>{item.name}</Text>
+                                    <Text style={[styles.itemTitle, isDark && { color: '#FFF' }]}>{item.name}</Text>
                                     <View style={styles.priceContainer}>
-                                        <Text style={styles.itemPrice}>₹{item.price}</Text>
-                                        <Text style={styles.itemUnit}>/{item.unit}</Text>
+                                        <Text style={[styles.itemPrice, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                                        <Text style={[styles.itemUnit, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
                                     </View>
                                 </View>
 
                                 <View style={styles.qtyContainer}>
                                     <TouchableOpacity
-                                        style={styles.qtyBtn}
+                                        style={[styles.qtyBtn, isDark && { backgroundColor: '#333' }]}
                                         onPress={() => updateQuantity(item.id, -1)}
                                     >
-                                        <Ionicons name="remove" size={18} color="#1A1A1A" />
+                                        <Ionicons name="remove" size={18} color={isDark ? '#FFF' : '#1A1A1A'} />
                                     </TouchableOpacity>
 
-                                    <Text style={styles.qtyText}>{quantities[item.id]}</Text>
+                                    <Text style={[styles.qtyText, isDark && { color: '#FFF' }]}>{quantities[item.id]}</Text>
 
                                     <TouchableOpacity
                                         style={[styles.qtyBtn, styles.qtyBtnAdd]}
@@ -86,10 +88,10 @@ export default function CartScreen() {
 
             {/* Bottom Bar */}
             {cartItems.length > 0 && (
-                <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }]}>
+                <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
                     <View>
-                        <Text style={styles.totalPrice}>₹{totalPrice.toFixed(2)}</Text>
-                        <Text style={styles.totalItems}>{totalCartItems} items</Text>
+                        <Text style={[styles.totalPrice, isDark && { color: '#FFF' }]}>₹{totalPrice.toFixed(2)}</Text>
+                        <Text style={[styles.totalItems, isDark && { color: '#AAA' }]}>{totalCartItems} items</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.checkoutBtn}

@@ -18,7 +18,9 @@ import { useFavourites } from '@/contexts/FavouritesContext';
 import { useAddresses } from '@/contexts/AddressContext';
 import { useCart } from '@/contexts/CartContext';
 import { useMarket, MarketProduct } from '@/contexts/MarketContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import CartPopup from '@/components/CartPopup';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +38,8 @@ export default function MarketScreen() {
   const { toggleFavourite, isFavourite } = useFavourites();
   const { addresses, selectedAddress, setSelectedAddress } = useAddresses();
   const { updateQuantity, getItemQuantity } = useCart();
+  const { unreadCount } = useNotifications();
+  const { isDark } = useTheme();
   const [activeCategory, setActiveCategory] = useState('All');
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,8 +63,8 @@ export default function MarketScreen() {
     // Dynamic style based on if it's a deal product or not, 
     // passing existing logic.
     const cardStyle = isDeal
-      ? [styles.productCard, { borderColor: '#FFD700', borderWidth: 2, backgroundColor: '#FFFDE7' }]
-      : styles.productCard;
+      ? [styles.productCard, { borderColor: '#FFD700', borderWidth: 2, backgroundColor: isDark ? '#3E2723' : '#FFFDE7' }]
+      : [styles.productCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }];
 
     return (
       <TouchableOpacity
@@ -69,7 +73,7 @@ export default function MarketScreen() {
         onPress={() => router.push(`/product/${item.id}`)}
         activeOpacity={0.9}
       >
-        <View style={styles.productImageContainer}>
+        <View style={[styles.productImageContainer, isDark && { backgroundColor: '#2C2C2C' }]}>
           <Image source={item.image} style={styles.productImage} contentFit="contain" />
           <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
             <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
@@ -93,12 +97,12 @@ export default function MarketScreen() {
           {isDeal && (
             <Text style={[styles.productType, { color: '#F57F17', fontWeight: 'bold' }]}>{item.specialOffer}</Text>
           )}
-          <Text style={styles.productType}>{!isDeal && item.type}</Text>
-          <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.productType, isDark && { color: '#AAA' }]}>{!isDeal && item.type}</Text>
+          <Text style={[styles.productName, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.name}</Text>
 
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
-              <Text style={styles.price}>₹{item.price}</Text>
+              <Text style={[styles.price, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
               <Text style={styles.unit}>{item.unit}</Text>
             </View>
 
@@ -133,7 +137,7 @@ export default function MarketScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && { backgroundColor: '#121212' }]}>
       <StatusBar style="light" />
 
       {/* Header Section */}
@@ -160,23 +164,25 @@ export default function MarketScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.notificationBtn}
+            style={[styles.notificationBtn, isDark && { backgroundColor: '#333' }]}
             onPress={() => router.push('/notifications')}
           >
-            <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>2</Text>
-            </View>
+            <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+        <View style={[styles.searchContainer, isDark && { backgroundColor: '#333' }]}>
+          <Ionicons name="search-outline" size={20} color={isDark ? '#AAA' : '#666'} style={styles.searchIcon} />
           <TextInput
             placeholder="Search 'Tomato' or 'Potato'"
-            placeholderTextColor="#999"
-            style={styles.searchInput}
+            placeholderTextColor={isDark ? '#888' : '#999'}
+            style={[styles.searchInput, isDark && { color: '#FFF' }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -224,7 +230,7 @@ export default function MarketScreen() {
           // Search Results View
           <View style={styles.searchResultsContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Search Results ({filteredSearchResults.length})</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Search Results ({filteredSearchResults.length})</Text>
             </View>
             <View style={styles.gridContainer}>
               {filteredSearchResults.length > 0 ? (
@@ -241,7 +247,7 @@ export default function MarketScreen() {
           // Normal Sections View
           <>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Bestsellers</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Bestsellers</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
               {/* Show top rated or random products */}
@@ -251,7 +257,7 @@ export default function MarketScreen() {
             {dealProducts.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Grab Best Deal</Text>
+                  <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Grab Best Deal</Text>
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
                   {dealProducts.map(renderProductCard)}
@@ -260,28 +266,28 @@ export default function MarketScreen() {
             )}
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Leafy & Fresh</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Leafy & Fresh</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
               {products.filter(p => ['Leafy', 'Hydroponic', 'Organic', 'Fresh'].includes(p.type) || p.tag === 'Fresh').map(renderProductCard)}
             </ScrollView>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Seasonal Fruits</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Seasonal Fruits</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
               {products.filter(p => p.type.includes('Fruit')).map(renderProductCard)}
             </ScrollView>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Farm Classics</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Farm Classics</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
               {products.filter(p => p.type === 'Daily' || p.tag === 'Local').map(renderProductCard)}
             </ScrollView>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Root Vegetables</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Root Vegetables</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
               {products.filter(p => p.type === 'Roots').map(renderProductCard)}
@@ -303,11 +309,11 @@ export default function MarketScreen() {
             activeOpacity={1}
             onPress={() => setShowLocationPicker(false)}
           />
-          <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }]}>
+          <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }, isDark && { backgroundColor: '#333' }]}>
             {addresses.map((addr) => (
               <TouchableOpacity
                 key={addr.id}
-                style={styles.locationOption}
+                style={[styles.locationOption, isDark && { borderBottomColor: '#444' }]}
                 onPress={() => {
                   setSelectedAddress(addr);
                   setShowLocationPicker(false);
@@ -319,10 +325,10 @@ export default function MarketScreen() {
                   color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
                 />
                 <View style={{ marginLeft: 12, flex: 1 }}>
-                  <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#1F5E2E' }]}>
+                  <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#81C784' }, isDark && selectedAddress?.id !== addr.id && { color: '#FFF' }]}>
                     {addr.type}
                   </Text>
-                  <Text style={styles.locationOptionAddress} numberOfLines={2}>
+                  <Text style={[styles.locationOptionAddress, isDark && { color: '#AAA' }]} numberOfLines={2}>
                     {addr.address}, {addr.city}
                   </Text>
                 </View>

@@ -20,6 +20,8 @@ type Order = {
 
 import { useVendor, VendorOrder } from '@/contexts/VendorContext';
 import { useUser } from '@/contexts/UserContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Helper to format date
 const formatDate = (dateString: string) => {
@@ -30,6 +32,8 @@ const formatDate = (dateString: string) => {
 export default function OrdersScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { unreadCount } = useNotifications();
+    const { isDark } = useTheme();
     const [activeTab, setActiveTab] = useState<'Active' | 'Past'>('Active');
     const { orders: userOrders, user, refreshOrders } = useUser();
     const [refreshing, setRefreshing] = useState(false);
@@ -78,7 +82,7 @@ export default function OrdersScreen() {
     const renderOrderCard = (order: Order, isPast: boolean) => (
         <TouchableOpacity
             key={order.id}
-            style={styles.card}
+            style={[styles.card, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
             activeOpacity={0.9}
             onPress={() => {
                 const orderId = order.orderNumber.replace('#', '');
@@ -97,25 +101,25 @@ export default function OrdersScreen() {
 
                 <View style={styles.orderInfo}>
                     <View style={styles.rowBetween}>
-                        <Text style={styles.orderNumber}>{order.orderNumber}</Text>
-                        <View style={[styles.statusBadge, isPast && styles.statusBadgeDelivered]}>
-                            <Text style={[styles.statusText, isPast && styles.statusTextDelivered]}>
+                        <Text style={[styles.orderNumber, isDark && { color: '#FFF' }]}>{order.orderNumber}</Text>
+                        <View style={[styles.statusBadge, isPast && styles.statusBadgeDelivered, isDark && { backgroundColor: '#333' }]}>
+                            <Text style={[styles.statusText, isPast && styles.statusTextDelivered, isDark && { color: '#81C784' }]}>
                                 {order.status}
                             </Text>
                         </View>
                     </View>
 
-                    <Text style={styles.itemSummary} numberOfLines={1}>{order.itemsSummary}</Text>
+                    <Text style={[styles.itemSummary, isDark && { color: '#AAA' }]} numberOfLines={1}>{order.itemsSummary}</Text>
                     <Text style={styles.dateText}>{order.date}</Text>
                 </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, isDark && { backgroundColor: '#333' }]} />
 
             <View style={styles.cardFooter}>
-                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={[styles.totalLabel, isDark && { color: '#FFF' }]}>Total</Text>
                 <View style={styles.footerRight}>
-                    <Text style={styles.totalValue}>{order.total}</Text>
+                    <Text style={[styles.totalValue, isDark && { color: '#81C784' }]}>{order.total}</Text>
                 </View>
             </View>
 
@@ -130,35 +134,37 @@ export default function OrdersScreen() {
     );
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, isDark && { backgroundColor: '#333', borderRadius: 12 }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Orders</Text>
-                <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/notifications')}>
-                    <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                    <View style={styles.badge}><Text style={styles.badgeText}>2</Text></View>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Orders</Text>
+                <TouchableOpacity style={[styles.notificationBtn, isDark && { backgroundColor: '#333', borderRadius: 12 }]} onPress={() => router.push('/notifications')}>
+                    <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+                    {unreadCount > 0 && (
+                        <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount}</Text></View>
+                    )}
                 </TouchableOpacity>
             </View>
 
             {/* Tabs */}
-            <View style={styles.tabContainer}>
+            <View style={[styles.tabContainer, isDark && { backgroundColor: '#1E1E1E' }]}>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'Active' && styles.activeTab]}
                     onPress={() => setActiveTab('Active')}
                 >
-                    <Text style={[styles.tabText, activeTab === 'Active' && styles.activeTabText]}>Active</Text>
+                    <Text style={[styles.tabText, activeTab === 'Active' && styles.activeTabText, isDark && activeTab !== 'Active' && { color: '#AAA' }]}>Active</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'Past' && styles.activeTab]}
                     onPress={() => setActiveTab('Past')}
                 >
-                    <Text style={[styles.tabText, activeTab === 'Past' && styles.activeTabText]}>Past Orders</Text>
+                    <Text style={[styles.tabText, activeTab === 'Past' && styles.activeTabText, isDark && activeTab !== 'Past' && { color: '#AAA' }]}>Past Orders</Text>
                 </TouchableOpacity>
             </View>
 

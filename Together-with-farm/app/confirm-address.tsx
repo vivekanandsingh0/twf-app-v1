@@ -6,11 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAddresses } from '@/contexts/AddressContext';
 import ConfirmationMap from '@/components/ConfirmationMap'; // This will resolve to .native or .web automatically
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ConfirmAddressScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { selectedAddress, updateAddress } = useAddresses();
+    const { isDark } = useTheme();
 
     // Local state for coordinate tweaks if user drags pin
     // Note: In real app, we would update the address in context/backend on confirm
@@ -38,21 +40,21 @@ export default function ConfirmAddressScreen() {
     }
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                <TouchableOpacity onPress={() => router.back()} style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Confirm Location</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Confirm Location</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
 
-                <Text style={styles.instructionText}>
+                <Text style={[styles.instructionText, isDark && { color: '#CCC' }]}>
                     Please confirm your delivery location on the map accurately for faster delivery.
                 </Text>
 
@@ -65,21 +67,21 @@ export default function ConfirmAddressScreen() {
                 </View>
 
                 {/* Address Details Card */}
-                <View style={styles.addressCard}>
+                <View style={[styles.addressCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                     <View style={styles.row}>
-                        <View style={styles.iconBox}>
-                            <Ionicons name="location" size={24} color="#1F5E2E" />
+                        <View style={[styles.iconBox, isDark && { backgroundColor: '#333' }]}>
+                            <Ionicons name="location" size={24} color={isDark ? '#FFF' : '#1F5E2E'} />
                         </View>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.addressType}>{selectedAddress.type}</Text>
-                            <Text style={styles.addressText}>{selectedAddress.address}, {selectedAddress.city}</Text>
-                            {selectedAddress.pincode && <Text style={styles.pincode}>PIN: {selectedAddress.pincode}</Text>}
+                            <Text style={[styles.addressType, isDark && { color: '#FFF' }]}>{selectedAddress.type}</Text>
+                            <Text style={[styles.addressText, isDark && { color: '#AAA' }]}>{selectedAddress.address}, {selectedAddress.city}</Text>
+                            {selectedAddress.pincode && <Text style={[styles.pincode, isDark && { color: '#888' }]}>PIN: {selectedAddress.pincode}</Text>}
 
                             {(selectedAddress.receiverName || selectedAddress.receiverPhone) && (
-                                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
-                                    <Text style={{ fontSize: 12, fontFamily: 'DMSans_700Bold', color: '#666', marginBottom: 2 }}>Receiver</Text>
-                                    {selectedAddress.receiverName && <Text style={{ fontSize: 13, fontFamily: 'DMSans_500Medium', color: '#1A1A1A' }}>{selectedAddress.receiverName}</Text>}
-                                    {selectedAddress.receiverPhone && <Text style={{ fontSize: 13, fontFamily: 'DMSans_400Regular', color: '#666' }}>{selectedAddress.receiverPhone}</Text>}
+                                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? '#333' : '#f0f0f0' }}>
+                                    <Text style={{ fontSize: 12, fontFamily: 'DMSans_700Bold', color: isDark ? '#AAA' : '#666', marginBottom: 2 }}>Receiver</Text>
+                                    {selectedAddress.receiverName && <Text style={{ fontSize: 13, fontFamily: 'DMSans_500Medium', color: isDark ? '#FFF' : '#1A1A1A' }}>{selectedAddress.receiverName}</Text>}
+                                    {selectedAddress.receiverPhone && <Text style={{ fontSize: 13, fontFamily: 'DMSans_400Regular', color: isDark ? '#AAA' : '#666' }}>{selectedAddress.receiverPhone}</Text>}
                                 </View>
                             )}
                         </View>
@@ -89,7 +91,7 @@ export default function ConfirmAddressScreen() {
             </ScrollView>
 
             {/* Footer */}
-            <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
                     <Text style={styles.confirmBtnText}>Confirm & Proceed</Text>
                     <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />

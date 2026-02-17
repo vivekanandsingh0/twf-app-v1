@@ -9,6 +9,7 @@ import Constants from 'expo-constants';
 import { useUser } from '@/contexts/UserContext';
 
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Helper Type
 interface TicketMessage {
@@ -22,6 +23,7 @@ export default function TicketDetailScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { user } = useUser();
+    const { isDark } = useTheme();
     const [ticket, setTicket] = useState<any>(null);
     const [reply, setReply] = useState('');
     const [sending, setSending] = useState(false);
@@ -119,23 +121,23 @@ export default function TicketDetailScreen() {
     }
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { backgroundColor: '#1E1E1E', borderBottomColor: '#333' }]}>
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.headerTitle} numberOfLines={1}>#{ticket.id.split('-')[1]}</Text>
-                    <Text style={styles.headerSubtitle} numberOfLines={1}>{ticket.subject}</Text>
+                    <Text style={[styles.headerTitle, isDark && { color: '#AAA' }]} numberOfLines={1}>#{ticket.id.split('-')[1]}</Text>
+                    <Text style={[styles.headerSubtitle, isDark && { color: '#FFF' }]} numberOfLines={1}>{ticket.subject}</Text>
                 </View>
                 <View style={[styles.statusBadge,
-                ticket.status === 'Open' ? styles.statusOpen : styles.statusClosed
+                ticket.status === 'Open' ? (isDark ? { backgroundColor: '#1E3E2E' } : styles.statusOpen) : (isDark ? { backgroundColor: '#333' } : styles.statusClosed)
                 ]}>
                     <Text style={[styles.statusText,
-                    ticket.status === 'Open' ? styles.statusTextOpen : styles.statusTextClosed
+                    ticket.status === 'Open' ? (isDark ? { color: '#81C784' } : styles.statusTextOpen) : (isDark ? { color: '#AAA' } : styles.statusTextClosed)
                     ]}>{ticket.status}</Text>
                 </View>
             </View>
@@ -154,9 +156,9 @@ export default function TicketDetailScreen() {
                                     <Ionicons name="headset" size={16} color="#fff" />
                                 </View>
                             )}
-                            <View style={[styles.msgBubble, isUser ? styles.msgBubbleUser : styles.msgBubbleAdmin]}>
-                                <Text style={[styles.msgText, isUser ? styles.msgTextUser : styles.msgTextAdmin]}>{msg.text}</Text>
-                                <Text style={[styles.msgTime, isUser ? styles.msgTimeUser : styles.msgTimeAdmin]}>
+                            <View style={[styles.msgBubble, isUser ? styles.msgBubbleUser : styles.msgBubbleAdmin, !isUser && isDark && { backgroundColor: '#333' }]}>
+                                <Text style={[styles.msgText, isUser ? styles.msgTextUser : styles.msgTextAdmin, !isUser && isDark && { color: '#FFF' }]}>{msg.text}</Text>
+                                <Text style={[styles.msgTime, isUser ? styles.msgTimeUser : styles.msgTimeAdmin, !isUser && isDark && { color: '#AAA' }]}>
                                     {new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </Text>
                             </View>
@@ -169,19 +171,20 @@ export default function TicketDetailScreen() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <View style={styles.inputBar}>
+                <View style={[styles.inputBar, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, isDark && { backgroundColor: '#333', color: '#FFF' }]}
                         placeholder="Type a message..."
+                        placeholderTextColor={isDark ? '#888' : '#999'}
                         value={reply}
                         onChangeText={setReply}
                     />
                     <TouchableOpacity
-                        style={[styles.sendButton, !reply.trim() && styles.sendButtonDisabled]}
+                        style={[styles.sendButton, !reply.trim() && styles.sendButtonDisabled, isDark && !reply.trim() && { backgroundColor: '#333' }]}
                         onPress={handleSendReply}
                         disabled={!reply.trim() || sending}
                     >
-                        <Ionicons name="send" size={20} color={!reply.trim() ? "#ccc" : "#fff"} />
+                        <Ionicons name="send" size={20} color={!reply.trim() ? (isDark ? "#666" : "#ccc") : "#fff"} />
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>

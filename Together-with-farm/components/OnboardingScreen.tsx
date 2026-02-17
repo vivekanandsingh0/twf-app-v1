@@ -13,6 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const scrollViewRef = useRef<ScrollView>(null);
     const insets = useSafeAreaInsets();
+    const { isDark } = useTheme();
 
     const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const offsetX = event.nativeEvent.contentOffset.x;
@@ -59,8 +61,8 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
 
     // Render content
     return (
-        <View style={styles.container}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Background Image Container - Fixed position */}
             <View style={[styles.imageContainer, { top: insets.top + 20 }]}>
@@ -74,7 +76,7 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
             {/* White Content Container with Curved Top */}
             <View style={styles.contentWrapper}>
                 {/* The Big Circle View for the Curve */}
-                <View style={styles.curveBackground} />
+                <View style={[styles.curveBackground, isDark && { backgroundColor: '#1E1E1E' }]} />
 
                 {/* Foreground Content (Text & Buttons) */}
                 <View style={styles.foregroundContent}>
@@ -91,8 +93,8 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
                         {onboardingData.map((item, index) => (
                             <View key={index} style={styles.slide}>
                                 <View style={styles.textContainer}>
-                                    <Text style={styles.title}>{item.title}</Text>
-                                    <Text style={styles.description}>{item.description}</Text>
+                                    <Text style={[styles.title, isDark && { color: '#FFF' }]}>{item.title}</Text>
+                                    <Text style={[styles.description, isDark && { color: '#AAA' }]}>{item.description}</Text>
                                 </View>
                             </View>
                         ))}
@@ -106,7 +108,7 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
                                     key={dotIndex}
                                     style={[
                                         styles.dot,
-                                        currentIndex === dotIndex ? styles.activeDot : styles.inactiveDot,
+                                        currentIndex === dotIndex ? styles.activeDot : (isDark ? { backgroundColor: '#555' } : styles.inactiveDot),
                                     ]}
                                 />
                             ))}
@@ -126,10 +128,10 @@ export default function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
                         {/* Terms text */}
                         <View style={styles.termsContainer}>
                             {isLastSlide && (
-                                <Text style={styles.termsText}>
+                                <Text style={[styles.termsText, isDark && { color: '#888' }]}>
                                     By continuing, you agree to our{' '}
-                                    <Text style={styles.termsLink}>Terms</Text> &{' '}
-                                    <Text style={styles.termsLink}>Privacy Policy</Text>.
+                                    <Text style={[styles.termsLink, isDark && { color: '#4CAF50' }]}>Terms</Text> &{' '}
+                                    <Text style={[styles.termsLink, isDark && { color: '#4CAF50' }]}>Privacy Policy</Text>.
                                 </Text>
                             )}
                         </View>

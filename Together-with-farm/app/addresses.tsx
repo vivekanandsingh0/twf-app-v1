@@ -15,11 +15,15 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // Address type now imported from context
 import { useAddresses, Address } from '@/contexts/AddressContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function AddressesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { unreadCount } = useNotifications();
     const { addresses, addAddress, updateAddress, deleteAddress } = useAddresses();
+    const { isDark } = useTheme();
 
     const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
     const [showMenu, setShowMenu] = useState(false);
@@ -122,23 +126,25 @@ export default function AddressesScreen() {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-            <StatusBar style="dark" />
+        <View style={[styles.container, { paddingTop: insets.top + 10 }, isDark && { backgroundColor: '#121212' }]}>
+            <StatusBar style={isDark ? "light" : "dark"} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <View style={[styles.header, isDark && { backgroundColor: '#121212', borderBottomColor: '#333' }]}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Addresses</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Addresses</Text>
                 <TouchableOpacity
-                    style={styles.notificationBtn}
+                    style={[styles.notificationBtn, isDark && { backgroundColor: '#333' }]}
                     onPress={() => router.push('/notifications')}
                 >
-                    <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
-                    <View style={styles.notificationBadge}>
-                        <Text style={styles.badgeText}>2</Text>
-                    </View>
+                    <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+                    {unreadCount > 0 && (
+                        <View style={styles.notificationBadge}>
+                            <Text style={styles.badgeText}>{unreadCount}</Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
             </View>
 
@@ -147,60 +153,60 @@ export default function AddressesScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* My Addresses Section */}
-                <Text style={styles.sectionTitle}>My Addresses</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>My Addresses</Text>
 
                 {addresses.map((item) => (
                     <TouchableOpacity
                         key={item.id}
-                        style={styles.addressCard}
+                        style={[styles.addressCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
                         activeOpacity={0.7}
                     >
                         <View style={styles.addressContent}>
-                            <View style={styles.iconContainer}>
+                            <View style={[styles.iconContainer, isDark && { backgroundColor: '#333' }]}>
                                 <MaterialCommunityIcons
                                     name={item.icon as any}
                                     size={24}
-                                    color="#1A1A1A"
+                                    color={isDark ? '#FFF' : '#1A1A1A'}
                                 />
                             </View>
                             <View style={styles.addressInfo}>
-                                <Text style={styles.addressType}>{item.type}</Text>
-                                <Text style={styles.addressText} numberOfLines={2}>
+                                <Text style={[styles.addressType, isDark && { color: '#FFF' }]}>{item.type}</Text>
+                                <Text style={[styles.addressText, isDark && { color: '#AAA' }]} numberOfLines={2}>
                                     {item.address}
                                 </Text>
-                                <Text style={styles.addressCity}>{item.city}</Text>
+                                <Text style={[styles.addressCity, isDark && { color: '#888' }]}>{item.city}</Text>
                             </View>
                         </View>
                         <TouchableOpacity
                             style={styles.moreButton}
                             onPress={() => handleMenuPress(item)}
                         >
-                            <Ionicons name="ellipsis-horizontal" size={20} color="#1A1A1A" />
+                            <Ionicons name="ellipsis-horizontal" size={20} color={isDark ? '#FFF' : '#1A1A1A'} />
                         </TouchableOpacity>
                     </TouchableOpacity>
                 ))}
 
                 {/* Add Address Section */}
-                <Text style={styles.sectionTitle}>Add Address</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Add Address</Text>
 
                 <TouchableOpacity
-                    style={styles.addAddressCard}
+                    style={[styles.addAddressCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
                     activeOpacity={0.7}
                     onPress={handleAddNew}
                 >
                     <View style={styles.addressContent}>
-                        <View style={styles.iconContainer}>
-                            <Ionicons name="add" size={24} color="#1A1A1A" />
+                        <View style={[styles.iconContainer, isDark && { backgroundColor: '#333' }]}>
+                            <Ionicons name="add" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                         </View>
                         <View style={styles.addressInfo}>
-                            <Text style={styles.addressType}>Add New Address</Text>
-                            <Text style={styles.addressSubtext}>
+                            <Text style={[styles.addressType, isDark && { color: '#FFF' }]}>Add New Address</Text>
+                            <Text style={[styles.addressSubtext, isDark && { color: '#AAA' }]}>
                                 Like, Home, Work, Office, etc
                             </Text>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.moreButton}>
-                        <Ionicons name="ellipsis-horizontal" size={20} color="#1A1A1A" />
+                        <Ionicons name="ellipsis-horizontal" size={20} color={isDark ? '#FFF' : '#1A1A1A'} />
                     </TouchableOpacity>
                 </TouchableOpacity>
             </ScrollView>
@@ -217,12 +223,12 @@ export default function AddressesScreen() {
                     activeOpacity={1}
                     onPress={() => setShowMenu(false)}
                 >
-                    <View style={styles.menuModal}>
+                    <View style={[styles.menuModal, isDark && { backgroundColor: '#1E1E1E' }]}>
                         <TouchableOpacity style={styles.menuItem} onPress={handleEdit}>
-                            <Ionicons name="create-outline" size={20} color="#1A1A1A" />
-                            <Text style={styles.menuText}>Edit</Text>
+                            <Ionicons name="create-outline" size={20} color={isDark ? '#FFF' : '#1A1A1A'} />
+                            <Text style={[styles.menuText, isDark && { color: '#FFF' }]}>Edit</Text>
                         </TouchableOpacity>
-                        <View style={styles.menuDivider} />
+                        <View style={[styles.menuDivider, isDark && { backgroundColor: '#333' }]} />
                         <TouchableOpacity style={styles.menuItem} onPress={handleDelete}>
                             <Ionicons name="trash-outline" size={20} color="#FF4B4B" />
                             <Text style={[styles.menuText, { color: '#FF4B4B' }]}>Delete</Text>
@@ -239,17 +245,17 @@ export default function AddressesScreen() {
                 onRequestClose={() => setShowDeleteConfirm(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={styles.confirmModal}>
-                        <Text style={styles.confirmTitle}>Delete Address?</Text>
-                        <Text style={styles.confirmText}>
+                    <View style={[styles.confirmModal, isDark && { backgroundColor: '#1E1E1E' }]}>
+                        <Text style={[styles.confirmTitle, isDark && { color: '#FFF' }]}>Delete Address?</Text>
+                        <Text style={[styles.confirmText, isDark && { color: '#AAA' }]}>
                             Are you sure you want to delete this address?
                         </Text>
                         <View style={styles.confirmButtons}>
                             <TouchableOpacity
-                                style={styles.cancelButton}
+                                style={[styles.cancelButton, isDark && { backgroundColor: '#333' }]}
                                 onPress={() => setShowDeleteConfirm(false)}
                             >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <Text style={[styles.cancelButtonText, isDark && { color: '#FFF' }]}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.deleteButton}
@@ -268,12 +274,12 @@ export default function AddressesScreen() {
                 animationType="slide"
                 onRequestClose={() => setShowAddressForm(false)}
             >
-                <View style={[styles.formContainer, { paddingTop: insets.top + 10 }]}>
-                    <View style={styles.formHeader}>
+                <View style={[styles.formContainer, { paddingTop: insets.top + 10 }, isDark && { backgroundColor: '#121212' }]}>
+                    <View style={[styles.formHeader, isDark && { borderBottomColor: '#333' }]}>
                         <TouchableOpacity onPress={() => setShowAddressForm(false)}>
-                            <Ionicons name="close" size={24} color="#1A1A1A" />
+                            <Ionicons name="close" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                         </TouchableOpacity>
-                        <Text style={styles.formTitle}>
+                        <Text style={[styles.formTitle, isDark && { color: '#FFF' }]}>
                             {isEditing ? 'Edit Address' : 'Add New Address'}
                         </Text>
                         <View style={{ width: 24 }} />
@@ -284,20 +290,22 @@ export default function AddressesScreen() {
                         contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
                     >
                         <View style={styles.formField}>
-                            <Text style={styles.formLabel}>Address Type *</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Address Type *</Text>
                             <TextInput
-                                style={styles.formInput}
+                                style={[styles.formInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="e.g., Home, Office, Work"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={formData.type}
                                 onChangeText={(text) => setFormData({ ...formData, type: text })}
                             />
                         </View>
 
                         <View style={styles.formField}>
-                            <Text style={styles.formLabel}>Full Address *</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Full Address *</Text>
                             <TextInput
-                                style={[styles.formInput, styles.textArea]}
+                                style={[styles.formInput, styles.textArea, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="House/Flat No., Street, Area"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={formData.address}
                                 onChangeText={(text) => setFormData({ ...formData, address: text })}
                                 multiline
@@ -306,20 +314,22 @@ export default function AddressesScreen() {
                         </View>
 
                         <View style={styles.formField}>
-                            <Text style={styles.formLabel}>City/Town *</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>City/Town *</Text>
                             <TextInput
-                                style={styles.formInput}
+                                style={[styles.formInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="Enter city or town"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={formData.city}
                                 onChangeText={(text) => setFormData({ ...formData, city: text })}
                             />
                         </View>
 
                         <View style={styles.formField}>
-                            <Text style={styles.formLabel}>Pincode</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Pincode</Text>
                             <TextInput
-                                style={styles.formInput}
+                                style={[styles.formInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="Enter pincode"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={formData.pincode}
                                 onChangeText={(text) => setFormData({ ...formData, pincode: text })}
                                 keyboardType="numeric"
@@ -327,32 +337,35 @@ export default function AddressesScreen() {
                         </View>
 
                         <View style={styles.formField}>
-                            <Text style={styles.formLabel}>Landmark (Optional)</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Landmark (Optional)</Text>
                             <TextInput
-                                style={styles.formInput}
+                                style={[styles.formInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="Nearby landmark"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={formData.landmark}
                                 onChangeText={(text) => setFormData({ ...formData, landmark: text })}
                             />
                         </View>
 
-                        <Text style={[styles.sectionTitle, { paddingHorizontal: 20, marginTop: 20, marginBottom: 10 }]}>Receiver Details (Optional)</Text>
+                        <Text style={[styles.sectionTitle, { paddingHorizontal: 20, marginTop: 20, marginBottom: 10 }, isDark && { color: '#FFF' }]}>Receiver Details (Optional)</Text>
 
                         <View style={styles.formField}>
-                            <Text style={styles.formLabel}>Receiver Name</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Receiver Name</Text>
                             <TextInput
-                                style={styles.formInput}
+                                style={[styles.formInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="e.g. Someone Else"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={formData.receiverName}
                                 onChangeText={(text) => setFormData({ ...formData, receiverName: text })}
                             />
                         </View>
 
                         <View style={styles.formField}>
-                            <Text style={styles.formLabel}>Receiver Phone</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Receiver Phone</Text>
                             <TextInput
-                                style={styles.formInput}
+                                style={[styles.formInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="e.g. 9876543210"
+                                placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={formData.receiverPhone}
                                 onChangeText={(text) => setFormData({ ...formData, receiverPhone: text })}
                                 keyboardType="phone-pad"

@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useMarket, MarketVendor, MarketProduct } from '@/contexts/MarketContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -23,14 +24,15 @@ export default function FarmerDetailsScreen() {
     const { id } = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     const { vendors, products } = useMarket();
+    const { isDark } = useTheme();
 
     const farmer = vendors.find(v => v.id === id);
     const farmerProducts = products.filter(p => p.vendorId === id);
 
     if (!farmer) {
         return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text>Farmer not found</Text>
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }, isDark && { backgroundColor: '#121212' }]}>
+                <Text style={isDark && { color: '#FFF' }}>Farmer not found</Text>
                 <TouchableOpacity onPress={() => router.back()}>
                     <Text style={{ color: '#1F5E2E', marginTop: 10 }}>Go Back</Text>
                 </TouchableOpacity>
@@ -41,34 +43,34 @@ export default function FarmerDetailsScreen() {
     const renderProductCard = (item: MarketProduct) => (
         <TouchableOpacity
             key={item.id}
-            style={styles.productCard}
+            style={[styles.productCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
             onPress={() => router.push(`/product/${item.id}`)}
             activeOpacity={0.9}
         >
-            <View style={styles.productImageContainer}>
+            <View style={[styles.productImageContainer, isDark && { backgroundColor: '#333' }]}>
                 <Image source={item.image} style={styles.productImage} contentFit="contain" />
                 {!!item.discount && (
                     <View style={styles.discountBadge}>
                         <Text style={styles.discountText}>{item.discount}</Text>
                     </View>
                 )}
-                <TouchableOpacity style={styles.favoriteButton}>
+                <TouchableOpacity style={[styles.favoriteButton, isDark && { backgroundColor: '#333' }]}>
                     <Ionicons
                         name={item.isFavorite ? "heart" : "heart-outline"}
                         size={18}
-                        color={item.isFavorite ? "#FF4B4B" : "#1A1A1A"}
+                        color={item.isFavorite ? "#FF4B4B" : (isDark ? "#FFF" : "#1A1A1A")}
                     />
                 </TouchableOpacity>
             </View>
 
             <View style={styles.productInfo}>
-                <Text style={styles.tagText}>{item.tag || item.type || ''}</Text>
-                <Text style={styles.productTitle} numberOfLines={1}>{item.name}</Text>
+                <Text style={[styles.tagText, isDark && { color: '#AAA' }]}>{item.tag || item.type || ''}</Text>
+                <Text style={[styles.productTitle, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.name}</Text>
 
                 <View style={styles.priceRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                        <Text style={styles.priceText}>₹{item.price}</Text>
-                        <Text style={styles.unitText}>/{item.unit}</Text>
+                        <Text style={[styles.priceText, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                        <Text style={[styles.unitText, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
                     </View>
 
                     <TouchableOpacity style={styles.addButton}>
@@ -80,7 +82,7 @@ export default function FarmerDetailsScreen() {
     );
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isDark && { backgroundColor: '#121212' }]}>
             <StatusBar style="light" />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -97,36 +99,36 @@ export default function FarmerDetailsScreen() {
                     </View>
                 </ImageBackground>
 
-                <View style={styles.profileCardContainer}>
-                    <View style={styles.profileCard}>
+                <View style={[styles.profileCardContainer]}>
+                    <View style={[styles.profileCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
                         {/* Avatar & Name Row */}
                         <View style={styles.profileHeader}>
                             <Image source={farmer.image} style={styles.avatar} contentFit="cover" />
                             <View style={styles.profileInfo}>
-                                <Text style={styles.farmerName}>{farmer.name}</Text>
+                                <Text style={[styles.farmerName, isDark && { color: '#FFF' }]}>{farmer.name}</Text>
                                 <View style={styles.locationRow}>
                                     <Ionicons name="location-outline" size={14} color="#1F5E2E" />
-                                    <Text style={styles.locationText}>{farmer.location}</Text>
+                                    <Text style={[styles.locationText, isDark && { color: '#CCC' }]}>{farmer.location}</Text>
                                 </View>
                             </View>
                         </View>
 
                         {/* Stats Row */}
                         <View style={styles.statsRow}>
-                            <View style={styles.statBox}>
+                            <View style={[styles.statBox, isDark && { borderColor: '#444' }]}>
                                 <MaterialCommunityIcons name="medal-outline" size={20} color="#1F5E2E" style={{ marginBottom: 4 }} />
-                                <Text style={styles.statLabel}>EXPERIENCE</Text>
-                                <Text style={styles.statValue}>{farmer.stats.experience}</Text>
+                                <Text style={[styles.statLabel, isDark && { color: '#AAA' }]}>EXPERIENCE</Text>
+                                <Text style={[styles.statValue, isDark && { color: '#FFF' }]}>{farmer.stats.experience}</Text>
                             </View>
-                            <View style={styles.statBox}>
+                            <View style={[styles.statBox, isDark && { borderColor: '#444' }]}>
                                 <Ionicons name="leaf-outline" size={20} color="#1F5E2E" style={{ marginBottom: 4 }} />
-                                <Text style={styles.statLabel}>METHOD</Text>
-                                <Text style={styles.statValue}>{farmer.stats.method}</Text>
+                                <Text style={[styles.statLabel, isDark && { color: '#AAA' }]}>METHOD</Text>
+                                <Text style={[styles.statValue, isDark && { color: '#FFF' }]}>{farmer.stats.method}</Text>
                             </View>
-                            <View style={styles.statBox}>
+                            <View style={[styles.statBox, isDark && { borderColor: '#444' }]}>
                                 <MaterialCommunityIcons name="image-filter-hdr" size={20} color="#1F5E2E" style={{ marginBottom: 4 }} />
-                                <Text style={styles.statLabel}>FARM SIZE</Text>
-                                <Text style={styles.statValue}>{farmer.stats.size}</Text>
+                                <Text style={[styles.statLabel, isDark && { color: '#AAA' }]}>FARM SIZE</Text>
+                                <Text style={[styles.statValue, isDark && { color: '#FFF' }]}>{farmer.stats.size}</Text>
                             </View>
                         </View>
                     </View>
@@ -135,15 +137,15 @@ export default function FarmerDetailsScreen() {
                 <View style={styles.contentSection}>
                     <View style={styles.sectionHeaderRow}>
                         <Ionicons name="book-outline" size={20} color="#1F5E2E" style={{ marginRight: 8 }} />
-                        <Text style={styles.sectionTitle}>Our Story</Text>
+                        <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Our Story</Text>
                     </View>
-                    <Text style={styles.storyText}>{farmer.story}</Text>
+                    <Text style={[styles.storyText, isDark && { color: '#CCC' }]}>{farmer.story}</Text>
 
-                    <View style={styles.quoteContainer}>
-                        <Text style={styles.quoteText}>"{farmer.quote}"</Text>
+                    <View style={[styles.quoteContainer, isDark && { backgroundColor: '#1E3E2E', borderLeftColor: '#4CAF50' }]}>
+                        <Text style={[styles.quoteText, isDark && { color: '#81C784' }]}>"{farmer.quote}"</Text>
                     </View>
 
-                    <Text style={styles.sectionTitleProducts}>All Products</Text>
+                    <Text style={[styles.sectionTitleProducts, isDark && { color: '#FFF' }]}>All Products</Text>
                     <View style={styles.productsGrid}>
                         {farmerProducts.map(renderProductCard)}
                     </View>
