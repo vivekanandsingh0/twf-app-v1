@@ -79,6 +79,25 @@ export default function OrderDetailsScreen() {
                         <Ionicons name="location-outline" size={20} color="#666" style={{ width: 24 }} />
                         <Text style={styles.detailText}>{order.deliveryAddress}</Text>
                     </View>
+
+                    {/* Receiver Details (Optional) */}
+                    {(order.receiverName || order.receiverPhone) && (
+                        <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
+                            <Text style={[styles.sectionTitle, { fontSize: 14, marginBottom: 8 }]}>Receiver Info</Text>
+                            {order.receiverName && (
+                                <View style={styles.detailRow}>
+                                    <Ionicons name="person" size={20} color="#666" style={{ width: 24 }} />
+                                    <Text style={styles.detailText}>{order.receiverName}</Text>
+                                </View>
+                            )}
+                            {order.receiverPhone && (
+                                <View style={styles.detailRow}>
+                                    <Ionicons name="call" size={20} color="#666" style={{ width: 24 }} />
+                                    <Text style={styles.detailText}>{order.receiverPhone}</Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
                 </View>
 
                 {/* Items */}

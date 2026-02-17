@@ -118,6 +118,8 @@ export interface VendorOrder {
     paymentMethod?: string; // Added to track payment method name
     shippingFee?: number;   // Added
     deliveryAddress: string;
+    receiverName?: string;
+    receiverPhone?: string;
 }
 
 export interface VendorTransaction {
@@ -351,7 +353,9 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         customerPhone: dbOrder.customer_phone,
                         paymentMethod: dbOrder.payment_method,
                         shippingFee: Number(dbOrder.shipping_fee || 0),
-                        deliveryAddress: dbOrder.delivery_address || ''
+                        deliveryAddress: dbOrder.delivery_address || '',
+                        receiverName: dbOrder.receiver_name,
+                        receiverPhone: dbOrder.receiver_phone,
                     }));
                     setOrders(mappedOrders);
                 }
@@ -605,6 +609,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 shipping_fee: order.shippingFee,
                 delivery_address: order.deliveryAddress,
                 customer_name: order.customerName, // Ensure backend schema has this column
+                receiver_name: order.receiverName,
+                receiver_phone: order.receiverPhone,
                 // created_at is auto-generated
             };
 

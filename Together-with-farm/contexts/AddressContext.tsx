@@ -14,6 +14,8 @@ export interface Address {
     landmark?: string;
     latitude?: number;
     longitude?: number;
+    receiverName?: string;
+    receiverPhone?: string;
 }
 
 // Keep initial addresses empty as we will fetch from DB

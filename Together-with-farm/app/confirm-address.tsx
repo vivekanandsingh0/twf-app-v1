@@ -74,6 +74,14 @@ export default function ConfirmAddressScreen() {
                             <Text style={styles.addressType}>{selectedAddress.type}</Text>
                             <Text style={styles.addressText}>{selectedAddress.address}, {selectedAddress.city}</Text>
                             {selectedAddress.pincode && <Text style={styles.pincode}>PIN: {selectedAddress.pincode}</Text>}
+
+                            {(selectedAddress.receiverName || selectedAddress.receiverPhone) && (
+                                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
+                                    <Text style={{ fontSize: 12, fontFamily: 'DMSans_700Bold', color: '#666', marginBottom: 2 }}>Receiver</Text>
+                                    {selectedAddress.receiverName && <Text style={{ fontSize: 13, fontFamily: 'DMSans_500Medium', color: '#1A1A1A' }}>{selectedAddress.receiverName}</Text>}
+                                    {selectedAddress.receiverPhone && <Text style={{ fontSize: 13, fontFamily: 'DMSans_400Regular', color: '#666' }}>{selectedAddress.receiverPhone}</Text>}
+                                </View>
+                            )}
                         </View>
                     </View>
                 </View>

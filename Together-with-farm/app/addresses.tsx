@@ -34,6 +34,8 @@ export default function AddressesScreen() {
         city: '',
         pincode: '',
         landmark: '',
+        receiverName: '',
+        receiverPhone: '',
     });
 
     const handleMenuPress = (address: Address) => {
@@ -49,6 +51,8 @@ export default function AddressesScreen() {
                 city: selectedAddress.city,
                 pincode: selectedAddress.pincode || '',
                 landmark: selectedAddress.landmark || '',
+                receiverName: selectedAddress.receiverName || '',
+                receiverPhone: selectedAddress.receiverPhone || '',
             });
             setIsEditing(true);
             setShowMenu(false);
@@ -76,6 +80,8 @@ export default function AddressesScreen() {
             city: '',
             pincode: '',
             landmark: '',
+            receiverName: '',
+            receiverPhone: '',
         });
         setIsEditing(false);
         setShowAddressForm(true);
@@ -327,6 +333,30 @@ export default function AddressesScreen() {
                                 placeholder="Nearby landmark"
                                 value={formData.landmark}
                                 onChangeText={(text) => setFormData({ ...formData, landmark: text })}
+                            />
+                        </View>
+
+                        <Text style={[styles.sectionTitle, { paddingHorizontal: 20, marginTop: 20, marginBottom: 10 }]}>Receiver Details (Optional)</Text>
+
+                        <View style={styles.formField}>
+                            <Text style={styles.formLabel}>Receiver Name</Text>
+                            <TextInput
+                                style={styles.formInput}
+                                placeholder="e.g. Someone Else"
+                                value={formData.receiverName}
+                                onChangeText={(text) => setFormData({ ...formData, receiverName: text })}
+                            />
+                        </View>
+
+                        <View style={styles.formField}>
+                            <Text style={styles.formLabel}>Receiver Phone</Text>
+                            <TextInput
+                                style={styles.formInput}
+                                placeholder="e.g. 9876543210"
+                                value={formData.receiverPhone}
+                                onChangeText={(text) => setFormData({ ...formData, receiverPhone: text })}
+                                keyboardType="phone-pad"
+                                maxLength={10}
                             />
                         </View>
 

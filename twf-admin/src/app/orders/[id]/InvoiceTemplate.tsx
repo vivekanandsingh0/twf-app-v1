@@ -23,6 +23,15 @@ export default function InvoiceTemplate({ order }: { order: any }) {
                     <p className="font-bold text-gray-900 text-lg">{order.customerName || order.customer?.full_name || 'Valued Customer'}</p>
                     <p className="text-gray-600 max-w-xs">{order.delivery_address || 'Address on file'}</p>
                     <p className="text-gray-600">{order.customer_phone}</p>
+
+                    {/* Receiver Details */}
+                    {(order.receiver_name || order.receiver_phone) && (
+                        <div className="mt-4 border-t border-gray-100 pt-2">
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Receiver</p>
+                            {order.receiver_name && <p className="font-semibold text-gray-800">{order.receiver_name}</p>}
+                            {order.receiver_phone && <p className="text-gray-600">{order.receiver_phone}</p>}
+                        </div>
+                    )}
                 </div>
                 <div className="text-right">
                     <div className="mb-4">

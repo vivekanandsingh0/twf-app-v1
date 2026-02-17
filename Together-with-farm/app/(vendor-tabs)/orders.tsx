@@ -116,9 +116,10 @@ export default function VendorOrdersScreen() {
                                     <div style="flex: 1;">
                                         <div class="label-section">
                                             <div class="label-title">SHIP TO:</div>
-                                            <div class="big-text">${order.customerName}</div>
+                                            <div class="big-text">${order.receiverName || order.customerName}</div>
                                             <div class="address-text">${order.deliveryAddress}</div>
-                                            <div style="margin-top: 5px;">Phone: +91 XXXXX XXXXX</div>
+                                            <div style="margin-top: 5px;">Phone: ${order.receiverPhone || order.customerPhone || 'N/A'}</div>
+                                            ${order.receiverName && order.receiverName !== order.customerName ? `<div style="font-size: 10px; color: #666; margin-top: 4px;">(Ordered by: ${order.customerName})</div>` : ''}
                                         </div>
                                     </div>
                                     <div style="flex: 1; border-left: 1px solid #ccc; padding-left: 20px;">
