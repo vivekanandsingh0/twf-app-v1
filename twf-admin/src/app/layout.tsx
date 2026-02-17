@@ -70,8 +70,8 @@ export default function RootLayout({
               <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">🔔</span>
               Notifications
             </a>
-            <a href="#" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium opacity-50 cursor-not-allowed">
-              <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center transition-colors">⚙️</span>
+            <a href="/settings" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">⚙️</span>
               Settings
             </a>
           </nav>

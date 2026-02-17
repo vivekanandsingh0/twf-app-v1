@@ -110,7 +110,7 @@ export default function SettingsScreen() {
                     'shield-checkmark-outline',
                     'Privacy & Security',
                     undefined,
-                    () => console.log('Privacy & Security pressed')
+                    () => router.push('/legal/privacy-security')
                 )}
 
                 {/* About Section */}
@@ -119,13 +119,13 @@ export default function SettingsScreen() {
                     'document-text-outline',
                     'Terms & Conditions',
                     undefined,
-                    () => console.log('Terms pressed')
+                    () => router.push('/legal/terms-conditions')
                 )}
                 {renderSettingItem(
                     'shield-outline',
                     'Privacy Policy',
                     undefined,
-                    () => console.log('Privacy Policy pressed')
+                    () => router.push('/legal/privacy-policy')
                 )}
                 {renderSettingItem(
                     'information-circle-outline',
