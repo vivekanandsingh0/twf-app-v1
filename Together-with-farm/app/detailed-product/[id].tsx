@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Platform, ToastAndroid, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Platform, ToastAndroid, Alert, ActivityIndicator } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,14 +8,16 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
 import { useUser } from '@/contexts/UserContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { supabase } from '@/lib/supabase';
 
 
 export default function OrderDetailScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { id } = useLocalSearchParams();
-    const { orders } = useUser();
+    const { orders, refreshOrders } = useUser();
     const { isDark } = useTheme();
+    const [cancelling, setCancelling] = useState(false);
 
     // Find Order
     const order = orders.find(o => o.id.includes(id as string));
@@ -28,6 +30,75 @@ export default function OrderDetailScreen() {
         } else {
             Alert.alert('Copied', 'Order ID copied to clipboard');
         }
+    };
+
+    const handleCancelOrder = async () => {
+        if (!order) return;
+
+        // Check if order can be cancelled
+        const cancellableStatuses = ['Pending', 'Confirmed', 'Accepted'];
+
+        if (!cancellableStatuses.includes(order.status)) {
+            Alert.alert(
+                "Cannot Cancel Order",
+                "This order has already been shipped by the farmer and cannot be cancelled.",
+                [{ text: "OK" }]
+            );
+            return;
+        }
+
+        Alert.alert(
+            "Cancel Order",
+            "Are you sure you want to cancel this order?",
+            [
+                { text: "No", style: "cancel" },
+                {
+                    text: "Yes, Cancel",
+                    style: "destructive",
+                    onPress: async () => {
+                        setCancelling(true);
+                        try {
+                            console.log('🔴 Cancelling order:', order.id);
+                            console.log('📝 Current status:', order.status);
+
+                            const { data, error } = await supabase
+                                .from('orders')
+                                .update({
+                                    status: 'Cancelled',
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', order.id)
+                                .select();
+
+                            console.log('📊 Update response:', { data, error });
+
+                            if (error) {
+                                console.error('❌ Supabase error:', error);
+                                throw error;
+                            }
+
+                            console.log('✅ Order cancelled in database');
+
+                            // Refresh orders to move from Active to Past
+                            console.log('🔄 Refreshing orders...');
+                            await refreshOrders();
+                            console.log('✅ Orders refreshed');
+
+                            Alert.alert(
+                                "Order Cancelled",
+                                "Your order has been cancelled successfully.",
+                                [{ text: "OK", onPress: () => router.back() }]
+                            );
+                        } catch (e: any) {
+                            console.error('❌ Cancel order error:', e);
+                            Alert.alert("Error", "Failed to cancel order: " + e.message);
+                        } finally {
+                            setCancelling(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     if (!order) {
@@ -79,7 +150,18 @@ export default function OrderDetailScreen() {
                     <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>#{id}</Text>
-                <View style={{ width: 32 }} />
+
+                {/* Help & Support Icon - Only for Active Orders */}
+                {['Pending', 'Accepted', 'Ready', 'Shipped', 'On the Way', 'Picked'].includes(order.status) ? (
+                    <TouchableOpacity
+                        onPress={() => router.push('/support/' as any)}
+                        style={[styles.helpBtn, isDark && { backgroundColor: '#333' }]}
+                    >
+                        <Ionicons name="help-circle-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
+                    </TouchableOpacity>
+                ) : (
+                    <View style={{ width: 32 }} />
+                )}
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -187,6 +269,52 @@ export default function OrderDetailScreen() {
                     </View>
                 </View>
 
+                {/* Rate Order Section - Only for Delivered Orders */}
+                {order.status === 'Delivered' && (
+                    <View style={styles.rateSection}>
+                        <TouchableOpacity
+                            style={[styles.rateOrderBtn, isDark && { backgroundColor: '#1F5E2E', borderColor: '#1F5E2E' }]}
+                            onPress={() => router.push(`/order/${order.id}` as any)}
+                        >
+                            <Ionicons name="star" size={20} color="#FFF" />
+                            <Text style={styles.rateOrderText}>Rate Your Order</Text>
+                        </TouchableOpacity>
+                        <Text style={[styles.rateHint, isDark && { color: '#AAA' }]}>
+                            Share your experience with this order
+                        </Text>
+                    </View>
+                )}
+
+                {/* Cancel Order Section */}
+                {['Pending', 'Confirmed', 'Accepted'].includes(order.status) && (
+                    <View style={styles.cancelSection}>
+                        <TouchableOpacity
+                            style={[styles.cancelOrderBtn, cancelling && styles.disabledBtn]}
+                            onPress={handleCancelOrder}
+                            disabled={cancelling}
+                        >
+                            {cancelling ? (
+                                <ActivityIndicator color="#FF4444" />
+                            ) : (
+                                <>
+                                    <Ionicons name="close-circle-outline" size={20} color="#FF4444" />
+                                    <Text style={styles.cancelOrderText}>Cancel Order</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                        <Text style={styles.cancelHint}>You can cancel this order until it's shipped</Text>
+                    </View>
+                )}
+
+                {['Shipped', 'On the Way', 'Ready', 'Processing'].includes(order.status) && (
+                    <View style={styles.infoBox}>
+                        <Ionicons name="information-circle" size={20} color="#FF9800" />
+                        <Text style={styles.infoText}>
+                            This order has been shipped by the farmer and cannot be cancelled.
+                        </Text>
+                    </View>
+                )}
+
                 <View style={{ height: 40 }} />
             </ScrollView>
         </View>
@@ -206,6 +334,10 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     backBtn: { padding: 4 },
+    helpBtn: {
+        padding: 4,
+        borderRadius: 12,
+    },
     notificationBtn: { padding: 4 },
     headerTitle: { fontSize: 18, fontFamily: 'DMSans_700Bold', color: '#1A1A1A' },
     badge: {
@@ -318,4 +450,81 @@ const styles = StyleSheet.create({
     },
     actionBtnText: { fontSize: 12, fontFamily: 'DMSans_700Bold', marginLeft: 4 },
 
+    cancelSection: {
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    cancelOrderBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: '#FF4444',
+        backgroundColor: '#fff',
+        gap: 8,
+    },
+    cancelOrderText: {
+        color: '#FF4444',
+        fontSize: 15,
+        fontFamily: 'DMSans_700Bold',
+    },
+    cancelHint: {
+        fontSize: 12,
+        color: '#999',
+        textAlign: 'center',
+        marginTop: 8,
+        fontFamily: 'DMSans_400Regular',
+    },
+    disabledBtn: {
+        opacity: 0.5,
+    },
+    infoBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF3E0',
+        padding: 12,
+        borderRadius: 12,
+        marginTop: 20,
+        marginBottom: 20,
+        gap: 10,
+    },
+    infoText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#E65100',
+        fontFamily: 'DMSans_500Medium',
+        lineHeight: 18,
+    },
+    rateSection: {
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    rateOrderBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 12,
+        backgroundColor: '#1F5E2E',
+        gap: 8,
+        shadowColor: '#1F5E2E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    rateOrderText: {
+        color: '#FFF',
+        fontSize: 15,
+        fontFamily: 'DMSans_700Bold',
+    },
+    rateHint: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 8,
+        fontFamily: 'DMSans_400Regular',
+    },
 });

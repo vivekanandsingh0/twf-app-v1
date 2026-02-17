@@ -31,6 +31,7 @@ export default function OrderDetailsScreen() {
             case 'Accepted': return '#1F5E2E';
             case 'Shipped': return '#5B4DBC';
             case 'Delivered': return '#666';
+            case 'Cancelled': return '#D32F2F'; // Red
             default: return '#666';
         }
     };
@@ -146,6 +147,19 @@ export default function OrderDetailsScreen() {
                         </Text>
                     </View>
                 </View>
+
+                {/* Cancelled Order Notice */}
+                {order.status === 'Cancelled' && (
+                    <View style={styles.cancelledNotice}>
+                        <Ionicons name="close-circle" size={24} color="#D32F2F" />
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                            <Text style={styles.cancelledTitle}>Order Cancelled</Text>
+                            <Text style={styles.cancelledText}>
+                                This order was cancelled by the customer. No action is required.
+                            </Text>
+                        </View>
+                    </View>
+                )}
 
                 <View style={{ height: 40 }} />
             </ScrollView>
@@ -324,5 +338,26 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontFamily: 'DMSans_700Bold',
         fontSize: 16,
-    }
+    },
+    cancelledNotice: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#FFEBEE',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FFCDD2',
+        marginTop: 20,
+    },
+    cancelledTitle: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#D32F2F',
+        marginBottom: 4,
+    },
+    cancelledText: {
+        fontSize: 14,
+        color: '#C62828',
+        lineHeight: 20,
+    },
 });

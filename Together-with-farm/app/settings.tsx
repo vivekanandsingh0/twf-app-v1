@@ -104,7 +104,7 @@ export default function SettingsScreen() {
                     'phone-portrait-outline',
                     'Change Mobile Number',
                     undefined,
-                    () => console.log('Change Mobile Number pressed')
+                    () => router.push('/change-phone')
                 )}
                 {renderSettingItem(
                     'shield-checkmark-outline',
@@ -138,7 +138,7 @@ export default function SettingsScreen() {
                 <TouchableOpacity style={[
                     styles.deleteButton,
                     isDark && { backgroundColor: '#3c1f1f' } // Darker red bg for dark mode
-                ]} onPress={() => console.log('Delete Account Pressed')}>
+                ]} onPress={() => router.push('/delete-account')}>
                     <Ionicons name="trash-outline" size={20} color="#FF453A" />
                     <Text style={[styles.deleteButtonText, isDark && { color: '#FF453A' }]}>Delete Account</Text>
                 </TouchableOpacity>

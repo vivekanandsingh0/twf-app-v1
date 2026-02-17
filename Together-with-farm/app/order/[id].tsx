@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, TextInput, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
 import { useUser } from '@/contexts/UserContext';
+import { supabase } from '@/lib/supabase';
 
 export default function RateOrderScreen() {
     const insets = useSafeAreaInsets();
@@ -23,6 +24,7 @@ export default function RateOrderScreen() {
     const [productRating, setProductRating] = useState(0);
     const [driverRating, setDriverRating] = useState(0);
     const [review, setReview] = useState('');
+    const [cancelling, setCancelling] = useState(false);
 
     if (!order) {
         return (
@@ -64,6 +66,56 @@ export default function RateOrderScreen() {
                 }
             }
         ]);
+    };
+
+    const handleCancelOrder = async () => {
+        // Check if order can be cancelled
+        const cancellableStatuses = ['Pending', 'Confirmed'];
+
+        if (!cancellableStatuses.includes(order.status)) {
+            Alert.alert(
+                "Cannot Cancel Order",
+                "This order has already been shipped by the farmer and cannot be cancelled.",
+                [{ text: "OK" }]
+            );
+            return;
+        }
+
+        Alert.alert(
+            "Cancel Order",
+            "Are you sure you want to cancel this order?",
+            [
+                { text: "No", style: "cancel" },
+                {
+                    text: "Yes, Cancel",
+                    style: "destructive",
+                    onPress: async () => {
+                        setCancelling(true);
+                        try {
+                            const { error } = await supabase
+                                .from('orders')
+                                .update({
+                                    status: 'Cancelled',
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', order.id);
+
+                            if (error) throw error;
+
+                            Alert.alert(
+                                "Order Cancelled",
+                                "Your order has been cancelled successfully.",
+                                [{ text: "OK", onPress: () => router.back() }]
+                            );
+                        } catch (e: any) {
+                            Alert.alert("Error", "Failed to cancel order: " + e.message);
+                        } finally {
+                            setCancelling(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const renderStars = (rating: number, setRating: (r: number) => void, readOnly: boolean) => {
@@ -120,12 +172,14 @@ export default function RateOrderScreen() {
 
                         <View style={styles.orderInfo}>
                             <View style={styles.rowBetween}>
-                                <Text style={styles.orderNumber}>{order.id}</Text>
+                                <Text style={styles.orderNumber} numberOfLines={1} ellipsizeMode="middle">{order.id}</Text>
+                            </View>
+                            <View style={styles.rowBetween}>
+                                <Text style={styles.itemSummary} numberOfLines={1}>{itemsSummary}</Text>
                                 <View style={styles.statusBadge}>
                                     <Text style={styles.statusText}>{order.status}</Text>
                                 </View>
                             </View>
-                            <Text style={styles.itemSummary} numberOfLines={1}>{itemsSummary}</Text>
                             <Text style={styles.dateText}>{new Date(order.date).toLocaleDateString()}</Text>
                         </View>
                     </View>
@@ -205,6 +259,36 @@ export default function RateOrderScreen() {
                     </View>
                 )}
 
+                {/* Cancel Order Section */}
+                {['Pending', 'Confirmed'].includes(order.status) && (
+                    <View style={styles.cancelSection}>
+                        <TouchableOpacity
+                            style={[styles.cancelOrderBtn, cancelling && styles.disabledBtn]}
+                            onPress={handleCancelOrder}
+                            disabled={cancelling}
+                        >
+                            {cancelling ? (
+                                <ActivityIndicator color="#FF4444" />
+                            ) : (
+                                <>
+                                    <Ionicons name="close-circle-outline" size={20} color="#FF4444" />
+                                    <Text style={styles.cancelOrderText}>Cancel Order</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                        <Text style={styles.cancelHint}>You can cancel this order until it's shipped</Text>
+                    </View>
+                )}
+
+                {['Shipped', 'Out for Delivery', 'Processing'].includes(order.status) && (
+                    <View style={styles.infoBox}>
+                        <Ionicons name="information-circle" size={20} color="#FF9800" />
+                        <Text style={styles.infoText}>
+                            This order has been shipped by the farmer and cannot be cancelled.
+                        </Text>
+                    </View>
+                )}
+
                 {/* Action Buttons */}
                 {isSubmitted ? (
                     <View style={styles.actionRow}>
@@ -267,12 +351,12 @@ const styles = StyleSheet.create({
     },
     quantityBadge: {},
     quantityText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-    orderInfo: { flex: 1 },
-    rowBetween: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-    orderNumber: { fontSize: 16, fontFamily: 'DMSans_700Bold', color: '#1A1A1A' },
-    statusBadge: { backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+    orderInfo: { flex: 1, overflow: 'hidden' },
+    rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+    orderNumber: { fontSize: 16, fontFamily: 'DMSans_700Bold', color: '#1A1A1A', flex: 1, marginRight: 8 },
+    statusBadge: { backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, flexShrink: 0 },
     statusText: { fontSize: 10, fontFamily: 'DMSans_700Bold', color: '#1F5E2E' },
-    itemSummary: { fontSize: 13, fontFamily: 'DMSans_400Regular', color: '#333', marginBottom: 4 },
+    itemSummary: { fontSize: 13, fontFamily: 'DMSans_400Regular', color: '#333', flex: 1, marginRight: 8 },
     dateText: { fontSize: 12, fontFamily: 'DMSans_400Regular', color: '#999' },
     divider: { height: 1, backgroundColor: '#F0F0F0', marginBottom: 12 },
     cardFooter: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -322,5 +406,53 @@ const styles = StyleSheet.create({
     },
     deleteBtnText: {
         color: '#FF4444', fontSize: 14, fontFamily: 'DMSans_700Bold', marginLeft: 8,
+    },
+
+    cancelSection: {
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    cancelOrderBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: '#FF4444',
+        backgroundColor: '#fff',
+        gap: 8,
+    },
+    cancelOrderText: {
+        color: '#FF4444',
+        fontSize: 15,
+        fontFamily: 'DMSans_700Bold',
+    },
+    cancelHint: {
+        fontSize: 12,
+        color: '#999',
+        textAlign: 'center',
+        marginTop: 8,
+        fontFamily: 'DMSans_400Regular',
+    },
+    disabledBtn: {
+        opacity: 0.5,
+    },
+    infoBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF3E0',
+        padding: 12,
+        borderRadius: 12,
+        marginTop: 20,
+        marginBottom: 20,
+        gap: 10,
+    },
+    infoText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#E65100',
+        fontFamily: 'DMSans_500Medium',
+        lineHeight: 18,
     },
 });

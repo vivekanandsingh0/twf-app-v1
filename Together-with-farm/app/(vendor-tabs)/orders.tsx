@@ -17,7 +17,7 @@ export default function VendorOrdersScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
 
-    const filters = ['All', 'Pending', 'Preparing', 'On the Way', 'Delivered'];
+    const filters = ['All', 'Pending', 'Preparing', 'On the Way', 'Delivered', 'Cancelled'];
 
     // Map Context Status to UI Status filters
     const getUIStatus = (status: VendorOrder['status']) => {
@@ -41,6 +41,7 @@ export default function VendorOrdersScreen() {
             case 'Ready': return '#1F5E2E'; // Green
             case 'Shipped': return '#5B4DBC'; // Purple/Blue (On the Way)
             case 'Delivered': return '#666';
+            case 'Cancelled': return '#D32F2F'; // Red
             default: return '#666';
         }
     };
