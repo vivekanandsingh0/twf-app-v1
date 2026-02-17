@@ -85,7 +85,7 @@ export default function OrdersScreen() {
                 if (!isPast) {
                     router.push(`/detailed-product/${orderId}` as any);
                 } else {
-                    router.push(`/order/${orderId}` as any);
+                    router.push(`/detailed-product/${orderId}` as any);
                 }
             }}
         >

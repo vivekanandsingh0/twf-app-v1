@@ -513,53 +513,7 @@
     }
   ],
   "vendor_requests": [],
-  "notifications": [
-    {
-      "id": "notif_1770626847876",
-      "title": "alert",
-      "body": "messagae body",
-      "type": "alert",
-      "targetType": "AllUsers",
-      "createdAt": "2026-02-09T08:47:27.876Z",
-      "read": false
-    },
-    {
-      "id": "notif_1770626800355",
-      "title": "user test",
-      "body": "message info",
-      "type": "info",
-      "targetType": "AllUsers",
-      "createdAt": "2026-02-09T08:46:40.355Z",
-      "read": false
-    },
-    {
-      "id": "notif_1770092671538",
-      "title": "offer title",
-      "body": "get 20% off with cde SHDH-HDGD_13",
-      "type": "promo",
-      "targetType": "AllVendors",
-      "createdAt": "2026-02-03T04:24:31.539Z",
-      "read": false
-    },
-    {
-      "id": "notif_1770092637720",
-      "title": "title alert",
-      "body": "message alert body",
-      "type": "alert",
-      "targetType": "AllVendors",
-      "createdAt": "2026-02-03T04:23:57.720Z",
-      "read": false
-    },
-    {
-      "id": "notif_1770092600291",
-      "title": "test info",
-      "body": "message body test info",
-      "type": "info",
-      "targetType": "AllVendors",
-      "createdAt": "2026-02-03T04:23:20.291Z",
-      "read": false
-    }
-  ],
+  "notifications": [],
   "tickets": [
     {
       "id": "TICKET-1771061601872",

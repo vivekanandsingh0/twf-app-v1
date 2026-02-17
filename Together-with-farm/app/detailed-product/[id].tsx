@@ -1,11 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Platform, ToastAndroid, Alert } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
 import { useUser } from '@/contexts/UserContext';
+
 
 export default function OrderDetailScreen() {
     const insets = useSafeAreaInsets();
@@ -15,6 +17,16 @@ export default function OrderDetailScreen() {
 
     // Find Order
     const order = orders.find(o => o.id.includes(id as string));
+
+    const handleCopyOrderId = async () => {
+        if (!order?.id) return;
+        await Clipboard.setStringAsync(order.id);
+        if (Platform.OS === 'android') {
+            ToastAndroid.show('Order ID copied to clipboard', ToastAndroid.SHORT);
+        } else {
+            Alert.alert('Copied', 'Order ID copied to clipboard');
+        }
+    };
 
     if (!order) {
         return (
@@ -129,7 +141,19 @@ export default function OrderDetailScreen() {
                 <View style={styles.paymentCard}>
                     <View style={styles.paymentRow}>
                         <Text style={styles.paymentLabel}>Order ID</Text>
-                        <Text style={styles.paymentValue}>#{order.id}</Text>
+                        <TouchableOpacity
+                            onPress={handleCopyOrderId}
+                            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 10 }}
+                        >
+                            <Text
+                                style={[styles.paymentValue, { flex: 1, textAlign: 'right', marginRight: 4 }]}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                            >
+                                #{order.id}
+                            </Text>
+                            <Ionicons name="copy-outline" size={14} color="#999" />
+                        </TouchableOpacity>
                     </View>
                     <View style={styles.paymentRow}>
                         <Text style={styles.paymentLabel}>Status</Text>
@@ -150,21 +174,16 @@ export default function OrderDetailScreen() {
                 <View style={styles.driverCard}>
                     <View style={styles.driverInfo}>
                         <View style={styles.driverAvatar}>
-                            <Text style={{ fontWeight: 'bold', color: '#555' }}>AK</Text>
+                            <Ionicons name="person" size={20} color="#555" />
                         </View>
                         <View>
                             <Text style={styles.driverName}>Amit Kumar</Text>
-                            <Text style={styles.driverDetails}>BR01AJ2346</Text>
                         </View>
                     </View>
                     <View style={styles.driverActions}>
-                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#E0E0E0' }]}>
-                            <Ionicons name="call" size={18} color="#1A1A1A" />
-                            <Text style={[styles.actionBtnText, { color: '#1A1A1A' }]}> Call</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1F5E2E' }]}>
-                            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
-                            <Text style={[styles.actionBtnText, { color: '#fff' }]}> Chat</Text>
+                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1F5E2E', paddingHorizontal: 20 }]}>
+                            <Ionicons name="call" size={18} color="#fff" />
+                            <Text style={[styles.actionBtnText, { color: '#fff' }]}> Call</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
