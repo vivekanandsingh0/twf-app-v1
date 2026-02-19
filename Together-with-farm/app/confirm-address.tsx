@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAddresses } from '@/contexts/AddressContext';
-import ConfirmationMap from '@/components/ConfirmationMap'; // This will resolve to .native or .web automatically
+import ConfirmationMap from '@/components/ConfirmationMap';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ConfirmAddressScreen() {
@@ -14,21 +14,44 @@ export default function ConfirmAddressScreen() {
     const { selectedAddress, updateAddress } = useAddresses();
     const { isDark } = useTheme();
 
-    // Local state for coordinate tweaks if user drags pin
-    // Note: In real app, we would update the address in context/backend on confirm
-    const [coordinate, setCoordinate] = useState<{ lat: number; lng: number } | null>(null);
+    // Initialize with already-known coords if address has them
+    const [pinnedCoord, setPinnedCoord] = useState<{ lat: number; lng: number } | null>(
+        selectedAddress?.latitude && selectedAddress?.longitude
+            ? { lat: selectedAddress.latitude, lng: selectedAddress.longitude }
+            : null
+    );
+    const [saving, setSaving] = useState(false);
 
-    const handleConfirm = () => {
-        // Here we could perform an update if coordinate changed
-        // if (coordinate && selectedAddress) {
-        //    updateAddress(selectedAddress.id, { latitude: coordinate.lat, longitude: coordinate.lng });
-        // }
+    const handleConfirm = async () => {
+        if (!selectedAddress) return;
+
+        if (!pinnedCoord) {
+            Alert.alert(
+                'Pin a Location',
+                'Please drag the pin or use "Locate Me" / search to set your delivery location on the map.',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
+        setSaving(true);
+        try {
+            // Save the pinned lat/lng back to Supabase via AddressContext
+            await updateAddress(selectedAddress.id, {
+                latitude: pinnedCoord.lat,
+                longitude: pinnedCoord.lng,
+            });
+        } catch (e) {
+            console.error('Failed to persist pin location:', e);
+            // Non-fatal — continue to payment anyway
+        } finally {
+            setSaving(false);
+        }
 
         router.push('/payment');
     };
 
     if (!selectedAddress) {
-        // Fallback if accessed directly without address
         return (
             <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
                 <Text>No Address Selected</Text>
@@ -55,14 +78,29 @@ export default function ConfirmAddressScreen() {
             <ScrollView contentContainerStyle={styles.content}>
 
                 <Text style={[styles.instructionText, isDark && { color: '#CCC' }]}>
-                    Please confirm your delivery location on the map accurately for faster delivery.
+                    Search or drag the pin to your exact delivery location.
                 </Text>
 
-                {/* Map Component */}
+                {/* Live Pin Status Badge */}
+                <View style={[styles.pinStatus, pinnedCoord ? styles.pinStatusSet : styles.pinStatusUnset]}>
+                    <Ionicons
+                        name={pinnedCoord ? 'checkmark-circle' : 'alert-circle-outline'}
+                        size={16}
+                        color={pinnedCoord ? '#1F5E2E' : '#E65100'}
+                    />
+                    <Text style={[styles.pinStatusText, { color: pinnedCoord ? '#1F5E2E' : '#E65100' }]}>
+                        {pinnedCoord
+                            ? `📍 ${pinnedCoord.lat.toFixed(5)}, ${pinnedCoord.lng.toFixed(5)}`
+                            : 'No location pinned — move the map marker to your spot'
+                        }
+                    </Text>
+                </View>
+
+                {/* Map */}
                 <View style={styles.mapWrapper}>
                     <ConfirmationMap
                         selectedAddress={selectedAddress}
-                        onPinChange={(lat, lng) => setCoordinate({ lat, lng })}
+                        onPinChange={(lat, lng) => setPinnedCoord({ lat, lng })}
                     />
                 </View>
 
@@ -74,14 +112,25 @@ export default function ConfirmAddressScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={[styles.addressType, isDark && { color: '#FFF' }]}>{selectedAddress.type}</Text>
-                            <Text style={[styles.addressText, isDark && { color: '#AAA' }]}>{selectedAddress.address}, {selectedAddress.city}</Text>
-                            {selectedAddress.pincode && <Text style={[styles.pincode, isDark && { color: '#888' }]}>PIN: {selectedAddress.pincode}</Text>}
-
+                            <Text style={[styles.addressText, isDark && { color: '#AAA' }]}>
+                                {selectedAddress.address}, {selectedAddress.city}
+                            </Text>
+                            {selectedAddress.pincode && (
+                                <Text style={[styles.pincode, isDark && { color: '#888' }]}>PIN: {selectedAddress.pincode}</Text>
+                            )}
                             {(selectedAddress.receiverName || selectedAddress.receiverPhone) && (
                                 <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? '#333' : '#f0f0f0' }}>
                                     <Text style={{ fontSize: 12, fontFamily: 'DMSans_700Bold', color: isDark ? '#AAA' : '#666', marginBottom: 2 }}>Receiver</Text>
-                                    {selectedAddress.receiverName && <Text style={{ fontSize: 13, fontFamily: 'DMSans_500Medium', color: isDark ? '#FFF' : '#1A1A1A' }}>{selectedAddress.receiverName}</Text>}
-                                    {selectedAddress.receiverPhone && <Text style={{ fontSize: 13, fontFamily: 'DMSans_400Regular', color: isDark ? '#AAA' : '#666' }}>{selectedAddress.receiverPhone}</Text>}
+                                    {selectedAddress.receiverName && (
+                                        <Text style={{ fontSize: 13, fontFamily: 'DMSans_500Medium', color: isDark ? '#FFF' : '#1A1A1A' }}>
+                                            {selectedAddress.receiverName}
+                                        </Text>
+                                    )}
+                                    {selectedAddress.receiverPhone && (
+                                        <Text style={{ fontSize: 13, fontFamily: 'DMSans_400Regular', color: isDark ? '#AAA' : '#666' }}>
+                                            {selectedAddress.receiverPhone}
+                                        </Text>
+                                    )}
                                 </View>
                             )}
                         </View>
@@ -92,9 +141,20 @@ export default function ConfirmAddressScreen() {
 
             {/* Footer */}
             <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
-                <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
-                    <Text style={styles.confirmBtnText}>Confirm & Proceed</Text>
-                    <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                <TouchableOpacity
+                    style={[styles.confirmBtn, saving && { opacity: 0.75 }]}
+                    onPress={handleConfirm}
+                    disabled={saving}
+                    activeOpacity={0.85}
+                >
+                    {saving ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                        <>
+                            <Text style={styles.confirmBtnText}>Confirm &amp; Proceed</Text>
+                            <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         </View>
@@ -133,21 +193,45 @@ const styles = StyleSheet.create({
     },
     content: {
         paddingHorizontal: 20,
+        paddingBottom: 120,
     },
     instructionText: {
         fontSize: 14,
         fontFamily: 'DMSans_400Regular',
         color: '#666',
-        marginBottom: 20,
+        marginBottom: 12,
         textAlign: 'center',
+    },
+    pinStatus: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+        borderRadius: 12,
+        marginBottom: 14,
+        borderWidth: 1,
+    },
+    pinStatusSet: {
+        backgroundColor: '#E8F5E9',
+        borderColor: '#A5D6A7',
+    },
+    pinStatusUnset: {
+        backgroundColor: '#FFF3E0',
+        borderColor: '#FFCC80',
+    },
+    pinStatusText: {
+        fontSize: 12,
+        fontFamily: 'DMSans_500Medium',
+        flex: 1,
     },
     mapWrapper: {
         borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: '#E0E0E0',
-        marginBottom: 24,
-        height: 300, // Taller map for confirmation
+        marginBottom: 20,
+        height: 360,
     },
     addressCard: {
         backgroundColor: '#fff',

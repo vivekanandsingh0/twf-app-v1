@@ -118,6 +118,8 @@ export interface VendorOrder {
     paymentMethod?: string; // Added to track payment method name
     shippingFee?: number;   // Added
     deliveryAddress: string;
+    deliveryLatitude?: number;
+    deliveryLongitude?: number;
     receiverName?: string;
     receiverPhone?: string;
 }
@@ -345,7 +347,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         userId: dbOrder.user_id,
                         customerId: dbOrder.user_id,
                         customerName: dbOrder.customer_name || dbOrder.customer?.full_name || 'Unknown',
-                        items: dbOrder.items || [], // Assuming items is stored as JSONB
+                        items: dbOrder.items || [],
                         totalAmount: Number(dbOrder.total_amount || 0),
                         status: dbOrder.status,
                         date: dbOrder.created_at,
@@ -354,6 +356,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         paymentMethod: dbOrder.payment_method,
                         shippingFee: Number(dbOrder.shipping_fee || 0),
                         deliveryAddress: dbOrder.delivery_address || '',
+                        deliveryLatitude: dbOrder.delivery_latitude ? Number(dbOrder.delivery_latitude) : undefined,
+                        deliveryLongitude: dbOrder.delivery_longitude ? Number(dbOrder.delivery_longitude) : undefined,
                         receiverName: dbOrder.receiver_name,
                         receiverPhone: dbOrder.receiver_phone,
                     }));
@@ -599,7 +603,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
         try {
             const insertData = {
                 user_id: order.userId,
-                vendor_id: order.vendorId, // crucial for vendor visibility
+                vendor_id: order.vendorId,
                 items: order.items,
                 total_amount: order.totalAmount,
                 status: 'Pending',
@@ -608,10 +612,11 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 customer_phone: order.customerPhone,
                 shipping_fee: order.shippingFee,
                 delivery_address: order.deliveryAddress,
-                customer_name: order.customerName, // Ensure backend schema has this column
+                delivery_latitude: order.deliveryLatitude ?? null,
+                delivery_longitude: order.deliveryLongitude ?? null,
+                customer_name: order.customerName,
                 receiver_name: order.receiverName,
                 receiver_phone: order.receiverPhone,
-                // created_at is auto-generated
             };
 
             console.log("💾 [VendorContext] Inserting order into DB:", JSON.stringify(insertData, null, 2));

@@ -97,7 +97,9 @@ export default function PaymentScreen() {
                 paymentMethod: LINKED_METHODS.find(m => m.id === selectedId)?.title || SAVED_METHODS.find(m => m.id === selectedId)?.title || 'Unknown',
                 customerPhone: userData?.phoneNumber || '+91 99999 99999',
                 shippingFee: 4.4, // Consistent with checkout
-                deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.pincode}` : "Patna, Bihar", // Enhanced address line
+                deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.pincode}` : "Patna, Bihar",
+                deliveryLatitude: selectedAddress?.latitude,
+                deliveryLongitude: selectedAddress?.longitude,
                 receiverName: selectedAddress?.receiverName,
                 receiverPhone: selectedAddress?.receiverPhone
             };

@@ -37,20 +37,31 @@ export interface MarketProduct {
 }
 
 export interface Article {
-    id: number;
+    id: string;
     title: string;
     category: string;
     time: string;
     image: any;
-    type?: string; // 'Farming Tips', 'Agri-Tech'
-    tag?: string; // 'Trending'
-    content?: string; // Full content for the article reader
+    image_url?: string;
+    type?: string;
+    tag?: string;
+    content?: string;
+    section_id?: string | null;
+}
+
+export interface FeedSection {
+    id: string;
+    name: string;
+    description?: string | null;
+    display_order: number;
+    is_active: boolean;
 }
 
 export interface MarketContextType {
     vendors: MarketVendor[];
     products: MarketProduct[];
     articles: Article[];
+    feedSections: FeedSection[];
     addArticle: (article: Omit<Article, 'id'>) => void;
     addProduct: (product: Omit<MarketProduct, 'id'>) => void;
     toggleFavoriteProduct: (productId: string) => void;
@@ -65,9 +76,9 @@ const MOCK_VENDORS: MarketVendor[] = []; // (Kept empty or reduced if needed, bu
 
 const MOCK_PRODUCTS: MarketProduct[] = []; // We will load from API
 
-const MOCK_ARTICLES: Article[] = [
+const FALLBACK_ARTICLES: Article[] = [
     {
-        id: 1,
+        id: 'mock-1',
         title: 'How to Keep Fruits Fresh Longer',
         category: 'Storage Tips',
         time: '4 mins',
@@ -75,7 +86,7 @@ const MOCK_ARTICLES: Article[] = [
         type: 'Tips'
     },
     {
-        id: 2,
+        id: 'mock-2',
         title: 'Top 10 Rich Nutrition Foods',
         category: 'Nutrition',
         time: '6 mins',
@@ -83,7 +94,7 @@ const MOCK_ARTICLES: Article[] = [
         type: 'Health'
     },
     {
-        id: 3,
+        id: 'mock-3',
         title: 'Sustainable Irrigation Methods',
         category: 'Tech',
         time: '5 min read',
@@ -99,7 +110,8 @@ import { supabase } from '@/lib/supabase';
 export function MarketProvider({ children }: { children: ReactNode }) {
     const [vendors, setVendors] = useState<MarketVendor[]>([]);
     const [products, setProducts] = useState<MarketProduct[]>([]);
-    const [articles, setArticles] = useState<Article[]>(MOCK_ARTICLES);
+    const [articles, setArticles] = useState<Article[]>(FALLBACK_ARTICLES);
+    const [feedSections, setFeedSections] = useState<FeedSection[]>([]);
 
     // FETCH VENDORS FROM SUPABASE
     useEffect(() => {
@@ -227,10 +239,84 @@ export function MarketProvider({ children }: { children: ReactNode }) {
         };
     }, []);
 
+    // FETCH ARTICLES FROM SUPABASE
+    useEffect(() => {
+        const fetchArticles = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('articles')
+                    .select('*')
+                    .eq('status', 'published')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const mapped: Article[] = data.map((a: any) => ({
+                        id: a.id,
+                        title: a.title,
+                        category: a.category,
+                        time: a.time,
+                        image: a.image_url ? { uri: a.image_url } : require('@/assets/images/3d-model-with-veg.png'),
+                        image_url: a.image_url,
+                        type: a.type,
+                        tag: a.tag,
+                        content: a.content,
+                        section_id: a.section_id ?? null,   // ← was missing!
+                    }));
+                    setArticles(mapped);
+                }
+                // If no articles in DB, fallback articles remain
+            } catch (e) {
+                console.error('Failed to fetch articles', e);
+                // Keep fallback articles on error
+            }
+        };
+
+        fetchArticles();
+
+        // Realtime: refresh when admin publishes/unpublishes
+        const articleSub = supabase
+            .channel('market:articles')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'articles' }, () => {
+                fetchArticles();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(articleSub); };
+    }, []);
+
     const addArticle = (article: Omit<Article, 'id'>) => {
-        const newArticle = { ...article, id: Date.now() };
+        const newArticle = { ...article, id: `local_${Date.now()}` };
         setArticles(prev => [newArticle, ...prev]);
     };
+
+    // FETCH FEED SECTIONS FROM SUPABASE
+    useEffect(() => {
+        const fetchSections = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('feed_sections')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('display_order', { ascending: true });
+                if (!error && data) setFeedSections(data as FeedSection[]);
+            } catch (e) {
+                console.error('Failed to fetch feed sections', e);
+            }
+        };
+
+        fetchSections();
+
+        const sectionSub = supabase
+            .channel('market:feed_sections')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'feed_sections' }, () => {
+                fetchSections();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(sectionSub); };
+    }, []);
 
     const addProduct = (product: Omit<MarketProduct, 'id'>) => {
         // Optimistic add (though ideally we should POST to backend if this was a vendor app)
@@ -249,6 +335,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
             vendors,
             products,
             articles,
+            feedSections,
             addArticle,
             addProduct,
             toggleFavoriteProduct

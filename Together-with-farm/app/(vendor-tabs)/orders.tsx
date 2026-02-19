@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, FlatList, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -331,13 +331,7 @@ export default function VendorOrdersScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <View>
-                    <View style={styles.titleRow}>
-                        <Ionicons name="bag-handle" size={24} color="#1F5E2E" style={{ marginRight: 8 }} />
-                        <Text style={styles.headerTitle}>Orders</Text>
-                    </View>
-                    <Text style={styles.headerSubtitle}>GREENVALLEY FARM</Text>
-                </View>
+                <Text style={styles.headerTitle}>Orders</Text>
 
                 <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
                     <Ionicons name="notifications-outline" size={24} color="#1A1A1A" />
@@ -356,31 +350,37 @@ export default function VendorOrdersScreen() {
                 />
             </View>
 
-            {/* Filters */}
-            <ScrollView
+            {/* Filter Chips */}
+            <FlatList
+                data={filters}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item}
+                style={styles.filtersList}
                 contentContainerStyle={styles.filtersContainer}
-                style={{ maxHeight: 60, marginBottom: 12 }}
-            >
-                {filters.map((filter) => (
+                renderItem={({ item: filter }) => (
                     <TouchableOpacity
-                        key={filter}
+                        onPress={() => setActiveFilter(filter)}
                         style={[
                             styles.filterChip,
-                            activeFilter === filter ? styles.activeFilterChip : styles.inactiveFilterChip
+                            activeFilter === filter
+                                ? styles.activeFilterChip
+                                : styles.inactiveFilterChip,
                         ]}
-                        onPress={() => setActiveFilter(filter)}
                     >
-                        <Text style={[
-                            styles.filterText,
-                            activeFilter === filter ? styles.activeFilterText : styles.inactiveFilterText
-                        ]}>
+                        <Text
+                            style={[
+                                styles.filterText,
+                                activeFilter === filter
+                                    ? styles.activeFilterText
+                                    : styles.inactiveFilterText,
+                            ]}
+                        >
                             {filter}
                         </Text>
                     </TouchableOpacity>
-                ))}
-            </ScrollView>
+                )}
+            />
 
             <ScrollView
                 contentContainerStyle={styles.ordersList}
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        marginBottom: 20,
+        marginBottom: 12,
     },
     titleRow: {
         flexDirection: 'row',
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         height: 48,
         marginHorizontal: 20,
-        marginBottom: 20,
+        marginBottom: 12,
         borderWidth: 1,
         borderColor: '#F0F0F0',
     },
@@ -471,19 +471,21 @@ const styles = StyleSheet.create({
         fontFamily: 'DMSans_400Regular',
         color: '#1A1A1A',
     },
+    filtersList: {
+        flexGrow: 0,
+        flexShrink: 0,
+        marginBottom: 14,
+    },
     filtersContainer: {
-        paddingHorizontal: 20,
-        gap: 12,
-        paddingBottom: 4, // Add padding to avoid clipping shadow/border
+        paddingHorizontal: 16,
+        paddingVertical: 4,
+        gap: 8,
     },
     filterChip: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        borderWidth: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 36,
+        paddingHorizontal: 18,
+        paddingVertical: 9,
+        borderRadius: 100,
+        borderWidth: 1.5,
     },
     activeFilterChip: {
         backgroundColor: '#1F5E2E',

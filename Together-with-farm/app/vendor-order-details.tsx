@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Platform, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -80,6 +80,41 @@ export default function OrderDetailsScreen() {
                         <Ionicons name="location-outline" size={20} color="#666" style={{ width: 24 }} />
                         <Text style={styles.detailText}>{order.deliveryAddress}</Text>
                     </View>
+
+                    {/* GPS Coordinates */}
+                    {order.deliveryLatitude && order.deliveryLongitude ? (
+                        <View style={styles.coordsCard}>
+                            <View style={styles.coordsRow}>
+                                <Ionicons name="navigate" size={16} color="#1F5E2E" />
+                                <View style={{ flex: 1, marginLeft: 8 }}>
+                                    <Text style={styles.coordsLabel}>Pinned GPS Location</Text>
+                                    <Text style={styles.coordsValue}>
+                                        {order.deliveryLatitude.toFixed(6)}, {order.deliveryLongitude.toFixed(6)}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.mapBtn}
+                                    onPress={() => {
+                                        const lat = order.deliveryLatitude;
+                                        const lng = order.deliveryLongitude;
+                                        const url = Platform.OS === 'ios'
+                                            ? `maps://?q=${lat},${lng}&ll=${lat},${lng}`
+                                            : `https://maps.google.com/?q=${lat},${lng}`;
+                                        Linking.openURL(url!);
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <Ionicons name="map" size={14} color="#fff" />
+                                    <Text style={styles.mapBtnText}>Maps</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={styles.noCoordsBadge}>
+                            <Ionicons name="alert-circle-outline" size={14} color="#999" />
+                            <Text style={styles.noCoordsText}>No GPS pin — customer did not set map location</Text>
+                        </View>
+                    )}
 
                     {/* Receiver Details (Optional) */}
                     {(order.receiverName || order.receiverPhone) && (
@@ -359,5 +394,62 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#C62828',
         lineHeight: 20,
+    },
+    coordsCard: {
+        backgroundColor: '#F0FAF3',
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#A5D6A7',
+        marginTop: 4,
+        marginBottom: 4,
+    },
+    coordsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    coordsLabel: {
+        fontSize: 11,
+        color: '#1F5E2E',
+        fontFamily: 'DMSans_700Bold',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 2,
+    },
+    coordsValue: {
+        fontSize: 13,
+        color: '#1A1A1A',
+        fontFamily: 'DMSans_500Medium',
+    },
+    mapBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#1F5E2E',
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 10,
+        marginLeft: 8,
+    },
+    mapBtnText: {
+        color: '#fff',
+        fontSize: 12,
+        fontFamily: 'DMSans_700Bold',
+    },
+    noCoordsBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 7,
+        backgroundColor: '#F5F5F5',
+        borderRadius: 8,
+    },
+    noCoordsText: {
+        fontSize: 12,
+        color: '#999',
+        fontFamily: 'DMSans_400Regular',
+        flex: 1,
     },
 });

@@ -19,10 +19,9 @@ import { useMarket, MarketVendor } from '@/contexts/MarketContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const CATEGORIES = ['All', 'Nutrition', 'Storage Tips', 'Recipes', 'Tips'];
 
 export default function FeedScreen() {
-  const { vendors, articles } = useMarket();
+  const { vendors, articles, feedSections } = useMarket();
   const { unreadCount } = useNotifications();
   const { isDark } = useTheme();
   const [activeCategory, setActiveCategory] = useState('All');
@@ -30,12 +29,15 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Derived arrays
-  const spotlightFarmers = vendors.filter(v => v.tag); // Show all tagged vendors
-  const recentArticles = articles; // All articles for now
+  const spotlightFarmers = vendors.filter(v => v.tag);
 
-  // Mock Insights - could also be in context or filtered articles
-  const insights = articles.filter(a => a.type === 'Agri-Tech' || a.tag === 'Trending');
+  // Build category list dynamically from real articles
+  const categories = ['All', ...Array.from(new Set(articles.map(a => a.category).filter(Boolean)))];
+
+  // Filter articles by selected category
+  const recentArticles = activeCategory === 'All'
+    ? articles
+    : articles.filter(a => a.category === activeCategory);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -116,7 +118,7 @@ export default function FeedScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesContainer}
         >
-          {CATEGORIES.map((cat, index) => (
+          {categories.map((cat, index) => (
             <TouchableOpacity
               key={index}
               style={[
@@ -146,7 +148,12 @@ export default function FeedScreen() {
           contentContainerStyle={styles.articlesContainer}
         >
           {recentArticles.map((article) => (
-            <View key={article.id} style={[styles.articleCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+            <TouchableOpacity
+              key={article.id}
+              style={[styles.articleCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
+              onPress={() => router.push(`/article/${article.id}` as any)}
+              activeOpacity={0.9}
+            >
               <Image source={article.image} style={styles.articleImage} contentFit="cover" />
 
               <View style={styles.imageOverlay}>
@@ -162,42 +169,65 @@ export default function FeedScreen() {
                 <Text style={[styles.articleTitle, isDark && { color: '#FFF' }]} numberOfLines={2}>
                   {article.title}
                 </Text>
-                <TouchableOpacity style={styles.readMoreLink}>
+                <View style={styles.readMoreLink}>
                   <Text style={styles.readMoreText}>Read article</Text>
                   <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* Admin Insights Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Admin Insights</Text>
-        </View>
-
-        <View style={styles.insightsContainer}>
-          {insights.map((item) => (
-            <View key={item.id} style={[styles.insightCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
-              <Image source={item.image} style={styles.insightImage} contentFit="cover" />
-              <View style={styles.insightContent}>
-                <View style={styles.insightMetaRow}>
-                  <View style={styles.trendingBadge}>
-                    <Text style={styles.trendingText}>{item.tag || 'New'}</Text>
-                  </View>
-                  <Text style={styles.insightTime}>{item.time}</Text>
-                </View>
-                <Text style={[styles.insightTitle, isDark && { color: '#FFF' }]} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <TouchableOpacity style={styles.readMoreLink}>
-                  <Text style={styles.readMoreText}>{item.type || 'Insight'}</Text>
-                  <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
-                </TouchableOpacity>
+        {/* Dynamic Sections from Admin */}
+        {feedSections.map(section => {
+          const sectionArticles = articles.filter(a => a.section_id === section.id);
+          if (sectionArticles.length === 0) return null;
+          return (
+            <View key={section.id}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>{section.name}</Text>
+                {section.description ? (
+                  <Text style={{ fontSize: 12, color: isDark ? '#888' : '#999', fontFamily: 'DMSans_400Regular', marginTop: 2 }}>
+                    {section.description}
+                  </Text>
+                ) : null}
               </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.articlesContainer}
+              >
+                {sectionArticles.map(article => (
+                  <TouchableOpacity
+                    key={article.id}
+                    style={[styles.articleCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
+                    onPress={() => router.push(`/article/${article.id}` as any)}
+                    activeOpacity={0.9}
+                  >
+                    <Image source={article.image} style={styles.articleImage} contentFit="cover" />
+                    <View style={styles.imageOverlay}>
+                      <View style={[styles.tagBadge, isDark && { backgroundColor: 'rgba(31, 94, 46, 0.8)', borderColor: '#1F5E2E' }]}>
+                        <Text style={[styles.tagText, isDark && { color: '#FFF' }]}>{article.category}</Text>
+                      </View>
+                      <View style={[styles.timeBadge, isDark && { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                        <Text style={[styles.timeText, isDark && { color: '#FFF' }]}>{article.time}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.articleContent}>
+                      <Text style={[styles.articleTitle, isDark && { color: '#FFF' }]} numberOfLines={2}>
+                        {article.title}
+                      </Text>
+                      <View style={styles.readMoreLink}>
+                        <Text style={styles.readMoreText}>Read article</Text>
+                        <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
-          ))}
-        </View>
+          );
+        })}
 
         {/* Spacer for Floating Tab Bar */}
         <View style={{ height: 100 }} />
