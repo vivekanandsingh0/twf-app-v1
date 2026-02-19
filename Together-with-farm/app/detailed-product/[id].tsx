@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Platform, ToastAndroid, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Platform, ToastAndroid, Alert, ActivityIndicator, Linking } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -250,24 +250,47 @@ export default function OrderDetailScreen() {
                     </View>
                 </View>
 
-                {/* Your Driver */}
-                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Your Driver</Text>
-                <View style={[styles.driverCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
-                    <View style={styles.driverInfo}>
-                        <View style={[styles.driverAvatar, isDark && { backgroundColor: '#333' }]}>
-                            <Ionicons name="person" size={20} color={isDark ? '#FFF' : '#555'} />
+
+                {/* ── Your Driver — only shown once vendor assigns one ── */}
+                {order.deliveryPartnerName ? (
+                    <>
+                        <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Your Driver</Text>
+                        <View style={[styles.driverCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
+                            <View style={styles.driverInfo}>
+                                {order.deliveryPartnerPhoto ? (
+                                    <Image
+                                        source={{ uri: order.deliveryPartnerPhoto }}
+                                        style={styles.driverAvatar}
+                                    />
+                                ) : (
+                                    <View style={[styles.driverAvatar, { backgroundColor: '#1F5E2E', alignItems: 'center', justifyContent: 'center' }]}>
+                                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                                            {order.deliveryPartnerName.trim().split(' ').slice(0, 2).map(w => w[0]?.toUpperCase()).join('')}
+                                        </Text>
+                                    </View>
+                                )}
+                                <View style={{ marginLeft: 12 }}>
+                                    <Text style={[styles.driverName, isDark && { color: '#FFF' }]}>{order.deliveryPartnerName}</Text>
+                                    {order.deliveryPartnerPhone ? (
+                                        <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{order.deliveryPartnerPhone}</Text>
+                                    ) : null}
+                                </View>
+                            </View>
+                            {order.deliveryPartnerPhone ? (
+                                <View style={styles.driverActions}>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, { backgroundColor: '#1F5E2E', paddingHorizontal: 20 }]}
+                                        onPress={() => Linking.openURL(`tel:${order.deliveryPartnerPhone}`)}
+                                    >
+                                        <Ionicons name="call" size={18} color="#fff" />
+                                        <Text style={[styles.actionBtnText, { color: '#fff' }]}> Call</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : null}
                         </View>
-                        <View>
-                            <Text style={[styles.driverName, isDark && { color: '#FFF' }]}>Amit Kumar</Text>
-                        </View>
-                    </View>
-                    <View style={styles.driverActions}>
-                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1F5E2E', paddingHorizontal: 20 }]}>
-                            <Ionicons name="call" size={18} color="#fff" />
-                            <Text style={[styles.actionBtnText, { color: '#fff' }]}> Call</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                    </>
+                ) : null}
+
 
                 {/* Rate Order Section - Only for Delivered Orders */}
                 {order.status === 'Delivered' && (

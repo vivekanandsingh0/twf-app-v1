@@ -52,7 +52,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         profileImage: ''
     });
 
-    // Standalone Refresh Function
     const refreshOrders = async () => {
         if (!session?.user) return;
         const userId = session.user.id;
@@ -79,7 +78,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 customerPhone: dbOrder.customer_phone,
                 paymentMethod: dbOrder.payment_method,
                 shippingFee: Number(dbOrder.shipping_fee || 0),
-                deliveryAddress: dbOrder.delivery_address || ''
+                deliveryAddress: dbOrder.delivery_address || '',
+                deliveryPartnerName: dbOrder.delivery_partner_name || undefined,
+                deliveryPartnerPhone: dbOrder.delivery_partner_phone || undefined,
+                deliveryPartnerPhoto: dbOrder.delivery_partner_photo || undefined,
             }));
             setOrders(mappedOrders);
         }
@@ -160,7 +162,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     }));
                 }
 
-                // B. Fetch Orders
                 const fetchOrders = async () => {
                     const { data: userOrders } = await supabase
                         .from('orders')
@@ -183,7 +184,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                             customerPhone: dbOrder.customer_phone,
                             paymentMethod: dbOrder.payment_method,
                             shippingFee: Number(dbOrder.shipping_fee || 0),
-                            deliveryAddress: dbOrder.delivery_address || ''
+                            deliveryAddress: dbOrder.delivery_address || '',
+                            deliveryPartnerName: dbOrder.delivery_partner_name || undefined,
+                            deliveryPartnerPhone: dbOrder.delivery_partner_phone || undefined,
+                            deliveryPartnerPhoto: dbOrder.delivery_partner_photo || undefined,
                         }));
                         setOrders(mappedOrders);
                     }

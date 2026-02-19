@@ -2,8 +2,12 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export const revalidate = 0;
+
+const getInitials = (name: string) =>
+    name.trim().split(' ').slice(0, 2).map(w => w[0]?.toUpperCase()).join('');
 
 export default async function VendorDashboardPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -18,15 +22,20 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
 
     // 2. Fetch Vendor Orders
     const { data: allOrders } = await db.orders.getAll();
-    // Relaxed comparison: coerce both to string to avoid type mismatches
     const vendorOrders = allOrders?.filter((o: any) => String(o.vendor_id) === String(id)) || [];
 
     // 3. Fetch Vendor Products
     const { data: allProducts } = await db.products.getAll();
     const vendorProducts = allProducts?.filter((p: any) => String(p.vendor_id) === String(id)) || [];
 
-    // 4. Calculate Stats
-    // STRICT ALIGNMENT: Total Sales = Delivered Orders Only (Realized Revenue), matching App logic.
+    // 4. Fetch Delivery Partners for this vendor
+    const { data: deliveryPartners } = await supabase
+        .from('delivery_partners')
+        .select('*')
+        .eq('vendor_id', id)
+        .order('created_at', { ascending: false });
+
+    // 5. Calculate Stats
     const totalSales = vendorOrders
         .filter((o: any) => o.status === 'Delivered')
         .reduce((sum: number, o: any) => sum + (Number(o.total_amount) || 0), 0);
@@ -34,7 +43,7 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
     const pendingOrders = vendorOrders.filter((o: any) => o.status === 'Pending').length;
     const completedOrders = vendorOrders.filter((o: any) => o.status === 'Delivered').length;
 
-    // 5. Determine Status Badge
+    // 6. Determine Status Badge
     const status = (vendor.shop_status || 'Active') as 'Active' | 'Inactive' | 'Suspended' | 'Terminated';
     const statusStyles = {
         'Active': 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -58,7 +67,7 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                             {vendor.businessName || vendor.full_name}
                             <span className={`text-xs font-bold px-2 py-1 rounded-full border uppercase tracking-wide ${statusStyles} border`}>{status}</span>
                         </h1>
-                        <p className="text-slate-500 mt-1">Vendor Dashboard & Activity Monitor</p>
+                        <p className="text-slate-500 mt-1">Vendor Dashboard &amp; Activity Monitor</p>
                     </div>
                     <div className="flex gap-3">
                         <Link href={`/vendors/${id}`} className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-50 transition-all">
@@ -102,10 +111,10 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                 </div>
             </div>
 
-            {/* Main Content Tabs */}
+            {/* Main Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* Left Column: Recent Orders */}
+                {/* Left Column: Recent Orders + Complaints */}
                 <div className="lg:col-span-2 space-y-8">
 
                     {/* Orders Section */}
@@ -123,7 +132,6 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                                         <div>
                                             <div className="font-bold text-slate-900 text-sm">{order.id}</div>
                                             <div className="text-xs text-slate-500 mb-1">{new Date(order.created_at).toLocaleDateString()}</div>
-                                            {/* Show Items Summary */}
                                             {order.items && order.items.length > 0 && (
                                                 <div className="text-xs text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100 mt-1 max-w-xs">
                                                     {order.items.map((i: any, idx: number) => (
@@ -149,24 +157,13 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                         </div>
                     </div>
 
-                    {/* Complaints / Activity Log (Placeholder) */}
-                    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-slate-100">
-                            <h2 className="font-bold text-lg text-slate-900">Complaints & Issues</h2>
-                        </div>
-                        <div className="p-8 text-center bg-slate-50">
-                            <div className="text-4xl mb-3">✅</div>
-                            <h3 className="font-bold text-slate-800">No Active Complaints</h3>
-                            <p className="text-slate-500 text-sm mt-1">This vendor has a clean record.</p>
-                        </div>
-                    </div>
 
                 </div>
 
-                {/* Right Column: Products & Payment Info */}
+                {/* Right Column */}
                 <div className="space-y-8">
 
-                    {/* Products Summary */}
+                    {/* Top Products */}
                     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                             <h2 className="font-bold text-lg text-slate-900">Top Products</h2>
@@ -179,7 +176,6 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                                 vendorProducts.slice(0, 5).map((prod: any) => (
                                     <div key={prod.id} className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
                                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex-shrink-0">
-                                            {/* Placeholder Image */}
                                             {prod.image_url && <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover rounded-lg" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -194,6 +190,54 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                         <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
                             <Link href={`/vendors/${id}/inventory`} className="text-sm font-bold text-slate-600 hover:text-slate-900">Manage Inventory</Link>
                         </div>
+                    </div>
+
+                    {/* ── Delivery Partners ──────────────────────────────────────── */}
+                    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <h2 className="font-bold text-lg text-slate-900">🚴 Delivery Partners</h2>
+                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                                {deliveryPartners?.length ?? 0}
+                            </span>
+                        </div>
+
+                        {!deliveryPartners || deliveryPartners.length === 0 ? (
+                            <div className="p-8 text-center bg-slate-50">
+                                <div className="text-3xl mb-2">🚲</div>
+                                <p className="text-slate-500 text-sm font-medium">No partners added yet</p>
+                                <p className="text-slate-400 text-xs mt-1">
+                                    Partners added by this vendor<br />will appear here.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {deliveryPartners.map((partner: any) => (
+                                    <div key={partner.id} className="p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                                        {/* Avatar */}
+                                        {partner.photo_url ? (
+                                            <img
+                                                src={partner.photo_url}
+                                                alt={partner.name}
+                                                className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-emerald-100"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                                {getInitials(partner.name)}
+                                            </div>
+                                        )}
+                                        {/* Info */}
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-bold text-slate-800 text-sm truncate">{partner.name}</p>
+                                            <p className="text-xs text-slate-500">{partner.phone}</p>
+                                        </div>
+                                        {/* Active badge */}
+                                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase">
+                                            Active
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Payout Information */}

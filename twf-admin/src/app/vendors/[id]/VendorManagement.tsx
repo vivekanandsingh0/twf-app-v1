@@ -1,13 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+interface DeliveryPartner {
+    id: string;
+    name: string;
+    phone: string;
+    photo_url: string | null;
+    created_at: string;
+}
+
+const getInitials = (name: string) =>
+    name.trim().split(' ').slice(0, 2).map(w => w[0]?.toUpperCase()).join('');
 
 export default function VendorManagement({ initialVendor }: { initialVendor: any }) {
     const [vendor, setVendor] = useState(initialVendor);
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
+    const [partnersLoading, setPartnersLoading] = useState(true);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -23,6 +37,25 @@ export default function VendorManagement({ initialVendor }: { initialVendor: any
     });
 
     const router = useRouter();
+
+    // Fetch delivery partners for this vendor
+    useEffect(() => {
+        (async () => {
+            setPartnersLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('delivery_partners')
+                    .select('*')
+                    .eq('vendor_id', vendor.id)
+                    .order('created_at', { ascending: false });
+                if (!error) setDeliveryPartners(data || []);
+            } catch (e) {
+                console.error('Failed to load delivery partners:', e);
+            } finally {
+                setPartnersLoading(false);
+            }
+        })();
+    }, [vendor.id]);
 
     const handleSave = async () => {
         setIsLoading(true);
@@ -140,9 +173,11 @@ export default function VendorManagement({ initialVendor }: { initialVendor: any
                     </div>
                 </div>
 
-                {/* Right Column: Detailed Info */}
-                <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm lg:col-span-2 space-y-6">
-                    <div>
+                {/* Right Column */}
+                <div className="lg:col-span-2 space-y-6">
+
+                    {/* Business Details */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
                         <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Business Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -207,6 +242,56 @@ export default function VendorManagement({ initialVendor }: { initialVendor: any
                             </div>
                         </div>
                     </div>
+
+                    {/* ── Delivery Partners Section ──────────────────────────────── */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+                        <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+                            <h3 className="text-lg font-bold text-slate-800">🚴 Delivery Partners</h3>
+                            <span className="text-sm font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                                {deliveryPartners.length} partner{deliveryPartners.length !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+
+                        {partnersLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : deliveryPartners.length === 0 ? (
+                            <div className="text-center py-8">
+                                <div className="text-4xl mb-2">🚲</div>
+                                <p className="text-slate-500 text-sm">No delivery partners added yet.</p>
+                                <p className="text-slate-400 text-xs mt-1">Partners added by this vendor will appear here.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {deliveryPartners.map(partner => (
+                                    <div key={partner.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        {/* Avatar */}
+                                        {partner.photo_url ? (
+                                            <img
+                                                src={partner.photo_url}
+                                                alt={partner.name}
+                                                className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-emerald-200"
+                                            />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                                                {getInitials(partner.name)}
+                                            </div>
+                                        )}
+                                        {/* Info */}
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-slate-800 truncate">{partner.name}</p>
+                                            <p className="text-sm text-slate-500 flex items-center gap-1">
+                                                <span>📞</span>
+                                                <span>{partner.phone}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                 </div>
             </div>
 

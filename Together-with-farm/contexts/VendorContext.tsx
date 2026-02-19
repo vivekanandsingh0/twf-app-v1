@@ -122,6 +122,10 @@ export interface VendorOrder {
     deliveryLongitude?: number;
     receiverName?: string;
     receiverPhone?: string;
+    // Delivery partner assigned at dispatch
+    deliveryPartnerName?: string;
+    deliveryPartnerPhone?: string;
+    deliveryPartnerPhoto?: string;
 }
 
 export interface VendorTransaction {
@@ -174,7 +178,7 @@ interface VendorContextType {
     addProduct: (product: Omit<VendorProduct, 'id'>) => Promise<boolean>;
     updateProduct: (id: string, updates: Partial<VendorProduct>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
-    updateOrderStatus: (orderId: string, status: VendorOrder['status']) => void;
+    updateOrderStatus: (orderId: string, status: VendorOrder['status'], partner?: { name: string; phone: string; photo_url: string | null }) => void;
     addOrder: (order: VendorOrder) => void; // Exposed to Payment Screen
     toggleShopStatus: () => Promise<void>;
     updateProfile: (updates: Partial<VendorProfile>) => void;
@@ -360,6 +364,9 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         deliveryLongitude: dbOrder.delivery_longitude ? Number(dbOrder.delivery_longitude) : undefined,
                         receiverName: dbOrder.receiver_name,
                         receiverPhone: dbOrder.receiver_phone,
+                        deliveryPartnerName: dbOrder.delivery_partner_name || undefined,
+                        deliveryPartnerPhone: dbOrder.delivery_partner_phone || undefined,
+                        deliveryPartnerPhoto: dbOrder.delivery_partner_photo || undefined,
                     }));
                     setOrders(mappedOrders);
                 }
@@ -643,13 +650,32 @@ export function VendorProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const updateOrderStatus = async (orderId: string, status: VendorOrder['status']) => {
-        // Optimistic
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    const updateOrderStatus = async (
+        orderId: string,
+        status: VendorOrder['status'],
+        partner?: { name: string; phone: string; photo_url: string | null }
+    ) => {
+        // Optimistic local update
+        setOrders(prev => prev.map(o => o.id === orderId ? {
+            ...o,
+            status,
+            ...(partner ? {
+                deliveryPartnerName: partner.name,
+                deliveryPartnerPhone: partner.phone,
+                deliveryPartnerPhoto: partner.photo_url ?? undefined,
+            } : {})
+        } : o));
 
         try {
             const updates: any = { status };
             if (status === 'Delivered') updates.payment_status = 'Paid';
+
+            // Persist delivery partner when dispatching
+            if (status === 'Shipped' && partner) {
+                updates.delivery_partner_name = partner.name;
+                updates.delivery_partner_phone = partner.phone;
+                updates.delivery_partner_photo = partner.photo_url ?? null;
+            }
 
             await supabase.from('orders').update(updates).eq('id', orderId);
         } catch (e) {

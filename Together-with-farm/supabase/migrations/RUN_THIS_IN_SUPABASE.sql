@@ -65,3 +65,39 @@
 -- 8. Add GPS pin columns to the orders table
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_latitude DOUBLE PRECISION;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_longitude DOUBLE PRECISION;
+
+-- 9. Delivery Partners table
+CREATE TABLE IF NOT EXISTS public.delivery_partners (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    vendor_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    photo_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.delivery_partners ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view delivery partners" ON public.delivery_partners;
+DROP POLICY IF EXISTS "Vendors can insert delivery partners" ON public.delivery_partners;
+DROP POLICY IF EXISTS "Vendors can delete delivery partners" ON public.delivery_partners;
+
+CREATE POLICY "Anyone can view delivery partners" ON public.delivery_partners FOR SELECT USING (true);
+CREATE POLICY "Vendors can insert delivery partners" ON public.delivery_partners FOR INSERT WITH CHECK (true);
+CREATE POLICY "Vendors can delete delivery partners" ON public.delivery_partners FOR DELETE USING (true);
+
+-- 10. Storage bucket for delivery partner photos
+INSERT INTO storage.buckets (id, name, public) VALUES ('delivery-partners', 'delivery-partners', true) ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public read delivery partner photos" ON storage.objects;
+DROP POLICY IF EXISTS "Anon upload delivery partner photos" ON storage.objects;
+DROP POLICY IF EXISTS "Anon delete delivery partner photos" ON storage.objects;
+
+CREATE POLICY "Public read delivery partner photos" ON storage.objects FOR SELECT USING (bucket_id = 'delivery-partners');
+CREATE POLICY "Anon upload delivery partner photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'delivery-partners');
+CREATE POLICY "Anon delete delivery partner photos" ON storage.objects FOR DELETE USING (bucket_id = 'delivery-partners');
+
+-- 11. Add Delivery Partner columns to Orders table
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_partner_name TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_partner_phone TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_partner_photo TEXT;

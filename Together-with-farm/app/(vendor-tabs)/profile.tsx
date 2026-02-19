@@ -144,8 +144,9 @@ export default function VendorProfileScreen() {
                 <View style={styles.menuGroup}>
                     {renderMenuItem('cube-outline', 'Orders', () => router.push('/(vendor-tabs)/orders'))}
                     <View style={styles.divider} />
+                    {renderMenuItem('bicycle-outline', 'Delivery Partners', () => router.push('/delivery-partners'))}
+                    <View style={styles.divider} />
                     {renderMenuItem('cash-outline', 'Payouts', () => router.push('/vendor-payouts'))}
-
                 </View>
 
                 {/* Performance Section */}
