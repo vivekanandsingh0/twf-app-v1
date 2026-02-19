@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Platform, Switch } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Platform, Switch, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
 import { useVendor } from '@/contexts/VendorContext';
+import { supabase } from '@/lib/supabase';
 import { useCallback } from 'react';
 
 export default function VendorProfileScreen() {
@@ -15,6 +16,21 @@ export default function VendorProfileScreen() {
     const { signOut, switchUserRole, userData } = useUser();
     const { profile, toggleShopStatus } = useVendor();
     const [requestStatus, setRequestStatus] = React.useState<{ status: string; note?: string } | null>(null);
+    const [supportPhone, setSupportPhone] = React.useState<string>('');
+
+    React.useEffect(() => {
+        const fetchSupportPhone = async () => {
+            const { data } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'vendor_support_phone')
+                .single();
+            if (data?.value) {
+                setSupportPhone(data.value);
+            }
+        };
+        fetchSupportPhone();
+    }, []);
 
     // Mock status check (No Supabase)
     useFocusEffect(
@@ -160,7 +176,13 @@ export default function VendorProfileScreen() {
                 <View style={styles.menuGroup}>
                     {renderMenuItem('card-outline', 'Payout Methods', () => router.push('/vendor-payment-methods'))}
                     <View style={styles.divider} />
-                    {renderMenuItem('headset-outline', 'Support')}
+                    {renderMenuItem('headset-outline', 'Support', () => {
+                        if (supportPhone) {
+                            Linking.openURL(`tel:${supportPhone}`);
+                        } else {
+                            Alert.alert("Support", "Support contact is currently unavailable.");
+                        }
+                    })}
                     <View style={styles.divider} />
                     <TouchableOpacity style={styles.menuItem} onPress={handleSwitchRole}>
                         <View style={styles.menuIconContainer}>
@@ -170,7 +192,7 @@ export default function VendorProfileScreen() {
                         <Ionicons name="swap-horizontal-outline" size={20} color="#E65100" />
                     </TouchableOpacity>
                     <View style={styles.divider} />
-                    {renderMenuItem('information-circle-outline', 'About Us')}
+                    {renderMenuItem('information-circle-outline', 'About Us', () => router.push('/about-us'))}
                 </View>
 
                 {/* Logout Button */}

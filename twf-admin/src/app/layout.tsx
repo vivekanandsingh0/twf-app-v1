@@ -74,6 +74,10 @@ export default function RootLayout({
               <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">⚙️</span>
               Settings
             </a>
+            <a href="/support" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">🎧</span>
+              Support
+            </a>
           </nav>
 
           <div className="p-4 border-t border-slate-100 bg-slate-50/50">

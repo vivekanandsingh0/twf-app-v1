@@ -218,6 +218,24 @@ export const db = {
             const { data, error } = await supabase.from('tickets').select('*').eq('id', id).single();
             return { data, error };
         }
+    },
+    settings: {
+        get: async (key: string) => {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', key)
+                .single();
+            return { data, error };
+        },
+        set: async (key: string, value: string) => {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .upsert({ key, value })
+                .select()
+                .single();
+            return { data, error };
+        }
     }
 };
 

@@ -699,8 +699,20 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 experience: updates.experience,
                 bio: updates.bio,
                 address: updates.address,
-                // Mapping bank details logic if needed
             };
+
+            // Map bank details if present
+            if (updates.bankDetails) {
+                (dbUpdates as any).bank_details = {
+                    account_holder_name: updates.bankDetails.accountHolderName,
+                    bank_name: updates.bankDetails.bankName,
+                    account_number: updates.bankDetails.accountNumber,
+                    ifsc_code: updates.bankDetails.ifscCode
+                };
+            }
+
+            // Remove undefined fields to avoid overwriting with null/undefined if not intended
+            Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
 
             await supabase.from('profiles').update(dbUpdates).eq('id', user.id);
         } catch (e) {
