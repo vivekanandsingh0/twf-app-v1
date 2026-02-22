@@ -276,12 +276,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const sendOtp = async (phone: string) => {
         console.log(`Sending OTP to ${phone} via Supabase`);
-        const { error } = await supabase.auth.signInWithOtp({ phone });
-        if (error) {
-            console.error("Send OTP Error:", error.message);
-            // Alert is shown in UI, but log here for debugging
+        console.log(`📱 [OTP Debug] Phone format: ${phone}, Length: ${phone.length}`);
+
+        try {
+            const result = await supabase.auth.signInWithOtp({ phone });
+
+            console.log('📱 [OTP Debug] Full Supabase response:', JSON.stringify(result, null, 2));
+            console.log('📱 [OTP Debug] Data:', JSON.stringify(result.data, null, 2));
+            console.log('📱 [OTP Debug] Error:', result.error ? JSON.stringify(result.error, null, 2) : 'NONE');
+
+            if (result.error) {
+                console.error("❌ Send OTP Error:", result.error.message);
+                console.error("❌ Error status:", result.error.status);
+                console.error("❌ Error name:", result.error.name);
+            } else {
+                console.log('✅ [OTP Debug] OTP request accepted by Supabase - SMS should be sent via Twilio');
+            }
+
+            return { error: result.error };
+        } catch (e: any) {
+            console.error('❌ [OTP Debug] Exception caught:', e.message);
+            console.error('❌ [OTP Debug] Full exception:', JSON.stringify(e, null, 2));
+            return { error: e };
         }
-        return { error };
     };
 
     const verifyOtp = async (phone: string, token: string, userType: 'User' | 'Vendor') => {

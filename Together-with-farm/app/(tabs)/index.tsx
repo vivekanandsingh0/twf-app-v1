@@ -59,6 +59,9 @@ export default function MarketScreen() {
   const renderProductCard = (item: any) => {
     const qty = getItemQuantity(item.id);
     const isDeal = item.specialOffer !== undefined;
+    const isPreorder = item.order_type === 'pre-order';
+    const hasDiscount = item.discountValue && item.discountValue > 0;
+    const discountedPrice = hasDiscount ? (item.price * (1 - item.discountValue / 100)).toFixed(0) : null;
 
     // Dynamic style based on if it's a deal product or not, 
     // passing existing logic.
@@ -75,9 +78,11 @@ export default function MarketScreen() {
       >
         <View style={[styles.productImageContainer, isDark && { backgroundColor: '#2C2C2C' }]}>
           <Image source={item.image} style={styles.productImage} contentFit="contain" />
-          <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
-            <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
-          </View>
+          {hasDiscount && (
+            <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
+              <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
+            </View>
+          )}
           <TouchableOpacity
             style={styles.favButton}
             onPress={(e) => {
@@ -91,27 +96,42 @@ export default function MarketScreen() {
               color={isFavourite(item.id) ? "#FF4B4B" : "#1A1A1A"}
             />
           </TouchableOpacity>
+          {isPreorder && (
+            <View style={styles.preorderBadge}>
+              <Ionicons name="time-outline" size={10} color="#fff" />
+              <Text style={styles.preorderBadgeText}>Pre-order</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.productInfo}>
           {isDeal && (
             <Text style={[styles.productType, { color: '#F57F17', fontWeight: 'bold' }]}>{item.specialOffer}</Text>
           )}
-          <Text style={[styles.productType, isDark && { color: '#AAA' }]}>{!isDeal && item.type}</Text>
+          {!isDeal && !!item.type && (
+            <Text style={[styles.productType, isDark && { color: '#AAA' }]}>{item.type}</Text>
+          )}
           <Text style={[styles.productName, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.name}</Text>
 
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
-              <Text style={[styles.price, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+              {hasDiscount ? (
+                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                  <Text style={[styles.price, isDark && { color: '#81C784' }]}>₹{discountedPrice}</Text>
+                  <Text style={[styles.originalPrice, isDark && { color: '#888' }, { marginLeft: 4 }]}>₹{item.price}</Text>
+                </View>
+              ) : (
+                <Text style={[styles.price, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+              )}
               <Text style={styles.unit}>{item.unit}</Text>
             </View>
 
             {qty === 0 ? (
               <TouchableOpacity
-                style={[styles.addButton, isDeal && { backgroundColor: '#F9A825' }]}
+                style={[styles.addButton, isDeal && { backgroundColor: '#F9A825' }, isPreorder && { backgroundColor: '#E65100' }]}
                 onPress={() => updateQuantity(item.id, 1)}
               >
-                <Ionicons name="add" size={24} color="#fff" />
+                <Ionicons name={isPreorder ? "time-outline" : "add"} size={isPreorder ? 20 : 24} color="#fff" />
               </TouchableOpacity>
             ) : (
               <View style={[styles.quantityControl, isDeal && { backgroundColor: '#F9A825' }]}>
@@ -303,9 +323,9 @@ export default function MarketScreen() {
 
       {/* Location Dropdown Overlay - Global Position */}
       {showLocationPicker && (
-        <>
+        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 900 }} pointerEvents="box-none">
           <TouchableOpacity
-            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 900 }}
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
             activeOpacity={1}
             onPress={() => setShowLocationPicker(false)}
           />
@@ -335,7 +355,7 @@ export default function MarketScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </>
+        </View>
       )}
 
     </View>
@@ -557,11 +577,35 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_700Bold',
     color: '#1F5E2E',
   },
+  originalPrice: {
+    fontSize: 12,
+    fontFamily: 'DMSans_400Regular',
+    color: '#999',
+    textDecorationLine: 'line-through',
+    marginLeft: 4,
+  },
   unit: {
     fontSize: 12,
     color: '#888',
     marginLeft: 2,
     fontFamily: 'DMSans_400Regular',
+  },
+  preorderBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: '#E65100',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
+  },
+  preorderBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontFamily: 'DMSans_700Bold',
   },
   // ... existing styles ...
   addButton: {

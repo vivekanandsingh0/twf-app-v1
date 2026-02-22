@@ -99,6 +99,9 @@ export interface VendorProduct {
     highlights?: { title: string; value: string }[];
     status: 'Active' | 'Draft' | 'Out of Stock';
     image_url?: string; // For backend compatibility
+    order_type?: 'instant' | 'pre-order';
+    preorder_duration?: number;
+    discount?: number;
 }
 
 export interface VendorOrder {
@@ -298,7 +301,10 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         category: p.category,
                         description: p.description || '',
                         highlights: p.highlights || [], // Fetch highlights
-                        status: p.stock > 0 ? 'Active' : 'Out of Stock'
+                        status: p.stock > 0 ? 'Active' : 'Out of Stock',
+                        order_type: p.order_type || 'instant',
+                        preorder_duration: p.preorder_duration || 0,
+                        discount: p.discount || 0,
                     })));
                 }
             } catch (e) {
@@ -367,6 +373,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         deliveryPartnerName: dbOrder.delivery_partner_name || undefined,
                         deliveryPartnerPhone: dbOrder.delivery_partner_phone || undefined,
                         deliveryPartnerPhoto: dbOrder.delivery_partner_photo || undefined,
+                        order_type: dbOrder.order_type || 'instant',
+                        estimated_delivery: dbOrder.estimated_delivery || null,
                     }));
                     setOrders(mappedOrders);
                 }
@@ -449,7 +457,10 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                     image_url: imageUrlToSave,
                     images: finalImages,
                     highlights: productData.highlights,
-                    vendor_id: user.id
+                    vendor_id: user.id,
+                    order_type: (productData as any).order_type || 'instant',
+                    preorder_duration: (productData as any).preorder_duration || 0,
+                    discount: (productData as any).discount || 0,
                 };
 
                 console.log('💾 [VendorContext] Attempting database insert...');
@@ -608,7 +619,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
         setOrders(prev => [order, ...prev]);
 
         try {
-            const insertData = {
+            const insertData: any = {
                 user_id: order.userId,
                 vendor_id: order.vendorId,
                 items: order.items,
@@ -624,6 +635,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 customer_name: order.customerName,
                 receiver_name: order.receiverName,
                 receiver_phone: order.receiverPhone,
+                order_type: (order as any).order_type || 'instant',
+                estimated_delivery: (order as any).estimated_delivery || null,
             };
 
             console.log("💾 [VendorContext] Inserting order into DB:", JSON.stringify(insertData, null, 2));

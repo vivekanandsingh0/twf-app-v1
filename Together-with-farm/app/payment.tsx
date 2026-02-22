@@ -10,6 +10,7 @@ import { useMarket } from '@/contexts/MarketContext';
 import { useUser } from '@/contexts/UserContext';
 import { useAddresses } from '@/contexts/AddressContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { supabase } from '@/lib/supabase';
 
 // Types for Payment Methods
 type PaymentMethod = {
@@ -44,6 +45,22 @@ export default function PaymentScreen() {
     const { userData, user, refreshOrders } = useUser();
     const { selectedAddress } = useAddresses();
 
+    // Delivery Settings
+    const [deliverySettings, setDeliverySettings] = useState({ min_order: 200, fee: 30 });
+
+    React.useEffect(() => {
+        const fetchDeliverySettings = async () => {
+            const { data } = await supabase.from('app_settings').select('value').eq('key', 'delivery_charges').single();
+            if (data?.value) {
+                setDeliverySettings({
+                    min_order: data.value.min_order_for_free_delivery || 200,
+                    fee: data.value.delivery_fee || 30
+                });
+            }
+        };
+        fetchDeliverySettings();
+    }, []);
+
     const handlePayment = async () => {
         // 1. Identify items in cart
         const cartItemIds = Object.keys(quantities).filter(id => quantities[id] > 0);
@@ -54,32 +71,54 @@ export default function PaymentScreen() {
         }
 
         // 2. Group Items by Vendor
-        const ordersByVendor: Record<string, { items: any[], total: number }> = {};
+        const ordersByVendor: Record<string, { items: any[], total: number, hasPreorder: boolean, maxDuration: number }> = {};
+        let cartSubtotal = 0;
 
         cartItemIds.forEach(id => {
             const product = marketProducts.find(p => p.id === id);
             if (product) {
                 const vendorId = product.vendorId || 'vendor_def_001'; // Fallback to default
                 const qty = quantities[id];
-                const itemTotal = product.price * qty;
+                const effectivePrice = (product.discountValue && product.discountValue > 0)
+                    ? product.price * (1 - product.discountValue / 100)
+                    : product.price;
+                const itemTotal = effectivePrice * qty;
+                const isPreorder = product.order_type === 'pre-order';
 
                 if (!ordersByVendor[vendorId]) {
-                    ordersByVendor[vendorId] = { items: [], total: 0 };
+                    ordersByVendor[vendorId] = { items: [], total: 0, hasPreorder: false, maxDuration: 0 };
                 }
 
+                if (isPreorder) {
+                    ordersByVendor[vendorId].hasPreorder = true;
+                    ordersByVendor[vendorId].maxDuration = Math.max(
+                        ordersByVendor[vendorId].maxDuration,
+                        product.preorder_duration || 3
+                    );
+                }
                 ordersByVendor[vendorId].items.push({
                     productName: product.name,
                     quantity: qty,
-                    price: product.price,
+                    price: effectivePrice,
                     image: product.image // Pass image for display in history
                 });
                 ordersByVendor[vendorId].total += itemTotal;
+
+                // Track total across all vendors for shipping threshold
+                cartSubtotal += itemTotal;
             }
         });
 
+        // Calculate if we reached free delivery
+        const isFreeDelivery = cartSubtotal >= deliverySettings.min_order;
+        const shippingFee = isFreeDelivery ? 0 : deliverySettings.fee;
+
         // 3. Create Vendor Orders (async loop)
-        const orderPromises = Object.keys(ordersByVendor).map(async (vendorId) => {
+        const orderPromises = Object.keys(ordersByVendor).map(async (vendorId, index) => {
             const vendorData = ordersByVendor[vendorId];
+
+            // Assign shipping fee to the first order only (or split it)
+            const orderShippingFee = index === 0 ? shippingFee : 0;
 
             // Use stable User ID if available, else fallback
             const finalUserId = user?.id || (userData.phoneNumber ? `user_${userData.phoneNumber.replace(/\D/g, '')}` : 'guest_user');
@@ -96,13 +135,17 @@ export default function PaymentScreen() {
                 paymentStatus: selectedId === 'cod' ? 'COD' : 'Paid',
                 paymentMethod: LINKED_METHODS.find(m => m.id === selectedId)?.title || SAVED_METHODS.find(m => m.id === selectedId)?.title || 'Unknown',
                 customerPhone: userData?.phoneNumber || '+91 99999 99999',
-                shippingFee: 4.4, // Consistent with checkout
+                shippingFee: orderShippingFee, // Dynamic shipping fee applied to first order
                 deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.pincode}` : "Patna, Bihar",
                 deliveryLatitude: selectedAddress?.latitude,
                 deliveryLongitude: selectedAddress?.longitude,
                 receiverName: selectedAddress?.receiverName,
-                receiverPhone: selectedAddress?.receiverPhone
-            };
+                receiverPhone: selectedAddress?.receiverPhone,
+                order_type: vendorData.hasPreorder ? 'pre-order' : 'instant',
+                estimated_delivery: vendorData.hasPreorder
+                    ? new Date(Date.now() + vendorData.maxDuration * 24 * 60 * 60 * 1000).toISOString()
+                    : undefined,
+            } as any;
 
             await addOrder(newOrder); // This adds it to the Vendor Context and Supabase
         });

@@ -27,6 +27,7 @@ export interface MarketProduct {
     price: number;
     unit: string;
     discount?: string; // e.g. '-40%', 'BOGO'
+    discountValue?: number; // numeric discount percentage from DB
     specialOffer?: string; // e.g. 'Limited Time Deal'
     image: any;
     images: string[];
@@ -34,6 +35,8 @@ export interface MarketProduct {
     isFavorite: boolean;
     tag?: string; // Additional tag like 'Organic'
     highlights?: { title: string; value: string }[];
+    order_type?: 'instant' | 'pre-order';
+    preorder_duration?: number;
 }
 
 export interface Article {
@@ -207,14 +210,17 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                             type: p.category || 'Vegetables',
                             price: p.price,
                             unit: p.unit || 'kg',
-                            discount: undefined,
+                            discount: p.discount && p.discount > 0 ? `-${p.discount}%` : undefined,
+                            discountValue: p.discount || 0,
                             specialOffer: undefined,
                             image: primaryImage,
                             images: productImages,
                             description: p.description || 'Fresh produce from local farmers.',
                             isFavorite: false,
                             tag: p.stock < 5 ? 'Low Stock' : 'Fresh',
-                            highlights: p.highlights || []
+                            highlights: p.highlights || [],
+                            order_type: p.order_type || 'instant',
+                            preorder_duration: p.preorder_duration || 0,
                         };
                     });
                     setProducts(mappedProducts);

@@ -68,7 +68,9 @@ export default function ProductDetailsScreen() {
     const displayPrice = product.price;
     const displayUnit = `/${product.unit}`;
     const displaySub = product.description;
-    const displayDesc = product.description; // or more detailed if available
+    const displayDesc = product.description;
+    const hasDiscount = (product.discountValue ?? 0) > 0;
+    const discountedPrice = hasDiscount ? (product.price * (1 - (product.discountValue || 0) / 100)).toFixed(0) : null;
 
     const qty = getItemQuantity(product.id);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -189,10 +191,25 @@ export default function ProductDetailsScreen() {
                     <View style={styles.titleRow}>
                         <Text style={[styles.titleText, isDark && { color: '#FFF' }]}>{displayTitle}</Text>
                         <View style={styles.priceContainer}>
-                            <Text style={[styles.mainPriceText, isDark && { color: '#81C784' }]}>₹{displayPrice}</Text>
+                            {hasDiscount ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                    <Text style={[styles.mainPriceText, isDark && { color: '#81C784' }]}>₹{discountedPrice}</Text>
+                                    <Text style={[styles.mainPriceStrike, isDark && { color: '#888' }, { marginLeft: 6 }]}>₹{displayPrice}</Text>
+                                </View>
+                            ) : (
+                                <Text style={[styles.mainPriceText, isDark && { color: '#81C784' }]}>₹{displayPrice}</Text>
+                            )}
                             <Text style={[styles.mainUnitText, isDark && { color: '#AAA' }]}>{displayUnit}</Text>
                         </View>
                     </View>
+                    {hasDiscount && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                            <View style={{ backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                                <Text style={{ fontFamily: 'DMSans_700Bold', fontSize: 12, color: '#1F5E2E' }}>{product.discountValue}% OFF</Text>
+                            </View>
+                            <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: '#888' }}>You save ₹{(displayPrice - parseFloat(discountedPrice!)).toFixed(0)}</Text>
+                        </View>
+                    )}
                     <Text style={[styles.subtitleText, isDark && { color: '#CCC' }]}>{displaySub}</Text>
 
                     {/* Feature Boxes */}
@@ -207,10 +224,72 @@ export default function ProductDetailsScreen() {
                             <Text style={[styles.featureSub, isDark && { color: '#AAA' }]}>Certified</Text>
                         </View>
                         <View style={[styles.featureBox, isDark && { backgroundColor: '#333' }]}>
-                            <Text style={[styles.featureTitle, isDark && { color: '#FFF' }]}>Fast</Text>
-                            <Text style={[styles.featureSub, isDark && { color: '#AAA' }]}>Delivery</Text>
+                            <Text style={[styles.featureTitle, isDark && { color: '#FFF' }]}>
+                                {product.order_type === 'pre-order' ? `${product.preorder_duration || 3}d` : 'Fast'}
+                            </Text>
+                            <Text style={[styles.featureSub, isDark && { color: '#AAA' }]}>
+                                {product.order_type === 'pre-order' ? 'Pre-order' : 'Delivery'}
+                            </Text>
                         </View>
                     </View>
+
+                    {/* Pre-order Benefits Section */}
+                    {product.order_type === 'pre-order' && (
+                        <View style={styles.preorderBenefitsSection}>
+                            <View style={styles.preorderBenefitsHeader}>
+                                <Ionicons name="sparkles" size={18} color="#E65100" />
+                                <Text style={styles.preorderBenefitsTitle}>Why Pre-order?</Text>
+                            </View>
+
+                            <View style={styles.benefitsGrid}>
+                                <View style={styles.benefitItem}>
+                                    <View style={[styles.benefitIconBox, { backgroundColor: '#E8F5E9' }]}>
+                                        <Ionicons name="pricetag" size={18} color="#1F5E2E" />
+                                    </View>
+                                    <Text style={styles.benefitLabel}>Best Price</Text>
+                                    <Text style={styles.benefitDesc}>Guaranteed lowest farm price</Text>
+                                </View>
+                                <View style={styles.benefitItem}>
+                                    <View style={[styles.benefitIconBox, { backgroundColor: '#FFF3E0' }]}>
+                                        <Ionicons name="leaf" size={18} color="#E65100" />
+                                    </View>
+                                    <Text style={styles.benefitLabel}>Ultra Fresh</Text>
+                                    <Text style={styles.benefitDesc}>Harvested just for you</Text>
+                                </View>
+                                <View style={styles.benefitItem}>
+                                    <View style={[styles.benefitIconBox, { backgroundColor: '#E3F2FD' }]}>
+                                        <Ionicons name="shield-checkmark" size={18} color="#1565C0" />
+                                    </View>
+                                    <Text style={styles.benefitLabel}>Farm Direct</Text>
+                                    <Text style={styles.benefitDesc}>No middlemen involved</Text>
+                                </View>
+                                <View style={styles.benefitItem}>
+                                    <View style={[styles.benefitIconBox, { backgroundColor: '#FCE4EC' }]}>
+                                        <Ionicons name="timer" size={18} color="#C62828" />
+                                    </View>
+                                    <Text style={styles.benefitLabel}>Ready in {product.preorder_duration || 3}d</Text>
+                                    <Text style={styles.benefitDesc}>We'll notify you!</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.preorderTimeline}>
+                                <View style={styles.timelineStep}>
+                                    <View style={[styles.timelineDot, { backgroundColor: '#1F5E2E' }]} />
+                                    <Text style={styles.timelineText}>You place order today</Text>
+                                </View>
+                                <View style={styles.timelineLine} />
+                                <View style={styles.timelineStep}>
+                                    <View style={[styles.timelineDot, { backgroundColor: '#E65100' }]} />
+                                    <Text style={styles.timelineText}>Farmer prepares your order</Text>
+                                </View>
+                                <View style={styles.timelineLine} />
+                                <View style={styles.timelineStep}>
+                                    <View style={[styles.timelineDot, { backgroundColor: '#1565C0' }]} />
+                                    <Text style={styles.timelineText}>Fresh delivery in ~{product.preorder_duration || 3} days</Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
 
                     {/* Highlights */}
                     {product.highlights && product.highlights.length > 0 && (
@@ -294,24 +373,52 @@ export default function ProductDetailsScreen() {
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }, isDark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
                 <View>
                     <Text style={[styles.weightText, isDark && { color: '#FFF' }]}>300 g</Text>
-                    <Text style={[styles.bottomPrice, isDark && { color: '#81C784' }]}>₹{displayPrice}<Text style={[styles.bottomUnit, isDark && { color: '#AAA' }]}>{displayUnit}</Text></Text>
+                    {hasDiscount ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                            <Text style={[styles.bottomPrice, isDark && { color: '#81C784' }]}>₹{discountedPrice}<Text style={[styles.bottomUnit, isDark && { color: '#AAA' }]}>{displayUnit}</Text></Text>
+                            <Text style={{ fontSize: 13, color: '#999', textDecorationLine: 'line-through', fontFamily: 'DMSans_400Regular' }}>₹{displayPrice}</Text>
+                        </View>
+                    ) : (
+                        <Text style={[styles.bottomPrice, isDark && { color: '#81C784' }]}>₹{displayPrice}<Text style={[styles.bottomUnit, isDark && { color: '#AAA' }]}>{displayUnit}</Text></Text>
+                    )}
                     <Text style={[styles.taxText, isDark && { color: '#888' }]}>Incl. of all taxes</Text>
                 </View>
 
-                {qty === 0 ? (
-                    <TouchableOpacity style={styles.addToCartBtn} onPress={() => updateQuantity(product.id, 1)}>
-                        <Text style={styles.addToCartText}>Add to Cart</Text>
-                    </TouchableOpacity>
+                {product.order_type === 'pre-order' ? (
+                    // Pre-order button
+                    qty === 0 ? (
+                        <TouchableOpacity style={styles.preorderBtn} onPress={() => updateQuantity(product.id, 1)}>
+                            <Ionicons name="time-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+                            <Text style={styles.preorderBtnText}>Pre-order</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.qtyControlBig}>
+                            <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, -1)}>
+                                <Ionicons name="remove" size={24} color="#fff" />
+                            </TouchableOpacity>
+                            <Text style={styles.qtyTextBig}>{qty}</Text>
+                            <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, 1)}>
+                                <Ionicons name="add" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    )
                 ) : (
-                    <View style={styles.qtyControlBig}>
-                        <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, -1)}>
-                            <Ionicons name="remove" size={24} color="#fff" />
+                    // Normal add to cart
+                    qty === 0 ? (
+                        <TouchableOpacity style={styles.addToCartBtn} onPress={() => updateQuantity(product.id, 1)}>
+                            <Text style={styles.addToCartText}>Add to Cart</Text>
                         </TouchableOpacity>
-                        <Text style={styles.qtyTextBig}>{qty}</Text>
-                        <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, 1)}>
-                            <Ionicons name="add" size={24} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
+                    ) : (
+                        <View style={styles.qtyControlBig}>
+                            <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, -1)}>
+                                <Ionicons name="remove" size={24} color="#fff" />
+                            </TouchableOpacity>
+                            <Text style={styles.qtyTextBig}>{qty}</Text>
+                            <TouchableOpacity style={styles.qtyBtnBig} onPress={() => updateQuantity(product.id, 1)}>
+                                <Ionicons name="add" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    )
                 )}
             </View>
 
@@ -429,9 +536,16 @@ const styles = StyleSheet.create({
         alignItems: 'baseline',
     },
     mainPriceText: {
-        fontSize: 24,
+        fontSize: 22,
         fontFamily: 'DMSans_700Bold',
         color: '#1F5E2E',
+    },
+    mainPriceStrike: {
+        fontSize: 15,
+        fontFamily: 'DMSans_400Regular',
+        color: '#999',
+        textDecorationLine: 'line-through',
+        marginLeft: 4,
     },
     mainUnitText: {
         fontSize: 14,
@@ -720,5 +834,134 @@ const styles = StyleSheet.create({
         fontFamily: 'DMSans_700Bold',
         minWidth: 20,
         textAlign: 'center',
-    }
+    },
+    preorderBtn: {
+        backgroundColor: '#E65100',
+        paddingVertical: 14,
+        paddingHorizontal: 28,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+    },
+    preorderBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        letterSpacing: 0.5,
+    },
+    preorderBenefitsSection: {
+        backgroundColor: '#FFFDF5',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#FFE0B2',
+    },
+    preorderBenefitsHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 14,
+    },
+    preorderBenefitsTitle: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#E65100',
+    },
+    benefitsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginBottom: 16,
+    },
+    benefitItem: {
+        width: '47%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
+    },
+    benefitIconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 6,
+    },
+    benefitLabel: {
+        fontSize: 13,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+        marginBottom: 2,
+        textAlign: 'center',
+    },
+    benefitDesc: {
+        fontSize: 10,
+        fontFamily: 'DMSans_400Regular',
+        color: '#888',
+        textAlign: 'center',
+    },
+    preorderTimeline: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
+    },
+    timelineStep: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    timelineDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+    },
+    timelineText: {
+        fontSize: 12,
+        fontFamily: 'DMSans_500Medium',
+        color: '#4B5563',
+    },
+    timelineLine: {
+        width: 2,
+        height: 16,
+        backgroundColor: '#E0E0E0',
+        marginLeft: 4,
+    },
+    preorderBanner: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#FFF3E0',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#FFE0B2',
+        gap: 12,
+    },
+    preorderBannerIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#E8F5E9',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    preorderBannerTitle: {
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+        color: '#E65100',
+        marginBottom: 2,
+    },
+    preorderBannerText: {
+        fontSize: 12,
+        fontFamily: 'DMSans_400Regular',
+        color: '#BF360C',
+        lineHeight: 18,
+    },
 });

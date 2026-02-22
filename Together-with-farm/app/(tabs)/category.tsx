@@ -179,8 +179,15 @@ export default function CategoryScreen() {
                     <Text style={[styles.tagText, isDark && { color: '#AAA' }]}>{item.tag || item.type}</Text>
                     <Text style={[styles.productTitle, isDark && { color: '#FFF' }]} numberOfLines={1}>{item.name}</Text>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
-                        <Text style={[styles.priceText, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 2 }}>
+                        {item.discountValue && item.discountValue > 0 ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                <Text style={[styles.priceText, isDark && { color: '#81C784' }]}>₹{(item.price * (1 - item.discountValue / 100)).toFixed(0)}</Text>
+                                <Text style={{ fontSize: 11, color: '#999', textDecorationLine: 'line-through', fontFamily: 'DMSans_400Regular', marginLeft: 3 }}>₹{item.price}</Text>
+                            </View>
+                        ) : (
+                            <Text style={[styles.priceText, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                        )}
                         <Text style={[styles.unitText, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
                     </View>
 

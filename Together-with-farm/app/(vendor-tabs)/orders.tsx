@@ -17,7 +17,7 @@ export default function VendorOrdersScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
 
-    const filters = ['All', 'Pending', 'Preparing', 'On the Way', 'Delivered', 'Cancelled'];
+    const filters = ['All', 'Pre-orders', 'Pending', 'Preparing', 'On the Way', 'Delivered', 'Cancelled'];
 
     // Map Context Status to UI Status filters
     const getUIStatus = (status: VendorOrder['status']) => {
@@ -28,7 +28,13 @@ export default function VendorOrdersScreen() {
 
     const displayOrders = orders.filter(o => {
         const uiStatus = getUIStatus(o.status);
-        if (activeFilter !== 'All' && uiStatus !== activeFilter) return false;
+
+        // Pre-orders filter: show only orders with order_type = 'pre-order'
+        if (activeFilter === 'Pre-orders') {
+            if ((o as any).order_type !== 'pre-order') return false;
+        } else if (activeFilter !== 'All' && uiStatus !== activeFilter) {
+            return false;
+        }
 
         const searchLower = searchQuery.toLowerCase();
         return o.id.toLowerCase().includes(searchLower) || o.customerName.toLowerCase().includes(searchLower);
@@ -241,6 +247,14 @@ export default function VendorOrdersScreen() {
                         {uiStatus}
                     </Text>
                 </TouchableOpacity>
+
+                {/* Pre-order Badge */}
+                {(order as any).order_type === 'pre-order' && (
+                    <View style={styles.preorderOrderBadge}>
+                        <Ionicons name="time-outline" size={12} color="#fff" />
+                        <Text style={styles.preorderOrderBadgeText}>Pre-order</Text>
+                    </View>
+                )}
 
                 {/* Order Details Box */}
                 <View style={styles.detailsBox}>
@@ -604,5 +618,21 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    preorderOrderBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        backgroundColor: '#E65100',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        gap: 4,
+        marginBottom: 8,
+    },
+    preorderOrderBadgeText: {
+        fontSize: 11,
+        fontFamily: 'DMSans_700Bold',
+        color: '#FFFFFF',
     },
 });

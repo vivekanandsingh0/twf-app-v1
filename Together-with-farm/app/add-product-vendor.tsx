@@ -27,7 +27,10 @@ export default function AddProductVendorScreen() {
     const [price, setPrice] = useState('');
     const [unit, setUnit] = useState('kg');
     const [quantity, setQuantity] = useState('');
+    const [discountPercent, setDiscountPercent] = useState('');
     const [orderType, setOrderType] = useState<'Instant' | 'Pre-order'>('Instant');
+    const [preorderDuration, setPreorderDuration] = useState('3');
+    const DURATION_OPTIONS = ['1', '2', '3', '5', '7'];
 
     const params = useLocalSearchParams();
     // Ensure id is a string (handle array case)
@@ -57,7 +60,13 @@ export default function AddProductVendorScreen() {
                 setPrice(productToEdit.price.toString());
                 setUnit(productToEdit.unit);
                 setQuantity(productToEdit.stock.toString());
-                // setOrderType(productToEdit.orderType); // Assuming orderType exists
+                setDiscountPercent((productToEdit as any).discount ? (productToEdit as any).discount.toString() : '');
+                if ((productToEdit as any).order_type === 'pre-order') {
+                    setOrderType('Pre-order');
+                    setPreorderDuration(((productToEdit as any).preorder_duration || 3).toString());
+                } else {
+                    setOrderType('Instant');
+                }
             }
         }
     }, [id, products]);
@@ -126,7 +135,10 @@ export default function AddProductVendorScreen() {
                     unit: unit || 'kg',
                     stock: numericStock,
                     highlights: highlights.filter(h => h.title || h.value), // Filter empty
-                }).catch(err => {
+                    order_type: orderType === 'Pre-order' ? 'pre-order' : 'instant',
+                    preorder_duration: orderType === 'Pre-order' ? parseInt(preorderDuration) || 3 : 0,
+                    discount: parseInt(discountPercent) || 0,
+                } as any).catch((err: any) => {
                     console.error("Background update failed:", err);
                     Alert.alert("Error", "Failed to save changes to server.");
                 });
@@ -145,8 +157,11 @@ export default function AddProductVendorScreen() {
                     highlights: highlights.filter(h => h.title || h.value),
                     status: 'Active',
                     image: images[0], // First image as primary
-                    images: images
-                });
+                    images: images,
+                    order_type: orderType === 'Pre-order' ? 'pre-order' : 'instant',
+                    preorder_duration: orderType === 'Pre-order' ? parseInt(preorderDuration) || 3 : 0,
+                    discount: parseInt(discountPercent) || 0,
+                } as any);
 
                 // Don't wait, just go back
                 router.back();
@@ -339,6 +354,28 @@ export default function AddProductVendorScreen() {
                     />
                 </View>
 
+                {/* Discount */}
+                <Text style={styles.label}>Discount (%)</Text>
+                <View style={styles.row}>
+                    <TextInput
+                        style={[styles.input, { flex: 1, marginRight: 12 }]}
+                        placeholder="e.g, 10"
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="numeric"
+                        value={discountPercent}
+                        onChangeText={(text) => setDiscountPercent(text.replace(/[^0-9]/g, ''))}
+                    />
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                        {discountPercent && parseInt(discountPercent) > 0 && price ? (
+                            <Text style={{ fontFamily: 'DMSans_500Medium', color: '#1F5E2E', fontSize: 14 }}>
+                                Sale: ₹{(parseFloat(price) * (1 - parseInt(discountPercent) / 100)).toFixed(0)}/{unit || 'kg'}
+                            </Text>
+                        ) : (
+                            <Text style={{ fontFamily: 'DMSans_400Regular', color: '#9CA3AF', fontSize: 13 }}>No discount</Text>
+                        )}
+                    </View>
+                </View>
+
                 {/* Available Quantity */}
                 <Text style={styles.label}>Available Quantity</Text>
                 <TextInput
@@ -371,6 +408,42 @@ export default function AddProductVendorScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
+
+                {/* Pre-order Duration - Only shown when Pre-order is selected */}
+                {orderType === 'Pre-order' && (
+                    <View style={styles.preorderSection}>
+                        <View style={styles.preorderHeader}>
+                            <Ionicons name="time-outline" size={20} color="#1F5E2E" />
+                            <Text style={styles.preorderTitle}>Pre-order Duration</Text>
+                        </View>
+                        <Text style={styles.preorderSubtext}>How many days before the product is ready?</Text>
+                        <View style={styles.durationContainer}>
+                            {DURATION_OPTIONS.map((d) => (
+                                <TouchableOpacity
+                                    key={d}
+                                    style={[styles.durationChip, preorderDuration === d && styles.durationChipActive]}
+                                    onPress={() => setPreorderDuration(d)}
+                                >
+                                    <Text style={[styles.durationText, preorderDuration === d && styles.durationTextActive]}>
+                                        {d} {parseInt(d) === 1 ? 'day' : 'days'}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.customDurationRow}>
+                            <Text style={styles.customDurationLabel}>Custom:</Text>
+                            <TextInput
+                                style={styles.customDurationInput}
+                                placeholder="e.g, 10"
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="numeric"
+                                value={preorderDuration}
+                                onChangeText={(text) => setPreorderDuration(text.replace(/[^0-9]/g, ''))}
+                            />
+                            <Text style={styles.customDurationSuffix}>days</Text>
+                        </View>
+                    </View>
+                )}
 
                 {/* Submit Button */}
                 <TouchableOpacity
@@ -545,6 +618,85 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         marginBottom: 0, // margin is handled by input marginBottom
+    },
+    preorderSection: {
+        backgroundColor: '#F0FAF0',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 32,
+        borderWidth: 1,
+        borderColor: '#C8E6C9',
+    },
+    preorderHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    preorderTitle: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1F5E2E',
+    },
+    preorderSubtext: {
+        fontSize: 12,
+        fontFamily: 'DMSans_400Regular',
+        color: '#666',
+        marginBottom: 12,
+    },
+    durationContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 12,
+    },
+    durationChip: {
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#C8E6C9',
+        backgroundColor: '#FFFFFF',
+    },
+    durationChipActive: {
+        backgroundColor: '#1F5E2E',
+        borderColor: '#1F5E2E',
+    },
+    durationText: {
+        fontSize: 13,
+        fontFamily: 'DMSans_500Medium',
+        color: '#4B5563',
+    },
+    durationTextActive: {
+        color: '#FFFFFF',
+    },
+    customDurationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    customDurationLabel: {
+        fontSize: 14,
+        fontFamily: 'DMSans_500Medium',
+        color: '#4B5563',
+    },
+    customDurationInput: {
+        height: 40,
+        width: 70,
+        borderWidth: 1,
+        borderColor: '#C8E6C9',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        fontSize: 15,
+        fontFamily: 'DMSans_500Medium',
+        color: '#1A1A1A',
+        backgroundColor: '#FFFFFF',
+        textAlign: 'center',
+    },
+    customDurationSuffix: {
+        fontSize: 14,
+        fontFamily: 'DMSans_400Regular',
+        color: '#666',
     },
     orderTypeContainer: {
         flexDirection: 'row',

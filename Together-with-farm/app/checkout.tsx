@@ -9,6 +9,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAddresses } from '@/contexts/AddressContext';
 import { useMarket } from '@/contexts/MarketContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { supabase } from '@/lib/supabase';
 
 export default function CheckoutScreen() {
     const insets = useSafeAreaInsets();
@@ -23,16 +24,43 @@ export default function CheckoutScreen() {
     const [couponApplied, setCouponApplied] = useState(false);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
 
+    // Delivery Settings
+    const [deliverySettings, setDeliverySettings] = useState({ min_order: 200, fee: 30 });
+
+    React.useEffect(() => {
+        const fetchDeliverySettings = async () => {
+            const { data } = await supabase.from('app_settings').select('value').eq('key', 'delivery_charges').single();
+            if (data?.value) {
+                setDeliverySettings({
+                    min_order: data.value.min_order_for_free_delivery || 200,
+                    fee: data.value.delivery_fee || 30
+                });
+            }
+        };
+        fetchDeliverySettings();
+    }, []);
+
     // Derived Data
     const cartItems = marketProducts.filter(p => quantities[p.id] && quantities[p.id] > 0);
 
     const subtotal = cartItems.reduce((sum, item) => {
-        return sum + (item.price * (quantities[item.id] || 0));
+        const effectivePrice = (item.discountValue && item.discountValue > 0)
+            ? item.price * (1 - item.discountValue / 100)
+            : item.price;
+        return sum + (effectivePrice * (quantities[item.id] || 0));
     }, 0);
 
-    const shippingFee = 4.4; // Fixed shipping for now
+    const isFreeDelivery = subtotal >= deliverySettings.min_order;
+    const shippingFee = isFreeDelivery ? 0 : deliverySettings.fee;
     const discount = couponApplied ? 6.22 : 0; // Example discount
     const total = subtotal + shippingFee - discount + tipAmount;
+
+    // Check if cart has pre-order items
+    const hasPreorderItems = cartItems.some(item => item.order_type === 'pre-order');
+    const allPreorder = cartItems.every(item => item.order_type === 'pre-order');
+    const maxPreorderDays = cartItems
+        .filter(item => item.order_type === 'pre-order')
+        .reduce((max, item) => Math.max(max, item.preorder_duration || 3), 0);
 
     const handlePlaceOrder = () => {
         if (!selectedAddress) {
@@ -63,6 +91,17 @@ export default function CheckoutScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+                {/* Free Delivery Notice */}
+                {!isFreeDelivery && (
+                    <View style={{ backgroundColor: '#E0F2F1', padding: 12, marginHorizontal: 20, marginTop: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="cart-outline" size={20} color="#1F5E2E" />
+                        <Text style={{ fontFamily: 'DMSans_500Medium', color: '#1F5E2E', fontSize: 13, flex: 1 }}>
+                            Add items worth <Text style={{ fontFamily: 'DMSans_700Bold' }}>₹{(deliverySettings.min_order - subtotal).toFixed(0)}</Text> more to get <Text style={{ fontFamily: 'DMSans_700Bold' }}>FREE delivery</Text>.
+                        </Text>
+                    </View>
+                )}
+
                 {/* Address Section */}
                 <View style={styles.addressSection}>
                     <View style={styles.locationIconBg}>
@@ -120,6 +159,24 @@ export default function CheckoutScreen() {
                         </View>
                     ))}
                 </View>
+
+                {/* Pre-order Notice */}
+                {hasPreorderItems && (
+                    <View style={[styles.preorderNotice, isDark && { backgroundColor: '#3E2723', borderColor: '#E65100' }]}>
+                        <Ionicons name="time-outline" size={20} color="#E65100" />
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                            <Text style={[styles.preorderNoticeTitle, isDark && { color: '#FFE0B2' }]}>
+                                {allPreorder ? 'Pre-order' : 'Cart contains pre-order items'}
+                            </Text>
+                            <Text style={[styles.preorderNoticeText, isDark && { color: '#FFCC80' }]}>
+                                {allPreorder
+                                    ? `Your order will be ready in ~${maxPreorderDays} days after placing.`
+                                    : `Some items are pre-orders (ready in ~${maxPreorderDays} days). Instant items will ship normally.`
+                                }
+                            </Text>
+                        </View>
+                    </View>
+                )}
 
                 {/* Add More Section */}
                 <View style={[styles.addMoreCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
@@ -190,7 +247,7 @@ export default function CheckoutScreen() {
                     </View>
                     <View style={styles.summaryRow}>
                         <Text style={[styles.summaryLabel, isDark && { color: '#AAA' }]}>Shipping fee</Text>
-                        <Text style={[styles.summaryValue, isDark && { color: '#81C784' }]}>₹{shippingFee.toFixed(2)}</Text>
+                        <Text style={[styles.summaryValue, isDark && { color: '#81C784' }]}>{shippingFee === 0 ? 'FREE' : `₹${shippingFee.toFixed(2)}`}</Text>
                     </View>
                     <View style={styles.summaryRow}>
                         <Text style={[styles.summaryLabel, isDark && { color: '#AAA' }]}>Voucher Discount</Text>
@@ -213,11 +270,12 @@ export default function CheckoutScreen() {
                     <Text style={[styles.bottomItems, isDark && { color: '#AAA' }]}>{totalCartItems} items</Text>
                 </View>
                 <TouchableOpacity
-                    style={styles.placeOrderBtn}
+                    style={[styles.placeOrderBtn, hasPreorderItems && { backgroundColor: '#E65100' }]}
                     activeOpacity={0.9}
                     onPress={handlePlaceOrder}
                 >
-                    <Text style={styles.placeOrderText}>Place Order</Text>
+                    {hasPreorderItems && <Ionicons name="time-outline" size={18} color="#fff" style={{ marginRight: 6 }} />}
+                    <Text style={styles.placeOrderText}>{allPreorder ? 'Place Pre-order' : (hasPreorderItems ? 'Place Order' : 'Place Order')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -594,6 +652,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
         paddingVertical: 16,
         borderRadius: 30,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     placeOrderText: {
         color: '#fff',
@@ -720,5 +780,27 @@ const styles = StyleSheet.create({
         color: '#1F5E2E',
         textDecorationLine: 'underline',
         textAlign: 'center',
+    },
+    preorderNotice: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#FFF3E0',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: '#FFE0B2',
+    },
+    preorderNoticeTitle: {
+        fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
+        color: '#E65100',
+        marginBottom: 2,
+    },
+    preorderNoticeText: {
+        fontSize: 12,
+        fontFamily: 'DMSans_400Regular',
+        color: '#BF360C',
+        lineHeight: 18,
     },
 });

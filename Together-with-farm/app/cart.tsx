@@ -20,7 +20,10 @@ export default function CartScreen() {
     const cartItems = marketProducts.filter(p => quantities[p.id] && quantities[p.id] > 0);
 
     const totalPrice = cartItems.reduce((sum, item) => {
-        return sum + (item.price * (quantities[item.id] || 0));
+        const effectivePrice = (item.discountValue && item.discountValue > 0)
+            ? item.price * (1 - item.discountValue / 100)
+            : item.price;
+        return sum + (effectivePrice * (quantities[item.id] || 0));
     }, 0);
 
     return (
@@ -55,9 +58,23 @@ export default function CartScreen() {
 
                                 <View style={styles.itemDetails}>
                                     <Text style={[styles.itemTitle, isDark && { color: '#FFF' }]}>{item.name}</Text>
-                                    <View style={styles.priceContainer}>
-                                        <Text style={[styles.itemPrice, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
-                                        <Text style={[styles.itemUnit, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <View style={styles.priceContainer}>
+                                            {item.discountValue && item.discountValue > 0 ? (
+                                                <>
+                                                    <Text style={[styles.itemPrice, isDark && { color: '#81C784' }]}>₹{(item.price * (1 - item.discountValue / 100)).toFixed(0)}</Text>
+                                                    <Text style={{ fontSize: 11, color: '#999', textDecorationLine: 'line-through', fontFamily: 'DMSans_400Regular', marginLeft: 4 }}>₹{item.price}</Text>
+                                                </>
+                                            ) : (
+                                                <Text style={[styles.itemPrice, isDark && { color: '#81C784' }]}>₹{item.price}</Text>
+                                            )}
+                                            <Text style={[styles.itemUnit, isDark && { color: '#AAA' }]}>/{item.unit}</Text>
+                                        </View>
+                                        {item.order_type === 'pre-order' && (
+                                            <View style={{ backgroundColor: '#E65100', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                                <Text style={{ color: '#fff', fontSize: 9, fontFamily: 'DMSans_700Bold' }}>Pre-order</Text>
+                                            </View>
+                                        )}
                                     </View>
                                 </View>
 
