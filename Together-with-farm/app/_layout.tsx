@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -42,11 +43,13 @@ function AppContent() {
   console.log("_layout: AppContent rendered", { session: !!session, loading });
   const colorScheme = useColorScheme();
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_700Bold,
   });
+
+  const isFontsReady = fontsLoaded || fontError;
 
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
@@ -180,7 +183,7 @@ function AppContent() {
     <View style={{ flex: 1 }}>
       {content}
       {/* Splash Screen Overlay - Always rendered on top until finished */}
-      {(showSplash || !fontsLoaded) && (
+      {(showSplash || !isFontsReady || loading) && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
           <SplashScreen onFinish={() => setShowSplash(false)} />
         </View>
@@ -198,3 +201,4 @@ export default function RootLayout() {
     </UserProvider>
   );
 }
+

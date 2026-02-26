@@ -25,6 +25,34 @@ export default function RateOrderScreen() {
     const [driverRating, setDriverRating] = useState(0);
     const [review, setReview] = useState('');
     const [cancelling, setCancelling] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [loadingReview, setLoadingReview] = useState(true);
+
+    React.useEffect(() => {
+        if (!order) return;
+        const fetchReview = async () => {
+            setLoadingReview(true);
+            try {
+                const { data, error } = await supabase
+                    .from('order_reviews')
+                    .select('*')
+                    .eq('order_id', order.id)
+                    .single();
+
+                if (data) {
+                    setProductRating(data.product_rating);
+                    setDriverRating(data.driver_rating);
+                    setReview(data.review_text || '');
+                    setIsSubmitted(true);
+                }
+            } catch (err) {
+                // Not found or error, we just stay in unsubmitted state
+            } finally {
+                setLoadingReview(false);
+            }
+        };
+        fetchReview();
+    }, [order]);
 
     if (!order) {
         return (
@@ -35,18 +63,48 @@ export default function RateOrderScreen() {
         );
     }
 
-    const itemsSummary = order.items.map(i => i.productName).join(', ');
-
-    const handleSubmit = () => {
-        if (productRating === 0 || driverRating === 0) {
-            Alert.alert("Incomplete", "Please provide a rating for both product and driver.");
-            return;
-        }
-        setIsSubmitted(true);
-        Alert.alert("Success", "Your review has been submitted!");
+    const getProxiedImageUrl = (url?: string) => {
+        if (!url) return undefined;
+        return url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev');
     };
 
-    // ... handlers ...
+    const itemsSummary = order.items.map(i => i.productName).join(', ');
+    const productImage = order.items.length > 0 && order.items[0].image
+        ? { uri: getProxiedImageUrl(order.items[0].image) }
+        : { uri: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=60' };
+
+    const handleSubmit = async () => {
+        if (productRating === 0 || (order.deliveryPartnerName && driverRating === 0)) {
+            Alert.alert("Incomplete", "Please provide a rating for the product" + (order.deliveryPartnerName ? " and driver." : "."));
+            return;
+        }
+
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+            Alert.alert("Error", "You must be logged in to submit a review.");
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const { error } = await supabase.from('order_reviews').upsert({
+                order_id: order.id,
+                user_id: userData.user.id,
+                product_rating: productRating,
+                driver_rating: driverRating,
+                review_text: review,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'order_id' });
+
+            if (error) throw error;
+            setIsSubmitted(true);
+            Alert.alert("Success", "Your review has been submitted!");
+        } catch (err: any) {
+            Alert.alert("Error", err.message || "Failed to submit review");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     const handleEdit = () => {
         setIsSubmitted(false);
@@ -58,11 +116,17 @@ export default function RateOrderScreen() {
             {
                 text: "Delete",
                 style: "destructive",
-                onPress: () => {
-                    setProductRating(0);
-                    setDriverRating(0);
-                    setReview('');
-                    setIsSubmitted(false);
+                onPress: async () => {
+                    try {
+                        const { error } = await supabase.from('order_reviews').delete().eq('order_id', order.id);
+                        if (error) throw error;
+                        setProductRating(0);
+                        setDriverRating(0);
+                        setReview('');
+                        setIsSubmitted(false);
+                    } catch (err: any) {
+                        Alert.alert("Error", err.message || "Failed to delete review");
+                    }
                 }
             }
         ]);
@@ -163,7 +227,7 @@ export default function RateOrderScreen() {
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=60' }}
+                            source={productImage}
                             style={styles.productImage}
                         />
                         <View style={styles.badgeContainer}>
@@ -211,29 +275,36 @@ export default function RateOrderScreen() {
                 </View>
 
                 {/* Driver Rating */}
-                <Text style={styles.sectionTitle}>Driver</Text>
-                <View style={styles.card}>
-                    <View style={styles.driverHeader}>
-                        <View style={styles.driverInfo}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1542596594-649edbc13630?w=500&auto=format&fit=crop&q=60' }}
-                                style={styles.driverAvatar}
-                            />
-                            <View>
-                                <Text style={styles.driverName}>Amit Kumar</Text>
-                                <Text style={styles.driverDetails}>BR01AJ2346</Text>
+                {order.deliveryPartnerName ? (
+                    <>
+                        <Text style={styles.sectionTitle}>Driver</Text>
+                        <View style={styles.card}>
+                            <View style={styles.driverHeader}>
+                                <View style={styles.driverInfo}>
+                                    <Image
+                                        source={{ uri: getProxiedImageUrl(order.deliveryPartnerPhoto) || 'https://images.unsplash.com/photo-1542596594-649edbc13630?w=500&auto=format&fit=crop&q=60' }}
+                                        style={styles.driverAvatar}
+                                    />
+                                    <View>
+                                        <Text style={styles.driverName}>{order.deliveryPartnerName}</Text>
+                                        <Text style={styles.driverDetails}>{order.deliveryPartnerPhone}</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={styles.ratingSection}>
+                                <Text style={styles.questionText}>
+                                    {isSubmitted ? 'Delivery Rating' : 'How was the delivery?'}
+                                </Text>
+                                {renderStars(driverRating, setDriverRating, isSubmitted)}
                             </View>
                         </View>
-                        {!isSubmitted && <Ionicons name="ellipsis-horizontal" size={24} color="#DDD" />}
+                    </>
+                ) : (
+                    <View style={[styles.card, { marginTop: 20 }]}>
+                        <Text style={styles.driverDetails}>Delivery Partner not assigned yet.</Text>
                     </View>
-
-                    <View style={styles.ratingSection}>
-                        <Text style={styles.questionText}>
-                            {isSubmitted ? 'Delivery Rating' : 'How was the delivery?'}
-                        </Text>
-                        {renderStars(driverRating, setDriverRating, isSubmitted)}
-                    </View>
-                </View>
+                )}
 
                 {/* Review Section */}
                 <Text style={styles.sectionTitle}>{isSubmitted ? 'Your Review' : 'Add a review'}</Text>
@@ -290,21 +361,31 @@ export default function RateOrderScreen() {
                 )}
 
                 {/* Action Buttons */}
-                {isSubmitted ? (
-                    <View style={styles.actionRow}>
-                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
-                            <Ionicons name="trash-outline" size={20} color="#FF4444" />
-                            <Text style={styles.deleteBtnText}>Delete</Text>
+                {!['Pending', 'Confirmed'].includes(order.status) && (
+                    isSubmitted ? (
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
+                                <Ionicons name="trash-outline" size={20} color="#FF4444" />
+                                <Text style={styles.deleteBtnText}>Delete</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={handleEdit}>
+                                <Ionicons name="create-outline" size={20} color="#fff" />
+                                <Text style={styles.editBtnText}>Edit Review</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={[styles.submitBtn, submitting && styles.disabledBtn]}
+                            onPress={handleSubmit}
+                            disabled={submitting || (order.deliveryPartnerName ? (driverRating === 0 || productRating === 0) : productRating === 0)}
+                        >
+                            {submitting ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.submitBtnText}>Submit Review</Text>
+                            )}
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={handleEdit}>
-                            <Ionicons name="create-outline" size={20} color="#fff" />
-                            <Text style={styles.editBtnText}>Edit Review</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-                        <Text style={styles.submitBtnText}>Submit Review</Text>
-                    </TouchableOpacity>
+                    )
                 )}
 
                 <View style={{ height: 40 }} />

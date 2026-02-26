@@ -33,11 +33,10 @@ export default function ChangePhoneScreen() {
     const [timer, setTimer] = useState(0);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
         if (timer > 0) {
-            interval = setInterval(() => setTimer(t => t - 1), 1000);
+            const interval = setInterval(() => setTimer(t => t - 1), 1000);
+            return () => clearInterval(interval);
         }
-        return () => clearInterval(interval);
     }, [timer]);
 
     // --- Helpers ---

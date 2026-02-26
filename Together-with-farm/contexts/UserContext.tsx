@@ -98,7 +98,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     console.log("UserContext: Session retrieved", { hasSession: !!session });
                     setSession(session);
                     setUser(session?.user ?? null);
-                    if (session?.user) setLoading(false); // Reverted: Set loading false immediately
+                    if (!session?.user) {
+                        setLoading(false); // ONLY set false if not logged in. If logged in, loadUserResources will turn it false.
+                    }
                 }
             } catch (error) {
                 console.error("Session init error:", error);
@@ -135,7 +137,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 profileImage: ''
             });
             setOrders([]);
-            // Loading is set to false in auth listener if !session
+            setLoading(false); // Force loading state OFF when no session user exists, fixing infinite loading bug
             return;
         }
 
