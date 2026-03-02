@@ -13,6 +13,8 @@ import OnboardingScreen from '@/components/OnboardingScreen';
 import RoleSelectionScreen from '@/components/RoleSelectionScreen';
 import LoginScreen from '@/components/LoginScreen';
 import NameInputScreen from '@/components/NameInputScreen';
+import MaintenanceScreen from '@/components/MaintenanceScreen';
+import { supabase } from '@/lib/supabase';
 import { FavouritesProvider } from '@/contexts/FavouritesContext';
 import { AddressProvider } from '@/contexts/AddressContext';
 import { UserProvider, useUser } from '@/contexts/UserContext';
@@ -57,6 +59,41 @@ function AppContent() {
   const [showLogin, setShowLogin] = useState(false);
   const [userType, setUserType] = useState<'User' | 'Vendor'>('User');
   const [hasNavigated, setHasNavigated] = useState(false);
+
+  const [maintenance, setMaintenance] = useState<{ is_active: boolean; message: string; app_type: string } | null>(null);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(true);
+
+  // Fetch maintenance status
+  useEffect(() => {
+    const fetchMaintenance = async () => {
+      try {
+        const { data, error } = await supabase.from('maintenance_settings').select('*');
+        if (!error && data) {
+          // We'll figure out which app to block down in render based on userType/userData
+          const relevantAppType = session && userData?.userType === 'Vendor' ? 'Vendor' : 'User';
+          const config = data.find((s: any) => s.app_type === relevantAppType);
+          if (config && config.is_active) {
+            setMaintenance(config);
+          } else {
+            setMaintenance(null);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check maintenance", e);
+      } finally {
+        setMaintenanceLoading(false);
+      }
+    };
+    fetchMaintenance();
+
+    // Listen for real-time maintenance toggles
+    const sub = supabase.channel('market:maintenance')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenance_settings' }, () => {
+        fetchMaintenance();
+      }).subscribe();
+
+    return () => { supabase.removeChannel(sub); };
+  }, [session, userData?.userType]);
 
   // Reset auth flow state when user logs out
   useEffect(() => {
@@ -182,8 +219,19 @@ function AppContent() {
   return (
     <View style={{ flex: 1 }}>
       {content}
+
+      {/* Maintenance Screen Overlay - Rendered above content but below Splash */}
+      {maintenance && !maintenanceLoading && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}>
+          <MaintenanceScreen
+            appType={maintenance.app_type as 'User' | 'Vendor'}
+            message={maintenance.message}
+          />
+        </View>
+      )}
+
       {/* Splash Screen Overlay - Always rendered on top until finished */}
-      {(showSplash || !isFontsReady || loading) && (
+      {(showSplash || !isFontsReady || loading || maintenanceLoading) && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
           <SplashScreen onFinish={() => setShowSplash(false)} />
         </View>

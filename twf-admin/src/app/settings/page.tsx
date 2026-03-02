@@ -67,6 +67,23 @@ export default function SettingsPage() {
                         Configure Now <span className="ml-1">→</span>
                     </div>
                 </Link>
+
+                {/* Maintenance Mode */}
+                <Link
+                    href="/settings/maintenance"
+                    className="group block p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-red-100 ring-2 ring-transparent hover:ring-red-50 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                        🚧
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-red-700 transition-colors">Maintenance Mode</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed">
+                        Temporarily restrict access to User or Vendor dashboards while updating systems.
+                    </p>
+                    <div className="mt-4 flex items-center text-red-600 text-sm font-medium opacity-0 group-hover:opacity-100 transform translate-x-3 group-hover:translate-x-0 transition-all duration-300">
+                        Manage Access <span className="ml-1">→</span>
+                    </div>
+                </Link>
             </div>
         </div>
     );
