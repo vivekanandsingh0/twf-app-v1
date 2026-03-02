@@ -14,6 +14,8 @@ import RoleSelectionScreen from '@/components/RoleSelectionScreen';
 import LoginScreen from '@/components/LoginScreen';
 import NameInputScreen from '@/components/NameInputScreen';
 import MaintenanceScreen from '@/components/MaintenanceScreen';
+import UpdateScreen from '@/components/UpdateScreen';
+import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { FavouritesProvider } from '@/contexts/FavouritesContext';
 import { AddressProvider } from '@/contexts/AddressContext';
@@ -62,6 +64,64 @@ function AppContent() {
 
   const [maintenance, setMaintenance] = useState<{ is_active: boolean; message: string; app_type: string } | null>(null);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
+
+  const [appUpdate, setAppUpdate] = useState<{ is_active: boolean; message: string; update_link: string; is_mandatory: boolean } | null>(null);
+  const [appUpdateLoading, setAppUpdateLoading] = useState(true);
+
+  // Fetch App Updates
+  useEffect(() => {
+    const fetchUpdates = async () => {
+      try {
+        const { data, error } = await supabase.from('app_updates').select('*').eq('id', 1).single();
+        if (!error && data) {
+          const config = data;
+
+          if (config && config.is_active) {
+            const currentVersion = Constants.expoConfig?.version || '1.0.0';
+
+            const compareVersions = (v1: string, v2: string) => {
+              const p1 = v1.split('.').map(Number);
+              const p2 = v2.split('.').map(Number);
+              for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+                const n1 = p1[i] || 0;
+                const n2 = p2[i] || 0;
+                if (n1 > n2) return 1;
+                if (n1 < n2) return -1;
+              }
+              return 0;
+            };
+
+            const isMandatory = compareVersions(currentVersion, config.min_mandatory_version) < 0;
+            const isOptional = compareVersions(currentVersion, config.latest_version) < 0;
+
+            if (isMandatory || isOptional) {
+              setAppUpdate({
+                is_active: config.is_active,
+                message: config.message,
+                update_link: config.update_link,
+                is_mandatory: isMandatory
+              });
+            } else {
+              setAppUpdate(null);
+            }
+          } else {
+            setAppUpdate(null);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check app updates", e);
+      } finally {
+        setAppUpdateLoading(false);
+      }
+    };
+    fetchUpdates();
+
+    const sub = supabase.channel('app:updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_updates' }, fetchUpdates)
+      .subscribe();
+
+    return () => { supabase.removeChannel(sub); };
+  }, [session, userData?.userType]);
 
   // Fetch maintenance status
   useEffect(() => {
@@ -230,8 +290,20 @@ function AppContent() {
         </View>
       )}
 
+      {/* App Update Screen Overlay */}
+      {appUpdate && !appUpdateLoading && !maintenance && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9997 }}>
+          <UpdateScreen
+            message={appUpdate.message}
+            link={appUpdate.update_link}
+            isMandatory={appUpdate.is_mandatory}
+            onDismiss={() => setAppUpdate(null)}
+          />
+        </View>
+      )}
+
       {/* Splash Screen Overlay - Always rendered on top until finished */}
-      {(showSplash || !isFontsReady || loading || maintenanceLoading) && (
+      {(showSplash || !isFontsReady || loading || maintenanceLoading || appUpdateLoading) && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
           <SplashScreen onFinish={() => setShowSplash(false)} />
         </View>

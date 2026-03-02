@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, FlatList, TouchableOpacity, TextInput, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, Text, View, ScrollView, FlatList, TouchableOpacity, TextInput, Platform, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,11 +8,63 @@ import { useVendor, VendorOrder } from '@/contexts/VendorContext';
 
 import { printToFileAsync, printAsync } from 'expo-print';
 import { shareAsync } from 'expo-sharing';
+import { useUser } from '@/contexts/UserContext';
+import { supabase } from '@/lib/supabase';
+
+interface DeliveryPartner {
+    id: string;
+    name: string;
+    phone: string;
+    photo_url: string | null;
+}
+
+const getInitials = (name: string) =>
+    name.trim().split(' ').slice(0, 2).map(w => w[0]?.toUpperCase()).join('');
 
 export default function VendorOrdersScreen() {
     const insets = useSafeAreaInsets();
     const router = require('expo-router').useRouter();
     const { orders, updateOrderStatus, profile } = useVendor();
+    const { user } = useUser();
+
+    // ── Delivery partner selection state ──────────────────────────────────
+    const [partnerModalVisible, setPartnerModalVisible] = useState(false);
+    const [partners, setPartners] = useState<DeliveryPartner[]>([]);
+    const [partnersLoading, setPartnersLoading] = useState(false);
+    const [selectedPartner, setSelectedPartner] = useState<DeliveryPartner | null>(null);
+    const [dispatchingOrderId, setDispatchingOrderId] = useState<string | null>(null);
+
+    const fetchPartners = useCallback(async () => {
+        if (!user?.id) return;
+        setPartnersLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('delivery_partners')
+                .select('id, name, phone, photo_url')
+                .eq('vendor_id', user.id)
+                .order('created_at', { ascending: false });
+            if (!error) setPartners(data || []);
+        } catch (e) {
+            console.error('Failed to fetch partners:', e);
+        } finally {
+            setPartnersLoading(false);
+        }
+    }, [user?.id]);
+
+    useEffect(() => {
+        fetchPartners();
+    }, [fetchPartners]);
+
+    const handleConfirmDispatch = () => {
+        if (!selectedPartner || !dispatchingOrderId) return;
+        setPartnerModalVisible(false);
+        updateOrderStatus(dispatchingOrderId, 'Shipped', {
+            name: selectedPartner.name,
+            phone: selectedPartner.phone,
+            photo_url: selectedPartner.photo_url,
+        });
+        setDispatchingOrderId(null);
+    };
 
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
@@ -238,9 +290,9 @@ export default function VendorOrdersScreen() {
                             style={styles.userImage}
                             contentFit="cover"
                         />
-                        <View>
-                            <Text style={styles.userName}>{order.customerName}</Text>
-                            <Text style={styles.orderId}>{order.id} <Ionicons name="chevron-forward" size={12} color="#999" /></Text>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.userName} numberOfLines={1}>{order.customerName}</Text>
+                            <Text style={styles.orderId} numberOfLines={1} ellipsizeMode={'middle'}>{order.id} <Ionicons name="chevron-forward" size={12} color="#999" /></Text>
                         </View>
                     </View>
                     <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
@@ -288,7 +340,10 @@ export default function VendorOrdersScreen() {
                             {order.status === 'Accepted' ? (
                                 <TouchableOpacity
                                     style={[styles.primaryButton, { flex: 1 }]}
-                                    onPress={() => updateOrderStatus(order.id, 'Shipped')}
+                                    onPress={() => {
+                                        setDispatchingOrderId(order.id);
+                                        setPartnerModalVisible(true);
+                                    }}
                                 >
                                     <Ionicons name="cube-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                                     <Text style={styles.primaryButtonText}>Mark as Dispatched</Text>
@@ -296,7 +351,10 @@ export default function VendorOrdersScreen() {
                             ) : (
                                 <TouchableOpacity
                                     style={[styles.primaryButton, { flex: 1 }]}
-                                    onPress={() => updateOrderStatus(order.id, 'Shipped')}
+                                    onPress={() => {
+                                        setDispatchingOrderId(order.id);
+                                        setPartnerModalVisible(true);
+                                    }}
                                 >
                                     <Ionicons name="bicycle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                                     <Text style={styles.primaryButtonText}>Dispatch Order</Text>
@@ -406,6 +464,105 @@ export default function VendorOrdersScreen() {
                 )}
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            {/* ── Select Delivery Partner Modal ─────────────────────────────── */}
+            <Modal
+                visible={partnerModalVisible}
+                animationType="slide"
+                transparent
+                onRequestClose={() => {
+                    setPartnerModalVisible(false);
+                    setDispatchingOrderId(null);
+                }}
+            >
+                <Pressable style={styles.backdrop} onPress={() => {
+                    setPartnerModalVisible(false);
+                    setDispatchingOrderId(null);
+                }} />
+                <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
+                    <View style={styles.sheetHandle} />
+                    <Text style={styles.sheetTitle}>Select Delivery Partner</Text>
+                    <Text style={styles.sheetSubtitle}>Choose who will deliver this order</Text>
+
+                    {partnersLoading ? (
+                        <View style={styles.sheetLoader}>
+                            <ActivityIndicator size="large" color="#1F5E2E" />
+                        </View>
+                    ) : partners.length === 0 ? (
+                        <View style={styles.noPartnersBox}>
+                            <Ionicons name="bicycle-outline" size={40} color="#CCC" />
+                            <Text style={styles.noPartnersTitle}>No delivery partners found</Text>
+                            <Text style={styles.noPartnersText}>
+                                Go to Profile → Delivery Partners to add your team first.
+                            </Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={partners}
+                            keyExtractor={p => p.id}
+                            style={{ maxHeight: 320 }}
+                            showsVerticalScrollIndicator={false}
+                            renderItem={({ item }) => {
+                                const isSelected = selectedPartner?.id === item.id;
+                                return (
+                                    <TouchableOpacity
+                                        style={[styles.partnerRow, isSelected && styles.partnerRowSelected]}
+                                        onPress={() => setSelectedPartner(item)}
+                                        activeOpacity={0.8}
+                                    >
+                                        {/* Avatar */}
+                                        {item.photo_url ? (
+                                            <Image
+                                                source={{ uri: item.photo_url }}
+                                                style={styles.partnerAvatar}
+                                                contentFit="cover"
+                                            />
+                                        ) : (
+                                            <View style={[styles.partnerAvatar, styles.partnerAvatarPlaceholder]}>
+                                                <Text style={styles.partnerInitials}>{getInitials(item.name)}</Text>
+                                            </View>
+                                        )}
+                                        {/* Info */}
+                                        <View style={{ flex: 1, marginLeft: 12 }}>
+                                            <Text style={styles.partnerName}>{item.name}</Text>
+                                            <Text style={styles.partnerPhone}>{item.phone}</Text>
+                                        </View>
+                                        {/* Check */}
+                                        {isSelected && (
+                                            <View style={styles.checkCircle}>
+                                                <Ionicons name="checkmark" size={16} color="#fff" />
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    )}
+
+                    {/* Confirm button */}
+                    {partners.length > 0 && (
+                        <TouchableOpacity
+                            style={[styles.confirmBtn, !selectedPartner && { opacity: 0.4 }]}
+                            onPress={handleConfirmDispatch}
+                            disabled={!selectedPartner}
+                            activeOpacity={0.85}
+                        >
+                            <Ionicons name="checkmark-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={styles.confirmBtnText}>
+                                {selectedPartner ? `Dispatch with ${selectedPartner.name}` : 'Select a Partner'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity style={styles.cancelBtn} onPress={() => {
+                        setPartnerModalVisible(false);
+                        setSelectedPartner(null);
+                        setDispatchingOrderId(null);
+                    }}>
+                        <Text style={styles.cancelBtnText}>Cancel</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -540,8 +697,10 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     userInfo: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
+        marginRight: 8,
     },
     userImage: {
         width: 48,
@@ -564,6 +723,7 @@ const styles = StyleSheet.create({
     statusText: {
         fontSize: 12,
         fontFamily: 'DMSans_700Bold',
+        flexShrink: 0,
     },
     detailsBox: {
         backgroundColor: '#F0F2F0', // Light grey box
@@ -634,5 +794,140 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontFamily: 'DMSans_700Bold',
         color: '#FFFFFF',
+    },
+    // ── Modal ──────────────────────────────────────────────────────────────
+    backdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+    },
+    sheet: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 24,
+        paddingTop: 16,
+    },
+    sheetHandle: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#E0E0E0',
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    sheetTitle: {
+        fontSize: 20,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+        textAlign: 'center',
+        marginBottom: 4,
+    },
+    sheetSubtitle: {
+        fontSize: 13,
+        fontFamily: 'DMSans_400Regular',
+        color: '#888',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    sheetLoader: {
+        paddingVertical: 40,
+        alignItems: 'center',
+    },
+
+    // No partners
+    noPartnersBox: {
+        alignItems: 'center',
+        paddingVertical: 32,
+        gap: 8,
+    },
+    noPartnersTitle: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: '#555',
+        marginTop: 8,
+    },
+    noPartnersText: {
+        fontSize: 13,
+        fontFamily: 'DMSans_400Regular',
+        color: '#999',
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+
+    // Partner row
+    partnerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: '#EEEEEE',
+        backgroundColor: '#FAFAFA',
+        marginBottom: 10,
+    },
+    partnerRowSelected: {
+        borderColor: '#1F5E2E',
+        backgroundColor: '#F0FAF3',
+    },
+    partnerAvatar: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+    },
+    partnerAvatarPlaceholder: {
+        backgroundColor: '#1F5E2E',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    partnerInitials: {
+        color: '#fff',
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+    },
+    partnerName: {
+        fontSize: 15,
+        fontFamily: 'DMSans_700Bold',
+        color: '#1A1A1A',
+    },
+    partnerPhone: {
+        fontSize: 13,
+        fontFamily: 'DMSans_400Regular',
+        color: '#666',
+        marginTop: 2,
+    },
+    checkCircle: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: '#1F5E2E',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    // Confirm button
+    confirmBtn: {
+        backgroundColor: '#1F5E2E',
+        borderRadius: 30,
+        paddingVertical: 15,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 16,
+        marginBottom: 10,
+    },
+    confirmBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+    },
+    cancelBtn: {
+        alignItems: 'center',
+        paddingVertical: 10,
+    },
+    cancelBtnText: {
+        fontSize: 15,
+        color: '#999',
+        fontFamily: 'DMSans_500Medium',
     },
 });

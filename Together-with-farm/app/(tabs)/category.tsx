@@ -25,57 +25,15 @@ const { width } = Dimensions.get('window');
 
 // --- Mock Data ---
 
-const CATEGORIES = [
-    {
-        id: 'vegetables',
-        name: 'Veggies',
-        image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?q=80&w=2568&auto=format&fit=crop', // Veggies
-    },
-    {
-        id: 'fruits',
-        name: 'Fruits',
-        image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop', // Fruits
-    },
-    {
-        id: 'meats',
-        name: 'Meats',
-        image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?q=80&w=2670&auto=format&fit=crop', // Meat
-    },
-    {
-        id: 'seafood',
-        name: 'Seafood',
-        image: 'https://images.unsplash.com/photo-1615141982880-19ed7e6642f3?q=80&w=2564&auto=format&fit=crop', // Seafood
-    },
-    {
-        id: 'dairy',
-        name: 'Dairy & Eggs',
-        image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=2574&auto=format&fit=crop', // Dairy
-    },
-    {
-        id: 'bakery',
-        name: 'Bakery',
-        image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=2672&auto=format&fit=crop', // Bakery
-    },
-];
-
-const categoryFilters: Record<string, string[]> = {
-    vegetables: ['Roots', 'Leafy', 'Hydroponic', 'Organic', 'Fruit Veg', 'Daily', 'Vegetables'],
-    fruits: ['Fruit', 'Seasonal', 'Bestsellers', 'Fruits'], // Assuming some mapping
-    meats: ['Meat', 'Poultry'],
-    seafood: ['Seafood', 'Fish'],
-    dairy: ['Dairy', 'Eggs'],
-    bakery: ['Bakery', 'Bread'],
-};
-
 export default function CategoryScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { toggleFavourite, isFavourite } = useFavourites();
     const { updateQuantity, getItemQuantity } = useCart();
-    const { products } = useMarket();
+    const { products, categories } = useMarket();
     const { isDark } = useTheme();
 
-    const [selectedCategoryId, setSelectedCategoryId] = useState('vegetables');
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilterModal, setShowFilterModal] = useState(false);
 
@@ -85,9 +43,15 @@ export default function CategoryScreen() {
     const [showDiscountOnly, setShowDiscountOnly] = useState(false);
     const [showInStockOnly, setShowInStockOnly] = useState(false);
 
+    // Initial setup for default category
+    React.useEffect(() => {
+        if (categories.length > 0 && !selectedCategoryId) {
+            setSelectedCategoryId(categories[0].name);
+        }
+    }, [categories, selectedCategoryId]);
+
     const activeCategoryProducts = products.filter(p => {
-        const filters = categoryFilters[selectedCategoryId] || [];
-        const matchesCategory = filters.includes(p.type) || filters.some(f => p.tag?.includes(f)) || (selectedCategoryId === 'vegetables' && !['Fruit', 'Fruits', 'Meat', 'Dairy', 'Bakery', 'Seafood'].includes(p.type));
+        const matchesCategory = selectedCategoryId ? p.type === selectedCategoryId : true;
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
 
         // Price filter
@@ -124,17 +88,17 @@ export default function CategoryScreen() {
         setShowInStockOnly(false);
     };
 
-    const renderCategoryItem = (item: typeof CATEGORIES[0]) => {
-        const isActive = selectedCategoryId === item.id;
+    const renderCategoryItem = (item: any) => {
+        const isActive = selectedCategoryId === item.name;
         return (
             <TouchableOpacity
-                key={item.id}
+                key={item.id || item.name}
                 style={[styles.categoryItemSidebar, isActive ? styles.activeCategorySidebar : null, isActive && isDark ? { backgroundColor: '#1E1E1E' } : null]}
-                onPress={() => setSelectedCategoryId(item.id)}
+                onPress={() => setSelectedCategoryId(item.name)}
                 activeOpacity={0.8}
             >
                 <View style={[styles.categoryIconContainer, isActive && styles.activeCategoryIconContainer, isDark && { backgroundColor: '#333', borderColor: '#444' }, isActive && isDark && { borderColor: '#1E1E1E' }]}>
-                    <Image source={{ uri: item.image }} style={styles.categoryImage} contentFit="cover" />
+                    <Image source={{ uri: item.image_url }} style={styles.categoryImage} contentFit="cover" />
                 </View>
                 <Text style={[styles.categorySidebarText, isActive && styles.activeCategorySidebarText, isDark && { color: '#AAA' }, isActive && isDark && { color: '#FFF' }]}>
                     {item.name}
@@ -263,7 +227,7 @@ export default function CategoryScreen() {
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.sidebarContent}
                     >
-                        {CATEGORIES.map(renderCategoryItem)}
+                        {categories.map(renderCategoryItem)}
                     </ScrollView>
                 </View>
 

@@ -196,8 +196,12 @@ export const db = {
             // So fetching orders total_amount
             const { data: orders } = await supabase.from('orders').select('total_amount');
             const totalRevenue = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+            const { count: productsCount } = await supabase.from('products').select('*', { count: 'exact', head: true });
 
             return {
+                products: productsCount || 0,
+                farmers: vendorCount || 0,
+                users: userCount || 0,
                 totalUsers: userCount || 0,
                 totalVendors: vendorCount || 0,
                 totalOrders: orderCount || 0,

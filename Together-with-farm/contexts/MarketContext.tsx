@@ -60,6 +60,14 @@ export interface FeedSection {
     is_active: boolean;
 }
 
+export interface Category {
+    id: string;
+    name: string;
+    image_url: string;
+    display_order: number;
+    is_active: boolean;
+}
+
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
 // Define type for fetched market sections
@@ -77,6 +85,7 @@ export interface MarketContextType {
     articles: Article[];
     feedSections: FeedSection[];
     marketSections: MarketSection[]; // ADDED
+    categories: Category[]; // ADDED
     addArticle: (article: Omit<Article, 'id'>) => void;
     addProduct: (product: Omit<MarketProduct, 'id'>) => void;
     toggleFavoriteProduct: (productId: string) => void;
@@ -127,16 +136,24 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     const [articles, setArticles] = useState<Article[]>(FALLBACK_ARTICLES);
     const [feedSections, setFeedSections] = useState<FeedSection[]>([]);
     const [marketSections, setMarketSections] = useState<MarketSection[]>([]); // ADDED state
+    const [categories, setCategories] = useState<Category[]>([]); // ADDED state
 
     const fetchMarketData = async () => {
         try {
-            // 1. Fetch Vendors
-            const { data: vData } = await supabase.from('profiles').select('*').eq('user_type', 'Vendor');
+            const today = new Date().toISOString().split('T')[0];
+            const [{ data: vData }, { data: sData }] = await Promise.all([
+                supabase.from('profiles').select('*').eq('user_type', 'Vendor'),
+                supabase.from('vendor_spotlights').select('vendor_id').eq('is_active', true).lte('start_date', today).gte('end_date', today)
+            ]);
+
+            const activeSpotlightVendorIds = sData ? sData.map(s => s.vendor_id) : [];
+
             if (vData) {
                 const mappedVendors: MarketVendor[] = vData.map((v: any) => {
                     const vendorImage = v.profile_image || v.avatar_url
                         ? { uri: v.profile_image || v.avatar_url }
                         : require('@/assets/images/3d-model-with-veg.png');
+                    const isSpotlight = activeSpotlightVendorIds.includes(v.id);
                     return {
                         id: v.id,
                         name: v.business_name || v.full_name || 'Vendor',
@@ -144,7 +161,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                         coverImage: vendorImage,
                         bio: v.bio || '',
                         location: v.address || 'India',
-                        tag: v.shop_status === 'Active' ? 'FEATURED VENDOR' : 'VENDOR',
+                        tag: isSpotlight ? 'FEATURED VENDOR' : (v.shop_status === 'Active' ? 'VENDOR' : ''),
                         stats: { experience: v.experience || 'N/A', method: 'Organic', size: v.farm_size || 'N/A' },
                         story: v.bio || '',
                         quote: "Fresh from farm to your table."
@@ -192,6 +209,10 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                 setMarketSections(finalSections);
             }
 
+            // 4. Fetch Categories
+            const { data: catData } = await supabase.from('categories').select('*').eq('is_active', true).order('display_order');
+            if (catData) setCategories(catData);
+
         } catch (e) {
             console.error("Failed to fetch market data:", e);
         };
@@ -232,10 +253,24 @@ export function MarketProvider({ children }: { children: ReactNode }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'market_section_products' }, fetchMarketData)
             .subscribe();
 
+        // Realtime subscription for categories
+        const categoriesSubscription = supabase
+            .channel('market:categories')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchMarketData)
+            .subscribe();
+
+        // Realtime subscription for vendor spotlights
+        const spotlightsSubscription = supabase
+            .channel('market:spotlights')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'vendor_spotlights' }, fetchMarketData)
+            .subscribe();
+
         return () => {
             supabase.removeChannel(subscription);
             supabase.removeChannel(sectionsSubscription);
             supabase.removeChannel(mappingSubscription);
+            supabase.removeChannel(categoriesSubscription);
+            supabase.removeChannel(spotlightsSubscription);
         };
     }, []);
 
@@ -337,6 +372,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
             articles,
             feedSections,
             marketSections,
+            categories,
             addArticle,
             addProduct,
             toggleFavoriteProduct,

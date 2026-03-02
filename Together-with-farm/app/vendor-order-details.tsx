@@ -118,9 +118,9 @@ export default function OrderDetailsScreen() {
                 {/* Order ID & Status */}
                 <View style={styles.sectionCard}>
                     <View style={styles.rowBetween}>
-                        <View>
+                        <View style={{ flex: 1, marginRight: 12 }}>
                             <Text style={styles.orderIdLabel}>Order ID</Text>
-                            <Text style={styles.orderIdValue}>{order.id}</Text>
+                            <Text style={styles.orderIdValue} numberOfLines={1} ellipsizeMode="middle">{order.id}</Text>
                         </View>
                         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
                             <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>

@@ -84,6 +84,23 @@ export default function SettingsPage() {
                         Manage Access <span className="ml-1">→</span>
                     </div>
                 </Link>
+
+                {/* App Updates */}
+                <Link
+                    href="/settings/app-updates"
+                    className="group block p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 ring-2 ring-transparent hover:ring-indigo-50 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                        📱
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-indigo-700 transition-colors">App Updates</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed">
+                        Control current app version, broadcast updates, and trigger forced update prompts.
+                    </p>
+                    <div className="mt-4 flex items-center text-indigo-600 text-sm font-medium opacity-0 group-hover:opacity-100 transform translate-x-3 group-hover:translate-x-0 transition-all duration-300">
+                        Manage Versions <span className="ml-1">→</span>
+                    </div>
+                </Link>
             </div>
         </div>
     );

@@ -488,6 +488,67 @@ function SectionsTab() {
 // ─── SPOTLIGHTS TAB ──────────────────────────────────────────────────────────
 
 function SpotlightsTab() {
+    const [spotlights, setSpotlights] = useState<any[]>([]);
+    const [vendors, setVendors] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [adding, setAdding] = useState(false);
+    const [newSpotlight, setNewSpotlight] = useState({ vendor_id: "", start_date: "", end_date: "" });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchData = async () => {
+        setLoading(true);
+        // GET vendors
+        const { data: vData } = await supabase.from("profiles").select("id, full_name, business_name").eq("user_type", "Vendor").order("business_name");
+        if (vData) setVendors(vData);
+
+        // GET spotlights
+        const { data: sData, error: sErr } = await supabase.from("vendor_spotlights").select("*, profiles:vendor_id(business_name, full_name)").order("created_at", { ascending: false });
+        if (sErr) {
+            console.error(sErr);
+            setError("Could not load spotlights. Make sure you ran the SQL migration.");
+        } else if (sData) {
+            setSpotlights(sData);
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => { fetchData(); }, []);
+
+    const handleAdd = async () => {
+        if (!newSpotlight.vendor_id || !newSpotlight.start_date || !newSpotlight.end_date) return;
+        setSaving(true);
+        setError(null);
+
+        const { data, error: insertErr } = await supabase.from("vendor_spotlights").insert({
+            vendor_id: newSpotlight.vendor_id,
+            start_date: newSpotlight.start_date,
+            end_date: newSpotlight.end_date,
+            is_active: true
+        }).select("*, profiles:vendor_id(business_name, full_name)").single();
+
+        if (insertErr) {
+            setError(`Failed to add spotlight: ${insertErr.message}`);
+        } else if (data) {
+            setSpotlights(prev => [data, ...prev]);
+            setAdding(false);
+            setNewSpotlight({ vendor_id: "", start_date: "", end_date: "" });
+        }
+        setSaving(false);
+    };
+
+    const handleRemove = async (id: string) => {
+        if (!confirm("Remove this vendor from Spotlight?")) return;
+        await supabase.from("vendor_spotlights").delete().eq("id", id);
+        setSpotlights(prev => prev.filter(s => s.id !== id));
+    };
+
+    const toggleStatus = async (s: any) => {
+        const newVal = !s.is_active;
+        await supabase.from("vendor_spotlights").update({ is_active: newVal }).eq("id", s.id);
+        setSpotlights(prev => prev.map(item => item.id === s.id ? { ...item, is_active: newVal } : item));
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -495,35 +556,122 @@ function SpotlightsTab() {
                     <h3 className="font-bold text-lg text-slate-900">Vendor Spotlights</h3>
                     <p className="text-slate-500 text-sm">Highlight top vendors on the user home feed.</p>
                 </div>
-                <button className="px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100">
+                <button
+                    onClick={() => { setAdding(true); setError(null); }}
+                    className="px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
+                >
                     + Add Vendor to Spotlight
                 </button>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-sm text-slate-600">
-                    <thead className="bg-slate-50 border-b border-slate-100 text-xs uppercase font-bold text-slate-500">
-                        <tr>
-                            <th className="px-6 py-4">Vendor</th>
-                            <th className="px-6 py-4">Duration</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4 text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        <tr>
-                            <td className="px-6 py-4 font-bold text-slate-900">Green Valley Farms</td>
-                            <td className="px-6 py-4">Feb 1 - Feb 7</td>
-                            <td className="px-6 py-4">
-                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700">Active</span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                                <button className="text-red-600 hover:text-red-700 font-bold text-xs">Remove</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium flex items-start gap-3">
+                    <span className="text-lg">⚠️</span>
+                    <div className="flex-1">
+                        <p className="font-bold mb-1">Error</p>
+                        <p>{error}</p>
+                    </div>
+                    <button onClick={() => setError(null)} className="text-red-400 font-bold hover:text-red-600 text-lg">✕</button>
+                </div>
+            )}
+
+            {adding && (
+                <div className="bg-white border border-emerald-200 rounded-2xl p-6 shadow-sm">
+                    <h4 className="font-bold text-slate-900 mb-4">Add Spotlight</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Select Vendor *</label>
+                            <select
+                                value={newSpotlight.vendor_id}
+                                onChange={e => setNewSpotlight({ ...newSpotlight, vendor_id: e.target.value })}
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:outline-none"
+                            >
+                                <option value="">-- Choose Vendor --</option>
+                                {vendors.map(v => (
+                                    <option key={v.id} value={v.id}>{v.business_name || v.full_name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Start Date *</label>
+                            <input
+                                type="date"
+                                value={newSpotlight.start_date}
+                                onChange={e => setNewSpotlight({ ...newSpotlight, start_date: e.target.value })}
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">End Date *</label>
+                            <input
+                                type="date"
+                                value={newSpotlight.end_date}
+                                onChange={e => setNewSpotlight({ ...newSpotlight, end_date: e.target.value })}
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:outline-none"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                        <button onClick={() => { setAdding(false); setNewSpotlight({ vendor_id: "", start_date: "", end_date: "" }); }} className="px-5 py-2.5 font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleAdd}
+                            disabled={saving || !newSpotlight.vendor_id || !newSpotlight.start_date || !newSpotlight.end_date}
+                            className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                        >
+                            {saving ? "Saving..." : "Add Spotlight"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {loading ? (
+                <div className="space-y-3">
+                    {[1, 2].map(i => <div key={i} className="h-16 bg-white border border-slate-200 rounded-2xl animate-pulse" />)}
+                </div>
+            ) : spotlights.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
+                    <p className="text-5xl mb-4">✨</p>
+                    <h3 className="font-bold text-slate-700 text-lg mb-2">No spotlights yet</h3>
+                    <p className="text-slate-400 text-sm mb-6">Highlight top vendors so users see them at the top.</p>
+                </div>
+            ) : (
+                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-slate-600">
+                        <thead className="bg-slate-50 border-b border-slate-100 text-xs uppercase font-bold text-slate-500">
+                            <tr>
+                                <th className="px-6 py-4">Vendor</th>
+                                <th className="px-6 py-4">Duration</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {spotlights.map(s => {
+                                const vendorName = s.profiles?.business_name || s.profiles?.full_name || "Unknown Provider";
+                                return (
+                                    <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4 font-bold text-slate-900">{vendorName}</td>
+                                        <td className="px-6 py-4">{new Date(s.start_date).toLocaleDateString()} - {new Date(s.end_date).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4">
+                                            <button
+                                                onClick={() => toggleStatus(s)}
+                                                className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${s.is_active ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                                            >
+                                                {s.is_active ? "● Active" : "◌ Inactive"}
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button onClick={() => handleRemove(s.id)} className="text-red-600 hover:text-red-700 font-bold text-xs">Remove</button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 }

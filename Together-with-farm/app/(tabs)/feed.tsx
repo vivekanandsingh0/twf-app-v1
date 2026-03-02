@@ -29,7 +29,7 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const spotlightFarmers = vendors.filter(v => v.tag);
+  const spotlightFarmers = vendors.filter(v => v.tag === 'FEATURED VENDOR');
 
   // Build category list dynamically from real articles
   const categories = ['All', ...Array.from(new Set(articles.map(a => a.category).filter(Boolean)))];
@@ -90,27 +90,30 @@ export default function FeedScreen() {
         </View>
 
         {/* Spotlight Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Spotlight</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.spotlightContainer}
-        >
-          {spotlightFarmers.map((farmer) => (
-            <TouchableOpacity
-              key={farmer.id}
-              style={styles.spotlightItem}
-              onPress={() => router.push(`/farmer/${farmer.id}`)}
+        {spotlightFarmers.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Spotlight</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.spotlightContainer}
             >
-              <View style={[styles.spotlightImageContainer, isDark && { borderColor: '#444' }]}>
-                <Image source={farmer.image} style={styles.spotlightImage} contentFit="cover" />
-              </View>
-              {/* <Text style={styles.spotlightName} numberOfLines={1}>{farmer.name}</Text> */}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {spotlightFarmers.map((farmer) => (
+                <TouchableOpacity
+                  key={farmer.id}
+                  style={styles.spotlightItem}
+                  onPress={() => router.push(`/farmer/${farmer.id}`)}
+                >
+                  <View style={[styles.spotlightImageContainer, isDark && { borderColor: '#444' }]}>
+                    <Image source={farmer.image} style={styles.spotlightImage} contentFit="cover" />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         {/* Categories */}
         <ScrollView

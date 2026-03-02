@@ -101,7 +101,7 @@ export default function OrdersScreen() {
 
                 <View style={styles.orderInfo}>
                     <View style={styles.rowBetween}>
-                        <Text style={[styles.orderNumber, isDark && { color: '#FFF' }]}>{order.orderNumber}</Text>
+                        <Text style={[styles.orderNumber, isDark && { color: '#FFF' }, { flex: 1, marginRight: 8 }]} numberOfLines={1} ellipsizeMode="middle">{order.orderNumber}</Text>
                         <View style={[styles.statusBadge, isPast && styles.statusBadgeDelivered, isDark && { backgroundColor: '#333' }]}>
                             <Text style={[styles.statusText, isPast && styles.statusTextDelivered, isDark && { color: '#81C784' }]}>
                                 {order.status}

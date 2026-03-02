@@ -180,3 +180,149 @@ CREATE POLICY "Anon can delete market sections" ON public.market_sections FOR DE
 CREATE POLICY "Anyone can view section products" ON public.market_section_products FOR SELECT USING (true);
 CREATE POLICY "Anon can insert section products" ON public.market_section_products FOR INSERT WITH CHECK (true);
 CREATE POLICY "Anon can delete section products" ON public.market_section_products FOR DELETE USING (true);
+
+-- 16. Create Maintenance Settings Table
+CREATE TABLE IF NOT EXISTS public.maintenance_settings (
+    app_type TEXT PRIMARY KEY CHECK (app_type IN ('User', 'Vendor')),
+    is_active BOOLEAN DEFAULT FALSE,
+    message TEXT,
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.maintenance_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read access to maintenance settings" ON public.maintenance_settings;
+CREATE POLICY "Allow public read access to maintenance settings" ON public.maintenance_settings FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public update access to maintenance settings" ON public.maintenance_settings;
+CREATE POLICY "Allow public update access to maintenance settings" ON public.maintenance_settings FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO public.maintenance_settings (app_type, is_active, message)
+VALUES 
+    ('User', FALSE, 'Our app is currently undergoing scheduled maintenance. Please check back later.'),
+    ('Vendor', FALSE, 'The vendor dashboard is currently in maintenance mode. We will be back shortly.')
+ON CONFLICT (app_type) DO NOTHING;
+
+-- 17. Create App Updates Table
+CREATE TABLE IF NOT EXISTS public.app_updates (
+    id INT PRIMARY KEY DEFAULT 1,
+    latest_version TEXT NOT NULL DEFAULT '1.0.0',
+    min_mandatory_version TEXT NOT NULL DEFAULT '1.0.0',
+    update_link TEXT,
+    message TEXT,
+    is_active BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT single_row CHECK (id = 1)
+);
+
+ALTER TABLE public.app_updates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read access to app updates" ON public.app_updates;
+CREATE POLICY "Allow public read access to app updates" ON public.app_updates FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public update access to app updates" ON public.app_updates;
+CREATE POLICY "Allow public update access to app updates" ON public.app_updates FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO public.app_updates (id, latest_version, min_mandatory_version, message, is_active)
+VALUES 
+    (1, '1.0.0', '1.0.0', 'A new version of the app is available! Please update to enjoy the latest features.', FALSE)
+ON CONFLICT (id) DO NOTHING;
+
+-- 18. Create Categories Table
+CREATE TABLE IF NOT EXISTS public.categories (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    image_url TEXT,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view active categories" ON public.categories;
+CREATE POLICY "Anyone can view active categories" ON public.categories FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Anon can manage categories" ON public.categories;
+CREATE POLICY "Anon can manage categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('categories', 'categories', true) ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public read category images" ON storage.objects;
+DROP POLICY IF EXISTS "Anon upload category images" ON storage.objects;
+DROP POLICY IF EXISTS "Anon delete category images" ON storage.objects;
+DROP POLICY IF EXISTS "Anon update category images" ON storage.objects;
+
+CREATE POLICY "Public read category images" ON storage.objects FOR SELECT USING (bucket_id = 'categories');
+CREATE POLICY "Anon upload category images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'categories');
+CREATE POLICY "Anon delete category images" ON storage.objects FOR DELETE USING (bucket_id = 'categories');
+CREATE POLICY "Anon update category images" ON storage.objects FOR UPDATE USING (bucket_id = 'categories');
+
+INSERT INTO public.categories (name, image_url, display_order)
+VALUES 
+    ('Vegetables', 'https://images.unsplash.com/photo-1540420773420-3366772f4999?q=80&w=2568&auto=format&fit=crop', 1),
+    ('Fruits', 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2670&auto=format&fit=crop', 2),
+    ('Meats', 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?q=80&w=2670&auto=format&fit=crop', 3),
+    ('Seafood', 'https://images.unsplash.com/photo-1615141982880-19ed7e6642f3?q=80&w=2564&auto=format&fit=crop', 4),
+    ('Dairy & Eggs', 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=2574&auto=format&fit=crop', 5),
+    ('Bakery', 'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=2672&auto=format&fit=crop', 6)
+ON CONFLICT (name) DO NOTHING;
+
+-- Create Payout Requests Table
+CREATE TABLE IF NOT EXISTS public.payout_requests (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    vendor_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    amount NUMERIC NOT NULL CHECK (amount > 0),
+    status TEXT NOT NULL DEFAULT 'Pending', -- Pending, Completed, Rejected
+    admin_notes TEXT,
+    transaction_id TEXT,
+    bank_name TEXT,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.payout_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Vendors can view own payout requests" ON public.payout_requests;
+CREATE POLICY "Vendors can view own payout requests" ON public.payout_requests FOR SELECT USING (auth.uid() = vendor_id);
+
+DROP POLICY IF EXISTS "Vendors can insert own payout requests" ON public.payout_requests;
+CREATE POLICY "Vendors can insert own payout requests" ON public.payout_requests FOR INSERT WITH CHECK (auth.uid() = vendor_id);
+
+DROP POLICY IF EXISTS "Anon can manage payout requests" ON public.payout_requests;
+CREATE POLICY "Anon can manage payout requests" ON public.payout_requests FOR ALL USING (true) WITH CHECK (true);
+
+
+-- Add foreign key constraint between payout_requests and profiles
+ALTER TABLE public.payout_requests DROP CONSTRAINT IF EXISTS fk_payout_requests_profiles;
+ALTER TABLE public.payout_requests DROP CONSTRAINT IF EXISTS payout_requests_vendor_id_fkey;
+
+ALTER TABLE public.payout_requests 
+ADD CONSTRAINT payout_requests_vendor_id_fkey 
+FOREIGN KEY (vendor_id) REFERENCES public.profiles(id) 
+ON DELETE CASCADE;
+
+-- Vendor Spotlights Table
+CREATE TABLE IF NOT EXISTS public.vendor_spotlights (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    vendor_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.vendor_spotlights ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Spotlights are viewable by everyone" ON public.vendor_spotlights;
+CREATE POLICY "Spotlights are viewable by everyone" ON public.vendor_spotlights FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Spotlights can be managed by all" ON public.vendor_spotlights;
+CREATE POLICY "Spotlights can be managed by all" ON public.vendor_spotlights FOR ALL USING (true) WITH CHECK (true);
+
+-- Refresh PostgREST schema cache
+NOTIFY pgrst, 'reload schema';

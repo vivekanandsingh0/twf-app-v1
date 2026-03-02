@@ -56,7 +56,7 @@ export default async function VendorsPage() {
                     </div>
 
                     <div className="grid gap-4">
-                        {requests.map((req) => (
+                        {requests.map((req: any) => (
                             <div key={req.id} className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-2xl p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                                 <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
                                     <span className="text-8xl">📝</span>

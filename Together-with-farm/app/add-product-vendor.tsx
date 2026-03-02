@@ -10,13 +10,11 @@ import { useMarket } from '@/contexts/MarketContext';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/lib/supabase';
 
-const CATEGORIES = ['Vegetables', 'Fruits', 'Dairy', 'Bakery', 'Meat', 'Seafood'];
-
 export default function AddProductVendorScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { addProduct: addVendorProduct, updateProduct, deleteProduct, products } = useVendor();
-    // const { addProduct: addMarketProduct } = useMarket(); // Removed as Market updates via DB sync
+    const { categories } = useMarket();
     const { user } = useUser();
 
     const [productName, setProductName] = useState('');
@@ -321,14 +319,14 @@ export default function AddProductVendorScreen() {
                 {/* Category Selection */}
                 <Text style={styles.label}>Category</Text>
                 <View style={styles.categoryContainer}>
-                    {CATEGORIES.map((cat) => (
+                    {categories.map((cat) => (
                         <TouchableOpacity
-                            key={cat}
-                            style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
-                            onPress={() => setCategory(cat)}
+                            key={cat.id || cat.name}
+                            style={[styles.categoryChip, category === cat.name && styles.categoryChipActive]}
+                            onPress={() => setCategory(cat.name)}
                         >
-                            <Text style={[styles.categoryText, category === cat && styles.categoryTextActive]}>
-                                {cat}
+                            <Text style={[styles.categoryText, category === cat.name && styles.categoryTextActive]}>
+                                {cat.name}
                             </Text>
                         </TouchableOpacity>
                     ))}

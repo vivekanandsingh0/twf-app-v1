@@ -1,12 +1,13 @@
 -- Create App Updates Table
 CREATE TABLE IF NOT EXISTS public.app_updates (
-    app_type TEXT PRIMARY KEY CHECK (app_type IN ('User', 'Vendor')),
+    id INT PRIMARY KEY DEFAULT 1,
     latest_version TEXT NOT NULL DEFAULT '1.0.0',
     min_mandatory_version TEXT NOT NULL DEFAULT '1.0.0',
     update_link TEXT,
     message TEXT,
     is_active BOOLEAN DEFAULT FALSE,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT single_row CHECK (id = 1)
 );
 
 -- Enable RLS
@@ -20,9 +21,8 @@ ON public.app_updates FOR SELECT USING (true);
 CREATE POLICY "Allow public update access to app updates" 
 ON public.app_updates FOR ALL USING (true) WITH CHECK (true);
 
--- Insert initial rows
-INSERT INTO public.app_updates (app_type, latest_version, min_mandatory_version, message, is_active)
+-- Insert initial row
+INSERT INTO public.app_updates (id, latest_version, min_mandatory_version, message, is_active)
 VALUES 
-    ('User', '1.0.0', '1.0.0', 'A new version of the app is available! Please update to enjoy the latest features.', FALSE),
-    ('Vendor', '1.0.0', '1.0.0', 'A new version of the vendor app is available! Update to improve performance.', FALSE)
-ON CONFLICT (app_type) DO NOTHING;
+    (1, '1.0.0', '1.0.0', 'A new version of the app is available! Please update to enjoy the latest features.', FALSE)
+ON CONFLICT (id) DO NOTHING;
