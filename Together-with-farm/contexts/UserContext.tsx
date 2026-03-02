@@ -13,6 +13,7 @@ interface UserData {
     gender: string;
     dob: string;
     userType: 'User' | 'Vendor';
+    vendorApproved?: boolean;
     experience?: string;
     farmSize?: string;
     bio?: string;
@@ -59,6 +60,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         gender: 'Male',
         dob: '10 August 1999',
         userType: 'User',
+        vendorApproved: false,
         profileImage: ''
     });
 
@@ -144,6 +146,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 gender: 'Male',
                 dob: '10 August 1999',
                 userType: 'User',
+                vendorApproved: false,
                 profileImage: ''
             });
             setOrders([]);
@@ -167,6 +170,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         gender: profile.gender || 'Male',
                         dob: profile.dob || '',
                         userType: profile.user_type || 'User',
+                        vendorApproved: profile.vendor_approved === true,
                         experience: profile.experience,
                         farmSize: profile.farm_size,
                         bio: profile.bio,
@@ -328,27 +332,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
             // Check for existing profile to avoid overwriting name
             let existingName = 'Anonymous';
+            let isExistingVendor = false;
             const { data: existingProfile } = await supabase
                 .from('profiles')
-                .select('full_name')
+                .select('full_name, vendor_approved')
                 .eq('id', data.user.id)
                 .single();
 
             if (existingProfile && existingProfile.full_name) {
                 existingName = existingProfile.full_name;
+                isExistingVendor = existingProfile.vendor_approved === true;
             }
 
-            // Sync/Create Profile
-            // Only overwrite name if we have a better one in userData or if existing is Anonymous
-            // Actually, if we are in this flow, userData.fullName is likely empty.
-            // So we prefer existingName.
             const finalName = existingName !== 'Anonymous' ? existingName : (userData.fullName || 'Anonymous');
+            // New vendor accounts start unapproved. Existing approved vendors keep their status.
+            const vendorApprovedValue = userType === 'Vendor' ? isExistingVendor : true;
 
             const updates = {
                 id: data.user.id,
                 phone_number: phone,
                 user_type: userType,
                 full_name: finalName,
+                vendor_approved: vendorApprovedValue,
                 updated_at: new Date().toISOString(),
             };
 
@@ -359,7 +364,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 ...prev,
                 phoneNumber: phone,
                 userType: userType,
-                fullName: finalName
+                fullName: finalName,
+                vendorApproved: vendorApprovedValue
             }));
 
             return { session: data.session, error: null };
@@ -377,7 +383,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
             fullName: '',
             gender: 'Male',
             dob: '10 August 1999',
-            userType: 'User'
+            userType: 'User',
+            vendorApproved: false
         });
     };
 

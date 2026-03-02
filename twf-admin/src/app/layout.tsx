@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import TicketAlerter from "@/components/TicketAlerter";
+import GlobalSearch from "@/components/GlobalSearch";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -106,20 +107,8 @@ export default function RootLayout({
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col h-full relative overflow-hidden bg-[#f8fafc]">
           {/* Top Glass Header */}
-          <header className="h-16 bg-white/60 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 z-10 sticky top-0">
-            <div className="flex items-center gap-4 text-slate-400">
-              <span className="bg-white p-2 rounded-lg border border-slate-100 shadow-sm">🔍</span>
-              <input type="text" placeholder="Search anything..." className="bg-transparent border-none outline-none text-sm w-64 text-slate-600 placeholder:text-slate-400" />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50 transition-all shadow-sm">
-                🔔
-              </button>
-              <button className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50 transition-all shadow-sm">
-                💬
-              </button>
-            </div>
+          <header className="h-16 bg-white/60 backdrop-blur-md border-b border-slate-200/60 flex items-center px-8 z-10 sticky top-0">
+            <GlobalSearch />
           </header>
 
           {/* Scrollable Page Content */}

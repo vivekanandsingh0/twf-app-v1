@@ -324,5 +324,10 @@ CREATE POLICY "Spotlights are viewable by everyone" ON public.vendor_spotlights 
 DROP POLICY IF EXISTS "Spotlights can be managed by all" ON public.vendor_spotlights;
 CREATE POLICY "Spotlights can be managed by all" ON public.vendor_spotlights FOR ALL USING (true) WITH CHECK (true);
 
+-- Add vendor_approved column to profiles for approval workflow
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS vendor_approved BOOLEAN DEFAULT false;
+-- Set all existing vendors to approved so they are not locked out
+UPDATE public.profiles SET vendor_approved = true WHERE user_type = 'Vendor' AND vendor_approved IS NOT true;
+
 -- Refresh PostgREST schema cache
 NOTIFY pgrst, 'reload schema';

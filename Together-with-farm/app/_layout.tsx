@@ -15,6 +15,7 @@ import LoginScreen from '@/components/LoginScreen';
 import NameInputScreen from '@/components/NameInputScreen';
 import MaintenanceScreen from '@/components/MaintenanceScreen';
 import UpdateScreen from '@/components/UpdateScreen';
+import VendorPendingScreen from '@/components/VendorPendingScreen';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { FavouritesProvider } from '@/contexts/FavouritesContext';
@@ -167,15 +168,17 @@ function AppContent() {
       // Check for valid name before redirecting
       if (userData.fullName && userData.fullName !== 'Anonymous') {
         // User is logged in - Navigate only once
-        if (userData.userType === 'Vendor') {
+        if (userData.userType === 'Vendor' && userData.vendorApproved) {
           router.replace('/(vendor-tabs)');
-        } else {
+          setHasNavigated(true);
+        } else if (userData.userType !== 'Vendor') {
           router.replace('/(tabs)');
+          setHasNavigated(true);
         }
-        setHasNavigated(true);
+        // If vendor is NOT approved, do NOT navigate — VendorPendingScreen will render
       }
     }
-  }, [session, loading, userData.userType, userData.fullName, hasNavigated]);
+  }, [session, loading, userData.userType, userData.fullName, userData.vendorApproved, hasNavigated]);
 
   // Determine Main Content
   let content = null;
@@ -193,9 +196,15 @@ function AppContent() {
     if (!userData.fullName || userData.fullName === 'Anonymous') {
       content = (
         <NameInputScreen onFinish={() => {
-          // userData will update, causing re-render.
-          // Reset navigation flag to allow router.replace to run again if needed
           setHasNavigated(false);
+        }} />
+      );
+    } else if (userData.userType === 'Vendor' && !userData.vendorApproved) {
+      // Vendor is logged in but NOT approved — show pending screen
+      content = (
+        <VendorPendingScreen onLogout={async () => {
+          await supabase.auth.signOut();
+          setShowOnboarding(true);
         }} />
       );
     } else {
