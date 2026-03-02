@@ -200,8 +200,12 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
                         // Determine primary image
                         const primaryImage = productImages.length > 0
-                            ? { uri: productImages[0] }
+                            ? { uri: productImages[0].replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') }
                             : require('@/assets/images/3d-model-with-veg.png');
+
+                        const proxiedImages = productImages.map((img: string) =>
+                            img.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev')
+                        );
 
                         return {
                             id: p.id,
@@ -214,7 +218,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                             discountValue: p.discount || 0,
                             specialOffer: undefined,
                             image: primaryImage,
-                            images: productImages,
+                            images: proxiedImages,
                             description: p.description || 'Fresh produce from local farmers.',
                             isFavorite: false,
                             tag: p.stock < 5 ? 'Low Stock' : 'Fresh',
@@ -263,8 +267,8 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                         title: a.title,
                         category: a.category,
                         time: a.time,
-                        image: a.image_url ? { uri: a.image_url } : require('@/assets/images/3d-model-with-veg.png'),
-                        image_url: a.image_url,
+                        image: a.image_url ? { uri: a.image_url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') } : require('@/assets/images/3d-model-with-veg.png'),
+                        image_url: a.image_url ? a.image_url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') : undefined,
                         type: a.type,
                         tag: a.tag,
                         content: a.content,

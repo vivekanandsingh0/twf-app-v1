@@ -37,7 +37,7 @@ export default function RateOrderScreen() {
                     .from('order_reviews')
                     .select('*')
                     .eq('order_id', order.id)
-                    .single();
+                    .maybeSingle();
 
                 if (data) {
                     setProductRating(data.product_rating);
@@ -63,9 +63,16 @@ export default function RateOrderScreen() {
         );
     }
 
-    const getProxiedImageUrl = (url?: string) => {
-        if (!url) return undefined;
-        return url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev');
+    const getProxiedImageUrl = (url?: any) => {
+        let urlString = undefined;
+        if (typeof url === 'string') {
+            urlString = url;
+        } else if (url && typeof url === 'object' && typeof url.uri === 'string') {
+            urlString = url.uri;
+        }
+
+        if (!urlString) return undefined;
+        return urlString.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev');
     };
 
     const itemsSummary = order.items.map(i => i.productName).join(', ');

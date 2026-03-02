@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet,
     Text,
@@ -16,6 +16,7 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { Image } from 'expo-image';
 import { useMarket, MarketVendor, MarketProduct } from '@/contexts/MarketContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,29 @@ export default function FarmerDetailsScreen() {
     const insets = useSafeAreaInsets();
     const { vendors, products } = useMarket();
     const { isDark } = useTheme();
+    const [rating, setRating] = useState<number | null>(null);
+
+    useEffect(() => {
+        const fetchRating = async () => {
+            if (!id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('order_reviews')
+                    .select('product_rating, orders!inner(vendor_id)')
+                    .eq('orders.vendor_id', id);
+
+                if (data && data.length > 0) {
+                    const avg = data.reduce((acc, curr) => acc + curr.product_rating, 0) / data.length;
+                    setRating(Number(avg.toFixed(1)));
+                } else {
+                    setRating(0);
+                }
+            } catch (e) {
+                console.error("Failed to fetch product rating:", e);
+            }
+        };
+        fetchRating();
+    }, [id]);
 
     const farmer = vendors.find(v => v.id === id);
     const farmerProducts = products.filter(p => p.vendorId === id);
@@ -110,6 +134,13 @@ export default function FarmerDetailsScreen() {
                                     <Ionicons name="location-outline" size={14} color="#1F5E2E" />
                                     <Text style={[styles.locationText, isDark && { color: '#CCC' }]}>{farmer.location}</Text>
                                 </View>
+                                {rating !== null && rating > 0 && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                        <Ionicons name="star" size={14} color="#F59E0B" />
+                                        <Text style={[isDark ? { color: '#FFF' } : { color: '#1A1A1A' }, { fontSize: 13, fontFamily: 'DMSans_700Bold', marginLeft: 4 }]}>{rating}</Text>
+                                        <Text style={[isDark ? { color: '#AAA' } : { color: '#666' }, { fontSize: 13, fontFamily: 'DMSans_400Regular', marginLeft: 4 }]}>Rating</Text>
+                                    </View>
+                                )}
                             </View>
                         </View>
 

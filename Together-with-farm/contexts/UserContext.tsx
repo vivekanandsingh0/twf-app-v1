@@ -37,6 +37,16 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const proxyUrl = (url?: any) => {
+    if (typeof url === 'string') {
+        return url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev');
+    }
+    if (url && typeof url === 'object' && typeof url.uri === 'string') {
+        return { ...url, uri: url.uri.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') };
+    }
+    return url;
+};
+
 export function UserProvider({ children }: { children: ReactNode }) {
     const [session, setSession] = useState<Session | null>(null);
     const [user, setUser] = useState<User | null>(null);
@@ -70,7 +80,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 vendorId: dbOrder.vendor_id,
                 customerId: dbOrder.user_id,
                 customerName: 'Me',
-                items: dbOrder.items || [],
+                items: (dbOrder.items || []).map((item: any) => ({ ...item, image: proxyUrl(item.image) })),
                 totalAmount: Number(dbOrder.total_amount || 0),
                 status: dbOrder.status,
                 date: dbOrder.created_at,
@@ -81,7 +91,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 deliveryAddress: dbOrder.delivery_address || '',
                 deliveryPartnerName: dbOrder.delivery_partner_name || undefined,
                 deliveryPartnerPhone: dbOrder.delivery_partner_phone || undefined,
-                deliveryPartnerPhoto: dbOrder.delivery_partner_photo || undefined,
+                deliveryPartnerPhoto: proxyUrl(dbOrder.delivery_partner_photo) || undefined,
             }));
             setOrders(mappedOrders);
         }
@@ -160,7 +170,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         experience: profile.experience,
                         farmSize: profile.farm_size,
                         bio: profile.bio,
-                        profileImage: profile.profile_image
+                        profileImage: proxyUrl(profile.profile_image)
                     }));
                 }
 
@@ -178,7 +188,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                             vendorId: dbOrder.vendor_id,
                             customerId: dbOrder.user_id,
                             customerName: 'Me',
-                            items: dbOrder.items || [],
+                            items: (dbOrder.items || []).map((item: any) => ({ ...item, image: proxyUrl(item.image) })),
                             totalAmount: Number(dbOrder.total_amount || 0),
                             status: dbOrder.status,
                             date: dbOrder.created_at,
@@ -189,7 +199,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                             deliveryAddress: dbOrder.delivery_address || '',
                             deliveryPartnerName: dbOrder.delivery_partner_name || undefined,
                             deliveryPartnerPhone: dbOrder.delivery_partner_phone || undefined,
-                            deliveryPartnerPhoto: dbOrder.delivery_partner_photo || undefined,
+                            deliveryPartnerPhoto: proxyUrl(dbOrder.delivery_partner_photo) || undefined,
                         }));
                         setOrders(mappedOrders);
                     }

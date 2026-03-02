@@ -12,7 +12,7 @@ type TimeRange = 'Today' | 'Yesterday' | 'Last 7 Days' | 'Last 30 Days' | 'This 
 export default function BusinessDashboardScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { orders, products, transactions } = useVendor();
+    const { orders, products, transactions, dashboardStats } = useVendor();
     const [selectedRange, setSelectedRange] = useState<TimeRange>('Last 7 Days');
 
     // --- Helpers ---
@@ -231,6 +231,25 @@ export default function BusinessDashboardScreen() {
                     )) : (
                         <Text style={{ color: '#999', textAlign: 'center', padding: 20 }}>No items sold</Text>
                     )}
+                </View>
+
+                {/* Customer Reviews & Rating */}
+                <View style={styles.sectionCard}>
+                    <View style={[styles.cardHeader, { marginBottom: 10 }]}>
+                        <Text style={styles.cardTitle}>Customer Rating</Text>
+                        <TouchableOpacity onPress={() => router.push('/vendor-reviews')}>
+                            <Text style={{ color: '#1F5E2E', fontSize: 13, fontWeight: '600' }}>See Reviews</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 32, fontFamily: 'DMSans_700Bold', color: '#1A1A1A' }}>
+                                {dashboardStats?.rating?.toFixed(1) || '0.0'}
+                            </Text>
+                            <Ionicons name="star" size={24} color="#F59E0B" style={{ marginTop: 2 }} />
+                        </View>
+                        <Text style={{ fontSize: 14, color: '#666', fontFamily: 'DMSans_500Medium', flex: 1 }}>Average Product Rating</Text>
+                    </View>
                 </View>
 
                 {/* Recent Payouts */}

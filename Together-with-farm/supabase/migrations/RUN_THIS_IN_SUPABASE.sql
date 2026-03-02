@@ -124,3 +124,30 @@ CREATE POLICY "Anon all app settings" ON public.app_settings FOR ALL USING (true
 INSERT INTO public.app_settings (key, value, description)
 VALUES ('vendor_support_phone', '919999999999', 'Phone number for vendor support')
 ON CONFLICT (key) DO NOTHING;
+
+-- 14. Add RPC functions for Admin Dashboard to bypass RLS
+CREATE OR REPLACE FUNCTION get_admin_vendor_ratings()
+RETURNS TABLE (
+    vendor_id UUID,
+    rating NUMERIC
+) 
+SECURITY DEFINER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.vendor_id,
+        ROUND(AVG(r.product_rating)::numeric, 1) as rating
+    FROM 
+        public.order_reviews r
+    INNER JOIN 
+        public.orders o ON r.order_id = o.id
+    GROUP BY 
+        o.vendor_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_admin_vendor_ratings() TO public;
+GRANT EXECUTE ON FUNCTION get_admin_vendor_ratings() TO anon;
+GRANT EXECUTE ON FUNCTION get_admin_vendor_ratings() TO authenticated;

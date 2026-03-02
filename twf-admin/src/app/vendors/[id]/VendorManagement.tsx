@@ -22,6 +22,7 @@ export default function VendorManagement({ initialVendor }: { initialVendor: any
     const [isLoading, setIsLoading] = useState(false);
     const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
     const [partnersLoading, setPartnersLoading] = useState(true);
+    const [vendorRating, setVendorRating] = useState<number | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -53,6 +54,26 @@ export default function VendorManagement({ initialVendor }: { initialVendor: any
                 console.error('Failed to load delivery partners:', e);
             } finally {
                 setPartnersLoading(false);
+            }
+        })();
+    }, [vendor.id]);
+
+    // Fetch average rating for this vendor via RPC to bypass RLS
+    useEffect(() => {
+        (async () => {
+            try {
+                const { data, error } = await supabase.rpc('get_admin_vendor_ratings');
+
+                if (!error && data) {
+                    const match = data.find((row: any) => row.vendor_id === vendor.id);
+                    if (match && match.rating) {
+                        setVendorRating(Number(match.rating));
+                    } else {
+                        setVendorRating(0);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch product rating via RPC:", e);
             }
         })();
     }, [vendor.id]);
@@ -118,6 +139,14 @@ export default function VendorManagement({ initialVendor }: { initialVendor: any
                         </div>
                         <h2 className="text-xl font-bold text-slate-900">{formData.businessName}</h2>
                         <p className="text-slate-500 text-sm mt-1">Vendor ID: {vendor.id}</p>
+
+                        {vendorRating !== null && (
+                            <div className="flex items-center justify-center mt-3 bg-amber-50 px-4 py-2 rounded-full border border-amber-200">
+                                <span className="text-amber-500 text-xl mr-1">★</span>
+                                <span className="text-slate-900 font-bold text-lg">{vendorRating > 0 ? vendorRating : 'No ratings'}</span>
+                                {vendorRating > 0 && <span className="text-slate-600 text-sm ml-1 font-medium">Avg Rating</span>}
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-4">

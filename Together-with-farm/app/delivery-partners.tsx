@@ -42,6 +42,16 @@ export default function DeliveryPartnersScreen() {
     const [saving, setSaving] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+    const proxyUrl = (url?: any) => {
+        if (typeof url === 'string') {
+            return url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev');
+        }
+        if (url && typeof url === 'object' && typeof url.uri === 'string') {
+            return { ...url, uri: url.uri.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') };
+        }
+        return url;
+    };
+
     // ── Fetch partners from Supabase ─────────────────────────────────────
     const fetchPartners = useCallback(async () => {
         if (!user?.id) return;
@@ -54,7 +64,8 @@ export default function DeliveryPartnersScreen() {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setPartners(data || []);
+            const mappedData = data?.map(d => ({ ...d, photo_url: proxyUrl(d.photo_url) })) || [];
+            setPartners(mappedData);
         } catch (e) {
             console.error('Failed to fetch delivery partners:', e);
         } finally {

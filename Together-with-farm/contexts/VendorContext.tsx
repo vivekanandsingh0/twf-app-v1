@@ -189,6 +189,16 @@ interface VendorContextType {
 
 const VendorContext = createContext<VendorContextType | undefined>(undefined);
 
+const proxyUrl = (url?: any) => {
+    if (typeof url === 'string') {
+        return url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev');
+    }
+    if (url && typeof url === 'object' && typeof url.uri === 'string') {
+        return { ...url, uri: url.uri.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') };
+    }
+    return url;
+};
+
 // --- Provider ---
 
 export function VendorProvider({ children }: { children: ReactNode }) {
@@ -238,7 +248,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         gender: data.gender || prev.gender,
                         dob: data.dob || prev.dob,
                         shopStatus: data.shop_status || 'Active',
-                        profileImage: data.profile_image || prev.profileImage,
+                        profileImage: proxyUrl(data.profile_image) || prev.profileImage,
                         // Assuming bank_details is a JSON column or separate table. 
                         // If JSON column:
                         bankDetails: data.bank_details ? {
@@ -292,9 +302,9 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                     setProducts(data.map((p: any) => ({
                         id: p.id,
                         name: p.name,
-                        image: p.images && p.images.length > 0 ? { uri: p.images[0] } : (p.image_url ? { uri: p.image_url } : require('@/assets/images/3d-model-with-veg.png')),
-                        image_url: p.image_url,
-                        images: p.images || (p.image_url ? [p.image_url] : []),
+                        image: p.images && p.images.length > 0 ? { uri: proxyUrl(p.images[0]) } : (p.image_url ? { uri: proxyUrl(p.image_url) } : require('@/assets/images/3d-model-with-veg.png')),
+                        image_url: proxyUrl(p.image_url),
+                        images: (p.images || (p.image_url ? [p.image_url] : [])).map(proxyUrl),
                         price: p.price,
                         unit: p.unit,
                         stock: p.stock,
@@ -317,6 +327,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
     const [orders, setOrders] = useState<VendorOrder[]>([]);
     const [transactions, setTransactions] = useState<VendorTransaction[]>([]);
 
+    const [rating, setRating] = useState<number>(0);
+
     // Sync Transactions with Orders (Mock Payout Logic)
     useEffect(() => {
         // Automatically generate "Payouts" for delivered orders
@@ -333,6 +345,26 @@ export function VendorProvider({ children }: { children: ReactNode }) {
             .filter(p => p.amount > 0); // Filter out zero/invalid amounts
         setTransactions(payouts);
     }, [orders]);
+
+    useEffect(() => {
+        const fetchRating = async () => {
+            if (!user?.id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('order_reviews')
+                    .select('product_rating, orders!inner(vendor_id)')
+                    .eq('orders.vendor_id', user.id);
+
+                if (data && data.length > 0) {
+                    const avg = data.reduce((acc, curr) => acc + curr.product_rating, 0) / data.length;
+                    setRating(Number(avg.toFixed(1)));
+                }
+            } catch (e) {
+                console.error("Failed to fetch product rating:", e);
+            }
+        };
+        fetchRating();
+    }, [user?.id]);
 
     // --- Stats Logic ---
     const totalSales = transactions.filter(t => t.type === 'Credit').reduce((acc, curr) => acc + curr.amount, 0);
@@ -357,7 +389,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         userId: dbOrder.user_id,
                         customerId: dbOrder.user_id,
                         customerName: dbOrder.customer_name || dbOrder.customer?.full_name || 'Unknown',
-                        items: dbOrder.items || [],
+                        items: (dbOrder.items || []).map((item: any) => ({ ...item, image: proxyUrl(item.image) })),
                         totalAmount: Number(dbOrder.total_amount || 0),
                         status: dbOrder.status,
                         date: dbOrder.created_at,
@@ -372,7 +404,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                         receiverPhone: dbOrder.receiver_phone,
                         deliveryPartnerName: dbOrder.delivery_partner_name || undefined,
                         deliveryPartnerPhone: dbOrder.delivery_partner_phone || undefined,
-                        deliveryPartnerPhoto: dbOrder.delivery_partner_photo || undefined,
+                        deliveryPartnerPhoto: proxyUrl(dbOrder.delivery_partner_photo) || undefined,
                         order_type: dbOrder.order_type || 'instant',
                         estimated_delivery: dbOrder.estimated_delivery || null,
                     }));
@@ -739,7 +771,7 @@ export function VendorProvider({ children }: { children: ReactNode }) {
             orders,
             transactions,
             profile,
-            dashboardStats: { totalSales, totalOrders, pendingOrders, rating: 4.8 },
+            dashboardStats: { totalSales, totalOrders, pendingOrders, rating },
             addProduct,
             updateProduct,
             deleteProduct,

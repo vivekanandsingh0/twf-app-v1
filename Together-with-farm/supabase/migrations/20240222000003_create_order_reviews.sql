@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS public.order_reviews (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_id TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+    order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     product_rating INTEGER NOT NULL CHECK (product_rating BETWEEN 1 AND 5),
     driver_rating INTEGER NOT NULL CHECK (driver_rating BETWEEN 1 AND 5),
