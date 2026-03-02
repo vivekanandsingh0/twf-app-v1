@@ -60,17 +60,28 @@ export interface FeedSection {
     is_active: boolean;
 }
 
+const MarketContext = createContext<MarketContextType | undefined>(undefined);
+
+// Define type for fetched market sections
+export interface MarketSection {
+    id: string;
+    name: string;
+    display_order: number;
+    is_active: boolean;
+    products: MarketProduct[];
+}
+
 export interface MarketContextType {
     vendors: MarketVendor[];
     products: MarketProduct[];
     articles: Article[];
     feedSections: FeedSection[];
+    marketSections: MarketSection[]; // ADDED
     addArticle: (article: Omit<Article, 'id'>) => void;
     addProduct: (product: Omit<MarketProduct, 'id'>) => void;
     toggleFavoriteProduct: (productId: string) => void;
+    refreshMarketData: () => Promise<void>; // ADDED
 }
-
-const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
 // --- Mock Data ---
 
@@ -115,57 +126,85 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     const [products, setProducts] = useState<MarketProduct[]>([]);
     const [articles, setArticles] = useState<Article[]>(FALLBACK_ARTICLES);
     const [feedSections, setFeedSections] = useState<FeedSection[]>([]);
+    const [marketSections, setMarketSections] = useState<MarketSection[]>([]); // ADDED state
 
-    // FETCH VENDORS FROM SUPABASE
-    useEffect(() => {
-        const fetchVendors = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('user_type', 'Vendor');
-
-                if (error) throw error;
-
-                if (data) {
-                    const mappedVendors: MarketVendor[] = data.map((v: any) => {
-                        // Determine vendor image
-                        const vendorImage = v.profile_image || v.avatar_url
-                            ? { uri: v.profile_image || v.avatar_url }
-                            : require('@/assets/images/3d-model-with-veg.png');
-
-                        return {
-                            id: v.id,
-                            name: v.business_name || v.full_name || 'Vendor',
-                            image: vendorImage,
-                            coverImage: vendorImage,
-                            bio: v.bio || 'Passionate about providing fresh, quality produce.',
-                            location: v.address || 'India',
-                            tag: v.shop_status === 'Active' ? 'FEATURED VENDOR' : 'VENDOR',
-                            stats: {
-                                experience: v.experience || 'N/A',
-                                method: 'Organic',
-                                size: v.farm_size || 'N/A'
-                            },
-                            story: v.bio || 'Dedicated to sustainable farming.',
-                            quote: "Fresh from farm to your table."
-                        };
-                    });
-                    setVendors(mappedVendors);
-                }
-            } catch (e) {
-                console.error("Failed to fetch vendors for Market", e);
+    const fetchMarketData = async () => {
+        try {
+            // 1. Fetch Vendors
+            const { data: vData } = await supabase.from('profiles').select('*').eq('user_type', 'Vendor');
+            if (vData) {
+                const mappedVendors: MarketVendor[] = vData.map((v: any) => {
+                    const vendorImage = v.profile_image || v.avatar_url
+                        ? { uri: v.profile_image || v.avatar_url }
+                        : require('@/assets/images/3d-model-with-veg.png');
+                    return {
+                        id: v.id,
+                        name: v.business_name || v.full_name || 'Vendor',
+                        image: vendorImage,
+                        coverImage: vendorImage,
+                        bio: v.bio || '',
+                        location: v.address || 'India',
+                        tag: v.shop_status === 'Active' ? 'FEATURED VENDOR' : 'VENDOR',
+                        stats: { experience: v.experience || 'N/A', method: 'Organic', size: v.farm_size || 'N/A' },
+                        story: v.bio || '',
+                        quote: "Fresh from farm to your table."
+                    };
+                });
+                setVendors(mappedVendors);
             }
-        };
 
-        fetchVendors();
+            // 2. Fetch Products
+            const { data: pData } = await supabase.from('products').select('*').gt('stock', 0);
+            let mappedProducts: MarketProduct[] = [];
+            if (pData) {
+                mappedProducts = pData.map((p: any) => {
+                    let productImages = p.images || [];
+                    if (typeof productImages === 'string') {
+                        try { productImages = JSON.parse(productImages); } catch (e) { productImages = []; }
+                    }
+                    if (!Array.isArray(productImages)) productImages = [];
+                    if (productImages.length === 0 && p.image_url) productImages.push(p.image_url);
+
+                    const baseImgUri = productImages.length > 0 ? productImages[0].replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') : null;
+                    const primaryImage = baseImgUri ? { uri: baseImgUri } : require('@/assets/images/3d-model-with-veg.png');
+
+                    return {
+                        id: p.id, vendorId: p.vendor_id, name: p.name, type: p.category || 'Vegetables', price: p.price,
+                        unit: p.unit || 'kg', discount: p.discount > 0 ? `-${p.discount}%` : undefined, discountValue: p.discount || 0,
+                        image: primaryImage, images: productImages.map((i: string) => i.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev')),
+                        description: p.description || '', isFavorite: false, tag: p.stock < 5 ? 'Low Stock' : 'Fresh',
+                        highlights: p.highlights || [], order_type: p.order_type || 'instant', preorder_duration: p.preorder_duration || 0,
+                    };
+                });
+                setProducts(mappedProducts);
+            }
+
+            // 3. Fetch Market Sections & Mappings
+            const { data: sectionsData } = await supabase.from('market_sections').select('*').eq('is_active', true).order('display_order');
+            const { data: mappingsData } = await supabase.from('market_section_products').select('*');
+
+            if (sectionsData) {
+                const finalSections: MarketSection[] = sectionsData.map(sec => {
+                    const matchedProductIds = (mappingsData || []).filter(m => m.section_id === sec.id).map(m => m.product_id);
+                    const matchedProducts = mappedProducts.filter(p => matchedProductIds.includes(p.id));
+                    return { ...sec, products: matchedProducts };
+                });
+                setMarketSections(finalSections);
+            }
+
+        } catch (e) {
+            console.error("Failed to fetch market data:", e);
+        };
+    };
+
+    // Keep subscriptions exactly as is underneath
+    useEffect(() => {
+        fetchMarketData();
 
         // Realtime subscription for vendor updates
         const vendorSubscription = supabase
             .channel('market:vendors')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-                fetchVendors();
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchMarketData)
             .subscribe();
 
         return () => {
@@ -175,77 +214,28 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
     // FETCH PRODUCTS FROM SUPABASE
     useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('products')
-                    .select('*')
-                    .gt('stock', 0); // Only show in-stock products
-
-                if (error) throw error;
-
-                if (data) {
-                    const mappedProducts: MarketProduct[] = data.map((p: any) => {
-                        // Safe parsing for images
-                        let productImages = p.images || [];
-                        if (typeof productImages === 'string') {
-                            try { productImages = JSON.parse(productImages); } catch (e) { console.error("JSON parse error for images", e); productImages = []; }
-                        }
-                        if (!Array.isArray(productImages)) productImages = [];
-
-                        // Combine legacy image_url if needed
-                        if (productImages.length === 0 && p.image_url) {
-                            productImages.push(p.image_url);
-                        }
-
-                        // Determine primary image
-                        const primaryImage = productImages.length > 0
-                            ? { uri: productImages[0].replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') }
-                            : require('@/assets/images/3d-model-with-veg.png');
-
-                        const proxiedImages = productImages.map((img: string) =>
-                            img.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev')
-                        );
-
-                        return {
-                            id: p.id,
-                            vendorId: p.vendor_id,
-                            name: p.name,
-                            type: p.category || 'Vegetables',
-                            price: p.price,
-                            unit: p.unit || 'kg',
-                            discount: p.discount && p.discount > 0 ? `-${p.discount}%` : undefined,
-                            discountValue: p.discount || 0,
-                            specialOffer: undefined,
-                            image: primaryImage,
-                            images: proxiedImages,
-                            description: p.description || 'Fresh produce from local farmers.',
-                            isFavorite: false,
-                            tag: p.stock < 5 ? 'Low Stock' : 'Fresh',
-                            highlights: p.highlights || [],
-                            order_type: p.order_type || 'instant',
-                            preorder_duration: p.preorder_duration || 0,
-                        };
-                    });
-                    setProducts(mappedProducts);
-                }
-            } catch (e) {
-                console.error("Failed to fetch products for Market", e);
-            }
-        };
-
-        fetchProducts();
-
         // Realtime subscription for new products
         const subscription = supabase
             .channel('market:products')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-                fetchProducts();
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchMarketData)
+            .subscribe();
+
+        // Realtime subscription for market sections
+        const sectionsSubscription = supabase
+            .channel('market:sections')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'market_sections' }, fetchMarketData)
+            .subscribe();
+
+        // Realtime subscription for market section products mapping
+        const mappingSubscription = supabase
+            .channel('market:section_products')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'market_section_products' }, fetchMarketData)
             .subscribe();
 
         return () => {
             supabase.removeChannel(subscription);
+            supabase.removeChannel(sectionsSubscription);
+            supabase.removeChannel(mappingSubscription);
         };
     }, []);
 
@@ -346,9 +336,11 @@ export function MarketProvider({ children }: { children: ReactNode }) {
             products,
             articles,
             feedSections,
+            marketSections,
             addArticle,
             addProduct,
-            toggleFavoriteProduct
+            toggleFavoriteProduct,
+            refreshMarketData: fetchMarketData
         }}>
             {children}
         </MarketContext.Provider>

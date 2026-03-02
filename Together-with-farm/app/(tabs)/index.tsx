@@ -266,52 +266,19 @@ export default function MarketScreen() {
         ) : (
           // Normal Sections View
           <>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Bestsellers</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-              {/* Show top rated or random products */}
-              {products.filter(p => p.isFavorite).slice(0, 5).map(renderProductCard)}
-            </ScrollView>
 
-            {dealProducts.length > 0 && (
-              <>
+            {useMarket().marketSections?.map(section => (
+              <React.Fragment key={section.id}>
                 <View style={styles.sectionHeader}>
-                  <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Grab Best Deal</Text>
+                  <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>{section.name}</Text>
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                  {dealProducts.map(renderProductCard)}
+                  {section.products.map(renderProductCard)}
                 </ScrollView>
-              </>
-            )}
+              </React.Fragment>
+            ))}
 
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Leafy & Fresh</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-              {products.filter(p => ['Leafy', 'Hydroponic', 'Organic', 'Fresh'].includes(p.type) || p.tag === 'Fresh').map(renderProductCard)}
-            </ScrollView>
 
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Seasonal Fruits</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-              {products.filter(p => p.type.includes('Fruit')).map(renderProductCard)}
-            </ScrollView>
-
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Farm Classics</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-              {products.filter(p => p.type === 'Daily' || p.tag === 'Local').map(renderProductCard)}
-            </ScrollView>
-
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Root Vegetables</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-              {products.filter(p => p.type === 'Roots').map(renderProductCard)}
-            </ScrollView>
           </>
         )}
 
@@ -322,43 +289,45 @@ export default function MarketScreen() {
       <CartPopup />
 
       {/* Location Dropdown Overlay - Global Position */}
-      {showLocationPicker && (
-        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 900 }} pointerEvents="box-none">
-          <TouchableOpacity
-            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
-            activeOpacity={1}
-            onPress={() => setShowLocationPicker(false)}
-          />
-          <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }, isDark && { backgroundColor: '#333' }]}>
-            {addresses.map((addr) => (
-              <TouchableOpacity
-                key={addr.id}
-                style={[styles.locationOption, isDark && { borderBottomColor: '#444' }]}
-                onPress={() => {
-                  setSelectedAddress(addr);
-                  setShowLocationPicker(false);
-                }}
-              >
-                <Ionicons
-                  name={selectedAddress?.id === addr.id ? "radio-button-on" : "radio-button-off"}
-                  size={18}
-                  color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
-                />
-                <View style={{ marginLeft: 12, flex: 1 }}>
-                  <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#81C784' }, isDark && selectedAddress?.id !== addr.id && { color: '#FFF' }]}>
-                    {addr.type}
-                  </Text>
-                  <Text style={[styles.locationOptionAddress, isDark && { color: '#AAA' }]} numberOfLines={2}>
-                    {addr.address}, {addr.city}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+      {
+        showLocationPicker && (
+          <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 900 }} pointerEvents="box-none">
+            <TouchableOpacity
+              style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
+              activeOpacity={1}
+              onPress={() => setShowLocationPicker(false)}
+            />
+            <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }, isDark && { backgroundColor: '#333' }]}>
+              {addresses.map((addr) => (
+                <TouchableOpacity
+                  key={addr.id}
+                  style={[styles.locationOption, isDark && { borderBottomColor: '#444' }]}
+                  onPress={() => {
+                    setSelectedAddress(addr);
+                    setShowLocationPicker(false);
+                  }}
+                >
+                  <Ionicons
+                    name={selectedAddress?.id === addr.id ? "radio-button-on" : "radio-button-off"}
+                    size={18}
+                    color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
+                  />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#81C784' }, isDark && selectedAddress?.id !== addr.id && { color: '#FFF' }]}>
+                      {addr.type}
+                    </Text>
+                    <Text style={[styles.locationOptionAddress, isDark && { color: '#AAA' }]} numberOfLines={2}>
+                      {addr.address}, {addr.city}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
-      )}
+        )
+      }
 
-    </View>
+    </View >
   );
 }
 

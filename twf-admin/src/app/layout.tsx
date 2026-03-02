@@ -66,6 +66,10 @@ export default function RootLayout({
               <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">📰</span>
               Manage Feed
             </a>
+            <a href="/manage-market" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">🛒</span>
+              Manage Market
+            </a>
             <a href="/notifications" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
               <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">🔔</span>
               Notifications
