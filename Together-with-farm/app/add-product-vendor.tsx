@@ -35,36 +35,42 @@ export default function AddProductVendorScreen() {
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
     const isEditMode = !!id;
 
-    React.useEffect(() => {
-        if (id && products.length > 0) {
-            const productToEdit = products.find(p => p.id === id);
-            if (productToEdit) {
-                setProductName(productToEdit.name);
-                // Load existing images or fallback to single image if available
-                if (productToEdit.images && productToEdit.images.length > 0) {
-                    setImages(productToEdit.images);
-                } else if (productToEdit.image && typeof productToEdit.image === 'object' && productToEdit.image.uri) {
-                    setImages([productToEdit.image.uri]);
-                } else if (productToEdit.image && typeof productToEdit.image === 'string') {
-                    // rare case if it was just a string
-                    setImages([productToEdit.image]);
-                }
+    // Use a ref to ensure we only load product data into the form ONCE
+    const hasLoadedRef = React.useRef(false);
 
-                setProductInfo(productToEdit.description);
-                setHighlights(productToEdit.highlights && productToEdit.highlights.length > 0
-                    ? productToEdit.highlights
-                    : [{ title: '', value: '' }]);
-                setCategory(productToEdit.category);
-                setPrice(productToEdit.price.toString());
-                setUnit(productToEdit.unit);
-                setQuantity(productToEdit.stock.toString());
-                setDiscountPercent((productToEdit as any).discount ? (productToEdit as any).discount.toString() : '');
-                if ((productToEdit as any).order_type === 'pre-order') {
-                    setOrderType('Pre-order');
-                    setPreorderDuration(((productToEdit as any).preorder_duration || 3).toString());
-                } else {
-                    setOrderType('Instant');
-                }
+    React.useEffect(() => {
+        // Only load product data once when entering edit mode
+        if (hasLoadedRef.current) return;
+        if (!id || products.length === 0) return;
+
+        const productToEdit = products.find(p => p.id === id);
+        if (productToEdit) {
+            hasLoadedRef.current = true; // Mark as loaded — never overwrite again
+
+            setProductName(productToEdit.name);
+            // Load existing images or fallback to single image if available
+            if (productToEdit.images && productToEdit.images.length > 0) {
+                setImages(productToEdit.images);
+            } else if (productToEdit.image && typeof productToEdit.image === 'object' && productToEdit.image.uri) {
+                setImages([productToEdit.image.uri]);
+            } else if (productToEdit.image && typeof productToEdit.image === 'string') {
+                setImages([productToEdit.image]);
+            }
+
+            setProductInfo(productToEdit.description);
+            setHighlights(productToEdit.highlights && productToEdit.highlights.length > 0
+                ? productToEdit.highlights
+                : [{ title: '', value: '' }]);
+            setCategory(productToEdit.category);
+            setPrice(productToEdit.price.toString());
+            setUnit(productToEdit.unit);
+            setQuantity(productToEdit.stock.toString());
+            setDiscountPercent((productToEdit as any).discount ? (productToEdit as any).discount.toString() : '');
+            if ((productToEdit as any).order_type === 'pre-order') {
+                setOrderType('Pre-order');
+                setPreorderDuration(((productToEdit as any).preorder_duration || 3).toString());
+            } else {
+                setOrderType('Instant');
             }
         }
     }, [id, products]);

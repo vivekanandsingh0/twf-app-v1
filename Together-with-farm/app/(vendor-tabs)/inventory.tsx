@@ -12,11 +12,12 @@ export default function VendorInventoryScreen() {
     const router = useRouter();
     const [shopOpen, setShopOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState('All Stock');
+    const [activeFilter, setActiveFilter] = useState('All');
 
     const { products, orders } = useVendor();
 
-    const filters = ['All Stock', 'Low Stock', 'Organic', 'Roots', 'Daily'];
+    const dynamicCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+    const filters = ['All', 'Low Stock', 'Out of Stock', ...dynamicCategories];
 
     // Stats
     const activeOrdersCount = orders.filter(o => o.status === 'Pending' || o.status === 'Accepted' || o.status === 'Ready').length;
@@ -54,11 +55,14 @@ export default function VendorInventoryScreen() {
     };
 
     const filteredInventory = products.filter(p => {
-        if (activeFilter === 'All Stock') return true;
+        if (activeFilter === 'All') return true;
         if (activeFilter === 'Low Stock') return p.stock > 0 && p.stock < 10;
-        // Mock filtering for other tags if not present in context yet
-        return true;
-    }).filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        if (activeFilter === 'Out of Stock') return p.stock === 0;
+        return p.category === activeFilter;
+    }).filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
     const renderInventoryItem = (item: VendorProduct) => {
         const status = getStatus(item);
@@ -151,6 +155,11 @@ export default function VendorInventoryScreen() {
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                     />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                            <Ionicons name="close-circle" size={20} color="#999" />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Filters */}
