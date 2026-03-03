@@ -105,7 +105,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         const initializeSession = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
+
+                if (error) {
+                    console.error("Supabase Session Error:", error.message);
+                    if (error.message.includes("Refresh Token")) {
+                        // The async storage token is invalid/expired. Clear it immediately.
+                        await supabase.auth.signOut();
+                    }
+                }
+
                 if (mounted) {
                     console.log("UserContext: Session retrieved", { hasSession: !!session });
                     setSession(session);

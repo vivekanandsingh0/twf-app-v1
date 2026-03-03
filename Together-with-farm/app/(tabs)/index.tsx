@@ -60,7 +60,7 @@ export default function MarketScreen() {
     const qty = getItemQuantity(item.id);
     const isDeal = item.specialOffer !== undefined;
     const isPreorder = item.order_type === 'pre-order';
-    const hasDiscount = item.discountValue && item.discountValue > 0;
+    const hasDiscount = Boolean(item.discountValue && item.discountValue > 0);
     const discountedPrice = hasDiscount ? (item.price * (1 - item.discountValue / 100)).toFixed(0) : null;
 
     // Dynamic style based on if it's a deal product or not, 
