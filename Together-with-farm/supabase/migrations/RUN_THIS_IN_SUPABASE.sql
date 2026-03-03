@@ -329,5 +329,22 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS vendor_approved BOOLEAN DEF
 -- Set all existing vendors to approved so they are not locked out
 UPDATE public.profiles SET vendor_approved = true WHERE user_type = 'Vendor' AND vendor_approved IS NOT true;
 
+-- RPC function for admin to approve/unapprove vendors (bypasses RLS)
+CREATE OR REPLACE FUNCTION public.admin_set_vendor_approved(vendor_uuid UUID, approved BOOLEAN)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    UPDATE public.profiles
+    SET vendor_approved = approved
+    WHERE id = vendor_uuid;
+END;
+$$;
+
+-- Allow anyone to call this function (admin panel uses anon key)
+GRANT EXECUTE ON FUNCTION public.admin_set_vendor_approved(UUID, BOOLEAN) TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_set_vendor_approved(UUID, BOOLEAN) TO authenticated;
+
 -- Refresh PostgREST schema cache
 NOTIFY pgrst, 'reload schema';
