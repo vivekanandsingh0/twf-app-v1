@@ -346,5 +346,59 @@ $$;
 GRANT EXECUTE ON FUNCTION public.admin_set_vendor_approved(UUID, BOOLEAN) TO anon;
 GRANT EXECUTE ON FUNCTION public.admin_set_vendor_approved(UUID, BOOLEAN) TO authenticated;
 
+-- RPC function for admin to COMPLETELY delete a vendor and all their data
+CREATE OR REPLACE FUNCTION public.admin_delete_vendor_completely(vendor_uuid UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- 1. Delete tickets (user_id FK to auth.users)
+    DELETE FROM public.tickets WHERE user_id = vendor_uuid;
+
+    -- 2. Delete notifications (if user_id FK exists)
+    BEGIN
+        DELETE FROM public.notifications WHERE user_id = vendor_uuid;
+    EXCEPTION WHEN undefined_table OR undefined_column THEN
+        -- Table or column doesn't exist, skip
+    END;
+
+    -- 3. Delete order reviews for ALL orders involving this vendor
+    DELETE FROM public.order_reviews WHERE order_id IN (
+        SELECT id FROM public.orders WHERE vendor_id = vendor_uuid OR user_id = vendor_uuid
+    );
+
+    -- 4. Delete orders (both as vendor and as customer)
+    DELETE FROM public.orders WHERE vendor_id = vendor_uuid;
+    DELETE FROM public.orders WHERE user_id = vendor_uuid;
+
+    -- 5. Delete market_section_products referencing this vendor's products
+    DELETE FROM public.market_section_products WHERE product_id IN (
+        SELECT id FROM public.products WHERE vendor_id = vendor_uuid
+    );
+
+    -- 6. Delete products
+    DELETE FROM public.products WHERE vendor_id = vendor_uuid;
+
+    -- 7. Delete payout requests
+    DELETE FROM public.payout_requests WHERE vendor_id = vendor_uuid;
+
+    -- 8. Delete delivery partners
+    DELETE FROM public.delivery_partners WHERE vendor_id = vendor_uuid;
+
+    -- 9. Delete vendor spotlights
+    DELETE FROM public.vendor_spotlights WHERE vendor_id = vendor_uuid;
+
+    -- 10. Delete the profile (addresses are JSON inside profile)
+    DELETE FROM public.profiles WHERE id = vendor_uuid;
+
+    -- 11. Delete the auth user so the phone number is freed up
+    DELETE FROM auth.users WHERE id = vendor_uuid;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_delete_vendor_completely(UUID) TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_delete_vendor_completely(UUID) TO authenticated;
+
 -- Refresh PostgREST schema cache
 NOTIFY pgrst, 'reload schema';

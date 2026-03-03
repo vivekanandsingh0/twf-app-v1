@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import DeleteVendorButton from "../DeleteVendorButton";
 
 export const revalidate = 0;
 
@@ -276,6 +277,17 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Danger Zone */}
+                    <div className="bg-white border border-red-200 rounded-xl shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-red-100 bg-red-50/30">
+                            <h2 className="font-bold text-lg text-red-800 flex items-center gap-2">⚠️ Danger Zone</h2>
+                            <p className="text-red-500 text-xs mt-1">Irreversible actions — proceed with extreme caution</p>
+                        </div>
+                        <div className="p-6">
+                            <DeleteVendorButton vendorId={id} vendorName={vendor.full_name || 'Unknown'} />
                         </div>
                     </div>
 
