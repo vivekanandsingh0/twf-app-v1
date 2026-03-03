@@ -400,5 +400,44 @@ $$;
 GRANT EXECUTE ON FUNCTION public.admin_delete_vendor_completely(UUID) TO anon;
 GRANT EXECUTE ON FUNCTION public.admin_delete_vendor_completely(UUID) TO authenticated;
 
+-- RPC function for admin to get ALL orders (bypasses RLS)
+CREATE OR REPLACE FUNCTION public.admin_get_all_orders()
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    result JSON;
+BEGIN
+    SELECT json_agg(row_to_json(t))
+    INTO result
+    FROM (
+        SELECT 
+            o.*,
+            json_build_object(
+                'id', c.id,
+                'full_name', c.full_name,
+                'phone_number', c.phone_number,
+                'user_type', c.user_type
+            ) as customer,
+            json_build_object(
+                'id', v.id,
+                'full_name', v.full_name,
+                'phone_number', v.phone_number,
+                'user_type', v.user_type
+            ) as vendor
+        FROM public.orders o
+        LEFT JOIN public.profiles c ON o.user_id = c.id
+        LEFT JOIN public.profiles v ON o.vendor_id = v.id
+        ORDER BY o.created_at DESC
+    ) t;
+    
+    RETURN COALESCE(result, '[]'::json);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_get_all_orders() TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_get_all_orders() TO authenticated;
+
 -- Refresh PostgREST schema cache
 NOTIFY pgrst, 'reload schema';

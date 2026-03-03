@@ -137,18 +137,16 @@ import { supabase } from './supabase';
 export const db = {
     orders: {
         getAll: async () => {
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*, customer:profiles!user_id(*), vendor:profiles!vendor_id(*)');
-            return { data, error };
+            // Use RPC to bypass RLS (admin needs to see ALL orders)
+            const { data, error } = await supabase.rpc('admin_get_all_orders');
+            return { data: data || [], error };
         },
         getById: async (id: string) => {
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*, customer:profiles!user_id(*), vendor:profiles!vendor_id(*)')
-                .eq('id', id)
-                .single();
-            return { data, error };
+            // Fetch all orders via RPC, then find the one we need
+            const { data, error } = await supabase.rpc('admin_get_all_orders');
+            if (error) return { data: null, error };
+            const order = (data || []).find((o: any) => o.id === id);
+            return { data: order || null, error: null };
         }
     },
     products: {
