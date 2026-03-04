@@ -245,7 +245,7 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                                 placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={name}
                                 onChangeText={setName}
-                                autoFocus
+                                autoFocus={false}
                                 returnKeyType="done"
                                 onSubmitEditing={handleNameSubmit}
                             />

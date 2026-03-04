@@ -54,9 +54,7 @@ export default function FeedScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333', borderRadius: 12 }]}>
-          <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
         <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Social Feed</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity

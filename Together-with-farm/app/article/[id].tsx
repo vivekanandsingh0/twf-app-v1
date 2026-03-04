@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import FastImage from '@/components/FastImage';
@@ -102,6 +102,20 @@ export default function ArticleDetailScreen() {
         isDark
     );
 
+    const onShare = async () => {
+        try {
+            const plainText = article.content
+                ? article.content.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 200)
+                : '';
+            await Share.share({
+                title: article.title,
+                message: `📰 ${article.title}\n\n${plainText}${plainText.length === 200 ? '...' : ''}\n\n— Together We Farm App\n📲 Download the app: https://play.google.com/store/apps/details?id=com.togetherwithfarm.app`,
+            });
+        } catch (e) {
+            // User cancelled or error — do nothing
+        }
+    };
+
     return (
         <View style={[styles.container, isDark && { backgroundColor: '#121212' }]}>
             <StatusBar style={isDark ? "light" : "dark"} />
@@ -116,7 +130,7 @@ export default function ArticleDetailScreen() {
                         <TouchableOpacity onPress={() => router.back()} style={styles.backCircleBtn}>
                             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.shareCircleBtn}>
+                        <TouchableOpacity style={styles.shareCircleBtn} onPress={onShare}>
                             <Ionicons name="share-social-outline" size={22} color="#1A1A1A" />
                         </TouchableOpacity>
                     </View>

@@ -81,7 +81,7 @@ export default function ProfileScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]}>
+                <TouchableOpacity style={[styles.iconButton, isDark && { backgroundColor: '#333' }]} onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, isDark && { color: '#FFF' }]}>Profile</Text>

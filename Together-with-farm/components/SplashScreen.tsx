@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Keyboard } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -27,6 +27,9 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     const { isDark } = useTheme();
 
     useEffect(() => {
+        // Forcefully dismiss any keyboard that may have opened behind this overlay
+        Keyboard.dismiss();
+
         // Elegant fade-in with subtle scale
         logoOpacity.value = withTiming(1, {
             duration: 1000,

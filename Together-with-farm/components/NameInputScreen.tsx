@@ -61,7 +61,7 @@ export default function NameInputScreen({ onFinish }: { onFinish: () => void }) 
                         placeholderTextColor={isDark ? '#888' : '#999'}
                         value={name}
                         onChangeText={setName}
-                        autoFocus
+                        autoFocus={false}
                         returnKeyType="done"
                         onSubmitEditing={handleSave}
                     />
