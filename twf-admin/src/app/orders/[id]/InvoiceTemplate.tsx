@@ -83,23 +83,29 @@ export default function InvoiceTemplate({ order }: { order: any }) {
                 <div className="w-64 space-y-3">
                     <div className="flex justify-between text-gray-600">
                         <span>Subtotal</span>
-                        <span>₹{order.items?.reduce((acc: number, x: any) => acc + (x.price * x.quantity), 0) || order.total_amount}</span>
+                        <span>₹{Number(order.items?.reduce((acc: number, x: any) => acc + (x.price * x.quantity), 0) || order.total_amount).toFixed(2)}</span>
                     </div>
-                    {order.shipping_fee > 0 && (
+                    {Number(order.shipping_fee || 0) > 0 && (
                         <div className="flex justify-between text-gray-600">
                             <span>Shipping</span>
-                            <span>₹{order.shipping_fee}</span>
+                            <span>₹{Number(order.shipping_fee).toFixed(2)}</span>
                         </div>
                     )}
-                    {order.discount > 0 && (
+                    {Number(order.discount || 0) > 0 && (
                         <div className="flex justify-between text-green-600">
                             <span>Discount</span>
-                            <span>-₹{order.discount}</span>
+                            <span>-₹{Number(order.discount).toFixed(2)}</span>
+                        </div>
+                    )}
+                    {Number(order.coupon_discount || 0) > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Coupon Discount</span>
+                            <span>-₹{Number(order.coupon_discount).toFixed(2)}</span>
                         </div>
                     )}
                     <div className="flex justify-between border-t border-gray-300 pt-3 text-xl font-bold text-gray-900">
                         <span>Total</span>
-                        <span>₹{order.total_amount}</span>
+                        <span>₹{Number(order.total_amount || 0).toFixed(2)}</span>
                     </div>
                 </div>
             </div>

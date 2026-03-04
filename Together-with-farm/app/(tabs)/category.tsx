@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import FastImage from '@/components/FastImage';
 import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
 import { useCart } from '@/contexts/CartContext';
@@ -98,7 +99,7 @@ export default function CategoryScreen() {
                 activeOpacity={0.8}
             >
                 <View style={[styles.categoryIconContainer, isActive && styles.activeCategoryIconContainer, isDark && { backgroundColor: '#333', borderColor: '#444' }, isActive && isDark && { borderColor: '#1E1E1E' }]}>
-                    <Image source={{ uri: item.image_url }} style={styles.categoryImage} contentFit="cover" />
+                    <FastImage source={{ uri: item.image_url }} style={styles.categoryImage} contentFit="cover" />
                 </View>
                 <Text style={[styles.categorySidebarText, isActive && styles.activeCategorySidebarText, isDark && { color: '#AAA' }, isActive && isDark && { color: '#FFF' }]}>
                     {item.name}
@@ -118,7 +119,7 @@ export default function CategoryScreen() {
                 activeOpacity={0.9}
             >
                 <View style={[styles.productImageContainer, isDark && { backgroundColor: '#333' }]}>
-                    <Image source={item.image} style={styles.productImage} contentFit="cover" />
+                    <FastImage source={item.image} style={styles.productImage} contentFit="cover" />
                     {item.discount && (
                         <View style={styles.discountBadge}>
                             <Text style={styles.discountText}>{item.discount}</Text>

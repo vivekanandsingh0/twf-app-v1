@@ -159,7 +159,7 @@ export default function OrdersDashboard({ orders }: { orders: any[] }) {
                         <span className="text-emerald-200 text-xs font-bold uppercase tracking-wider">Revenue</span>
                         <span className="text-lg">💰</span>
                     </div>
-                    <p className="text-3xl font-bold">₹{stats.totalRevenue.toLocaleString()}</p>
+                    <p className="text-3xl font-bold">₹{stats.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     <p className="text-xs text-emerald-200 mt-1">From delivered orders</p>
                 </div>
             </div>
@@ -295,7 +295,7 @@ export default function OrdersDashboard({ orders }: { orders: any[] }) {
 
                                 {/* Amount */}
                                 <div className="col-span-1">
-                                    <span className="font-bold text-sm text-slate-900">₹{Number(order.total_amount || 0).toLocaleString()}</span>
+                                    <span className="font-bold text-sm text-slate-900">₹{Number(order.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
 
                                 {/* Payment */}
@@ -353,9 +353,31 @@ export default function OrdersDashboard({ orders }: { orders: any[] }) {
                                                             <span className="font-bold text-sm text-slate-900">₹{(item.quantity * item.price).toLocaleString()}</span>
                                                         </div>
                                                     ))}
+                                                    <div className="flex justify-between pt-2 border-t border-slate-200 mt-2 text-xs">
+                                                        <span className="text-slate-500">Subtotal</span>
+                                                        <span className="text-slate-700">₹{Number(order.items?.reduce((acc: number, x: any) => acc + (x.price * x.quantity), 0) || order.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    {Number(order.shipping_fee || 0) > 0 && (
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-slate-500">Delivery Fee</span>
+                                                            <span className="text-slate-700">₹{Number(order.shipping_fee).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    )}
+                                                    {Number(order.discount || 0) > 0 && (
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-green-600">Discount</span>
+                                                            <span className="text-green-600">-₹{Number(order.discount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    )}
+                                                    {Number(order.coupon_discount || 0) > 0 && (
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-green-600">Coupon Discount</span>
+                                                            <span className="text-green-600">-₹{Number(order.coupon_discount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    )}
                                                     <div className="flex justify-between pt-2 border-t border-slate-200 mt-2">
                                                         <span className="text-xs font-bold text-slate-500">Total</span>
-                                                        <span className="font-bold text-emerald-700">₹{Number(order.total_amount || 0).toLocaleString()}</span>
+                                                        <span className="font-bold text-emerald-700">₹{Number(order.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                     </div>
                                                 </div>
                                             ) : (

@@ -14,14 +14,15 @@ import { supabase } from '@/lib/supabase';
 export default function CheckoutScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { quantities, updateQuantity, totalCartItems } = useCart();
+    const { quantities, updateQuantity, totalCartItems, appliedCoupon, setAppliedCoupon } = useCart();
     const { selectedAddress, addresses, setSelectedAddress, updateAddress } = useAddresses();
     const { products: marketProducts } = useMarket();
     const { isDark } = useTheme();
 
     // Local State
-    const [tipAmount, setTipAmount] = useState<number>(0);
-    const [couponApplied, setCouponApplied] = useState(false);
+    const [couponInput, setCouponInput] = useState('');
+    const [couponError, setCouponError] = useState('');
+    const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
 
     // Delivery Settings
@@ -52,8 +53,84 @@ export default function CheckoutScreen() {
 
     const isFreeDelivery = subtotal >= deliverySettings.min_order;
     const shippingFee = isFreeDelivery ? 0 : deliverySettings.fee;
-    const discount = couponApplied ? 6.22 : 0; // Example discount
-    const total = subtotal + shippingFee - discount + tipAmount;
+
+    // Calculate actual discount from applied coupon
+    let discount = 0;
+    if (appliedCoupon) {
+        if (appliedCoupon.discount_type === 'percentage') {
+            let potentialDiscount = subtotal * (appliedCoupon.discount_value / 100);
+            if (appliedCoupon.max_discount && potentialDiscount > appliedCoupon.max_discount) {
+                potentialDiscount = appliedCoupon.max_discount;
+            }
+            discount = potentialDiscount;
+        } else {
+            discount = appliedCoupon.discount_value;
+        }
+    }
+    // Prevent discount from making total negative
+    if (discount > subtotal) {
+        discount = subtotal;
+    }
+
+    const total = subtotal + shippingFee - discount;
+
+    const handleApplyCoupon = async () => {
+        if (!couponInput.trim()) return;
+        setCouponError('');
+        setIsApplyingCoupon(true);
+
+        try {
+            const { data, error } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('code', couponInput.trim().toUpperCase())
+                .eq('is_active', true)
+                .single();
+
+            if (error || !data) {
+                setCouponError('Invalid or expired coupon code.');
+                setAppliedCoupon(null);
+                return;
+            }
+
+            // Check min order value
+            if (data.min_order_value && subtotal < data.min_order_value) {
+                setCouponError(`Minimum order value of ₹${data.min_order_value} required.`);
+                setAppliedCoupon(null);
+                return;
+            }
+
+            // Check expiry
+            if (data.valid_until && new Date(data.valid_until) < new Date()) {
+                setCouponError('This coupon has expired.');
+                setAppliedCoupon(null);
+                return;
+            }
+
+            // Optional: check specific_product_id if needed, but for now we apply globally
+            if (data.specific_product_id) {
+                const hasProduct = cartItems.some(i => i.id === data.specific_product_id);
+                if (!hasProduct) {
+                    setCouponError('This coupon is not valid for the items in your cart.');
+                    setAppliedCoupon(null);
+                    return;
+                }
+            }
+
+            setAppliedCoupon(data);
+            setCouponInput('');
+        } catch (err: any) {
+            setCouponError('Error applying coupon.');
+            setAppliedCoupon(null);
+        } finally {
+            setIsApplyingCoupon(false);
+        }
+    };
+
+    const handleRemoveCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponError('');
+    };
 
     // Check if cart has pre-order items
     const hasPreorderItems = cartItems.some(item => item.order_type === 'pre-order');
@@ -94,9 +171,9 @@ export default function CheckoutScreen() {
 
                 {/* Free Delivery Notice */}
                 {!isFreeDelivery && (
-                    <View style={{ backgroundColor: '#E0F2F1', padding: 12, marginHorizontal: 20, marginTop: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="cart-outline" size={20} color="#1F5E2E" />
-                        <Text style={{ fontFamily: 'DMSans_500Medium', color: '#1F5E2E', fontSize: 13, flex: 1 }}>
+                    <View style={{ backgroundColor: '#E0F2F1', padding: 16, marginBottom: 24, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Ionicons name="cart-outline" size={24} color="#1F5E2E" />
+                        <Text style={{ fontFamily: 'DMSans_500Medium', color: '#1F5E2E', fontSize: 14, flex: 1, lineHeight: 20 }}>
                             Add items worth <Text style={{ fontFamily: 'DMSans_700Bold' }}>₹{(deliverySettings.min_order - subtotal).toFixed(0)}</Text> more to get <Text style={{ fontFamily: 'DMSans_700Bold' }}>FREE delivery</Text>.
                         </Text>
                     </View>
@@ -194,48 +271,53 @@ export default function CheckoutScreen() {
 
                 {/* Coupons Section */}
                 <View style={[styles.sectionCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
-                    <Text style={[styles.sectionHeaderTitle, isDark && { color: '#FFF' }]}>Coupons</Text>
-                    <View style={styles.couponRow}>
-                        <View style={styles.couponIcon}>
-                            <Ionicons name="pricetag-outline" size={20} color="#fff" />
-                        </View>
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={[styles.couponText, isDark && { color: '#FFF' }]}>Get Rs.50 cashback on</Text>
-                            <Text style={[styles.couponText, isDark && { color: '#FFF' }]}>Bihar Pride</Text>
-                        </View>
-                        <TouchableOpacity onPress={() => setCouponApplied(!couponApplied)}>
-                            <Text style={styles.applyText}>{couponApplied ? 'Remove' : 'Apply'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                    <Text style={[styles.sectionHeaderTitle, { marginBottom: 12 }, isDark && { color: '#FFF' }]}>Apply Coupon</Text>
 
-                {/* Delivery Tip Section */}
-                <View style={[styles.sectionCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
-                    <View style={styles.tipHeaderRow}>
-                        <Ionicons name="heart-outline" size={20} color={isDark ? '#FFF' : '#1A1A1A'} style={{ marginRight: 8 }} />
-                        <Text style={[styles.sectionHeaderTitle, isDark && { color: '#FFF' }]}>Delivery Partner Tip</Text>
-                    </View>
-                    <Text style={styles.tipSubtitle}>
-                        100% of the tip goes to your delivery partner. They help deliver fresh foods to bihar homes.
-                    </Text>
-
-                    <View style={styles.tipOptionsRow}>
-                        {[10, 100, 200].map((amount) => (
-                            <TouchableOpacity
-                                key={amount}
-                                style={[styles.tipOption, isDark && { borderColor: '#444' }, tipAmount === amount && styles.tipOptionSelected]}
-                                onPress={() => setTipAmount(amount)}
-                            >
-                                <Text style={[styles.tipText, isDark && { color: '#FFF' }, tipAmount === amount && styles.tipTextSelected]}>
-                                    ₹{amount}
-                                </Text>
+                    {appliedCoupon ? (
+                        <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                <View style={styles.couponIcon}>
+                                    <Ionicons name="pricetag" size={16} color="#fff" />
+                                </View>
+                                <View>
+                                    <Text style={{ fontFamily: 'DMSans_700Bold', color: '#1F5E2E', fontSize: 14 }}>{appliedCoupon.code}</Text>
+                                    <Text style={{ fontFamily: 'DMSans_400Regular', color: '#1F5E2E', fontSize: 12 }}>Coupon applied successfully</Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity onPress={handleRemoveCoupon} style={{ padding: 4 }}>
+                                <Ionicons name="close-circle" size={24} color="#1F5E2E" />
                             </TouchableOpacity>
-                        ))}
-                        <TouchableOpacity style={[styles.tipOption, isDark && { borderColor: '#444' }]}>
-                            <Text style={[styles.tipText, isDark && { color: '#FFF' }]}>Custom</Text>
-                        </TouchableOpacity>
-                    </View>
+                        </View>
+                    ) : (
+                        <>
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                                <TextInput
+                                    style={{ flex: 1, borderWidth: 1, borderColor: isDark ? '#444' : '#E0E0E0', borderRadius: 12, paddingHorizontal: 16, height: 48, fontFamily: 'DMSans_500Medium', color: isDark ? '#FFF' : '#1A1A1A' }}
+                                    placeholder="Enter coupon code"
+                                    placeholderTextColor={isDark ? '#666' : '#999'}
+                                    autoCapitalize="characters"
+                                    value={couponInput}
+                                    onChangeText={setCouponInput}
+                                    editable={!isApplyingCoupon}
+                                />
+                                <TouchableOpacity
+                                    style={{ height: 48, paddingHorizontal: 20, backgroundColor: couponInput.trim() ? '#1F5E2E' : '#A5D6A7', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
+                                    onPress={handleApplyCoupon}
+                                    disabled={!couponInput.trim() || isApplyingCoupon}
+                                >
+                                    <Text style={{ color: '#fff', fontFamily: 'DMSans_700Bold', fontSize: 14 }}>
+                                        {isApplyingCoupon ? 'Applying' : 'Apply'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                            {couponError ? (
+                                <Text style={{ color: '#E53935', fontSize: 12, marginTop: 8, fontFamily: 'DMSans_500Medium' }}>{couponError}</Text>
+                            ) : null}
+                        </>
+                    )}
                 </View>
+
+
 
                 {/* Order Summary */}
                 <View style={[styles.sectionCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>

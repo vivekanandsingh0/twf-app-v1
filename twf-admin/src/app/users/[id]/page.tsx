@@ -132,7 +132,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                             </div>
                             <div className="flex justify-between items-center p-3 rounded-lg bg-purple-50 border border-purple-100">
                                 <span className="text-sm font-medium text-purple-800">Total Spent</span>
-                                <span className="text-lg font-bold text-purple-700">₹{totalSpent}</span>
+                                <span className="text-lg font-bold text-purple-700">₹{Number(totalSpent).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>

@@ -258,10 +258,35 @@ export default function RateOrderScreen() {
                     <View style={styles.divider} />
 
                     {/* Show Details only if editing/new, OR just always show summaries? Keeping summary always */}
+                    {/* Order Breakdown */}
                     <View style={styles.cardFooter}>
-                        <Text style={styles.totalLabel}>Total</Text>
-                        <Text style={styles.totalValue}>₹{order.totalAmount}</Text>
+                        <Text style={styles.totalLabel}>Subtotal</Text>
+                        <Text style={[styles.totalValue, { fontSize: 14 }]}>₹{order.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0).toFixed(2)}</Text>
+                    </View>
 
+                    {order.shippingFee !== undefined && (
+                        <View style={styles.cardFooter}>
+                            <Text style={styles.totalLabel}>Delivery Fee</Text>
+                            <Text style={[styles.totalValue, { fontSize: 14 }]}>
+                                {order.shippingFee === 0 ? 'FREE' : `₹${order.shippingFee.toFixed(2)}`}
+                            </Text>
+                        </View>
+                    )}
+
+                    {(order as any).coupon_discount ? (
+                        <View style={styles.cardFooter}>
+                            <Text style={styles.totalLabel}>Coupon Discount</Text>
+                            <Text style={[styles.totalValue, { fontSize: 14, color: '#D32F2F' }]}>
+                                -₹{Number((order as any).coupon_discount).toFixed(2)}
+                            </Text>
+                        </View>
+                    ) : null}
+
+                    <View style={[styles.divider, { marginVertical: 8 }]} />
+
+                    <View style={styles.cardFooter}>
+                        <Text style={[styles.totalLabel, { fontFamily: 'DMSans_700Bold', fontSize: 15 }]}>Grand Total</Text>
+                        <Text style={styles.totalValue}>₹{Number(order.totalAmount).toFixed(2)}</Text>
                     </View>
 
                     {!isSubmitted && (

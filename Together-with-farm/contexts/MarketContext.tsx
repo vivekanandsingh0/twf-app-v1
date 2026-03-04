@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Image } from 'expo-image';
 
 // --- Interfaces ---
 
@@ -148,11 +149,14 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
             const activeSpotlightVendorIds = sData ? sData.map(s => s.vendor_id) : [];
 
+            const urlsToPrefetch: string[] = [];
+
             if (vData) {
                 const mappedVendors: MarketVendor[] = vData.map((v: any) => {
                     const vendorImage = v.profile_image || v.avatar_url
                         ? { uri: v.profile_image || v.avatar_url }
                         : require('@/assets/images/3d-model-with-veg.png');
+                    if (v.profile_image || v.avatar_url) urlsToPrefetch.push(v.profile_image || v.avatar_url);
                     const isSpotlight = activeSpotlightVendorIds.includes(v.id);
                     return {
                         id: v.id,
@@ -184,11 +188,15 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
                     const baseImgUri = productImages.length > 0 ? productImages[0].replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') : null;
                     const primaryImage = baseImgUri ? { uri: baseImgUri } : require('@/assets/images/3d-model-with-veg.png');
+                    const fixedImages = productImages.map((i: string) => i.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev'));
+
+                    if (baseImgUri) urlsToPrefetch.push(baseImgUri);
+                    fixedImages.forEach((img: string) => urlsToPrefetch.push(img));
 
                     return {
                         id: p.id, vendorId: p.vendor_id, name: p.name, type: p.category || 'Vegetables', price: p.price,
                         unit: p.unit || 'kg', discount: p.discount > 0 ? `-${p.discount}%` : undefined, discountValue: p.discount || 0,
-                        image: primaryImage, images: productImages.map((i: string) => i.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev')),
+                        image: primaryImage, images: fixedImages,
                         description: p.description || '', isFavorite: false, tag: p.stock < 5 ? 'Low Stock' : 'Fresh',
                         highlights: p.highlights || [], order_type: p.order_type || 'instant', preorder_duration: p.preorder_duration || 0,
                     };
@@ -211,7 +219,17 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
             // 4. Fetch Categories
             const { data: catData } = await supabase.from('categories').select('*').eq('is_active', true).order('display_order');
-            if (catData) setCategories(catData);
+            if (catData) {
+                setCategories(catData);
+                catData.forEach((c: any) => {
+                    if (c.image_url) urlsToPrefetch.push(c.image_url);
+                });
+            }
+
+            // Fire Prefetch
+            if (urlsToPrefetch.length > 0) {
+                Image.prefetch([...new Set(urlsToPrefetch)]);
+            }
 
         } catch (e) {
             console.error("Failed to fetch market data:", e);
@@ -287,19 +305,29 @@ export function MarketProvider({ children }: { children: ReactNode }) {
                 if (error) throw error;
 
                 if (data && data.length > 0) {
-                    const mapped: Article[] = data.map((a: any) => ({
-                        id: a.id,
-                        title: a.title,
-                        category: a.category,
-                        time: a.time,
-                        image: a.image_url ? { uri: a.image_url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') } : require('@/assets/images/3d-model-with-veg.png'),
-                        image_url: a.image_url ? a.image_url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') : undefined,
-                        type: a.type,
-                        tag: a.tag,
-                        content: a.content,
-                        section_id: a.section_id ?? null,   // ← was missing!
-                    }));
+                    const articleUrlsToPrefetch: string[] = [];
+                    const mapped: Article[] = data.map((a: any) => {
+                        const fixedUrl = a.image_url ? a.image_url.replace('ftnkpsaxxdbdnrkxtvkt.supabase.co', 'tiny-base-2323twf0api.rksuccessor.workers.dev') : undefined;
+                        if (fixedUrl) articleUrlsToPrefetch.push(fixedUrl);
+
+                        return {
+                            id: a.id,
+                            title: a.title,
+                            category: a.category,
+                            time: a.time,
+                            image: fixedUrl ? { uri: fixedUrl } : require('@/assets/images/3d-model-with-veg.png'),
+                            image_url: fixedUrl,
+                            type: a.type,
+                            tag: a.tag,
+                            content: a.content,
+                            section_id: a.section_id ?? null,
+                        };
+                    });
                     setArticles(mapped);
+
+                    if (articleUrlsToPrefetch.length > 0) {
+                        Image.prefetch([...new Set(articleUrlsToPrefetch)]);
+                    }
                 }
                 // If no articles in DB, fallback articles remain
             } catch (e) {

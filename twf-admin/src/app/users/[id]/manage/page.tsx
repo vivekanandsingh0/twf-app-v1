@@ -140,7 +140,7 @@ function OrdersView({ userId }: { userId: string }) {
                                             {order.status}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-right font-bold text-slate-900">${order.totalAmount}</td>
+                                    <td className="px-4 py-3 text-right font-bold text-slate-900">₹{Number(order.total_amount || order.totalAmount || 0).toFixed(2)}</td>
                                 </tr>
                             ))
                         )}

@@ -125,7 +125,7 @@ export default function ProfileScreen() {
                 <View style={styles.menuGroup}>
                     {renderMenuItem('cart-outline', 'Your Orders', () => router.push('/orders'))}
                     {renderMenuItem('heart-outline', 'My Favourites', () => router.push('/favourites'))}
-                    {renderMenuItem('pricetag-outline', 'Promotion & Vouchers')}
+                    {renderMenuItem('pricetag-outline', 'Promotion & Vouchers', () => router.push('/promotions'))}
                 </View>
 
                 {/* Account Settings Section */}

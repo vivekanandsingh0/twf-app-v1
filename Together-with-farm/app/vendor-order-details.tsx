@@ -216,19 +216,26 @@ export default function OrderDetailsScreen() {
 
                     <View style={styles.summaryRow}>
                         <Text style={styles.summaryLabel}>Subtotal</Text>
-                        <Text style={styles.summaryValue}>₹{order.items.reduce((acc, i) => acc + (i.price * i.quantity), 0)}</Text>
+                        <Text style={styles.summaryValue}>₹{order.items.reduce((acc, i) => acc + (i.price * i.quantity), 0).toFixed(2)}</Text>
                     </View>
                     <View style={styles.summaryRow}>
                         <Text style={styles.summaryLabel}>Shipping</Text>
-                        <Text style={styles.summaryValue}>₹{order.shippingFee || 0}</Text>
+                        <Text style={styles.summaryValue}>{order.shippingFee === 0 ? 'FREE' : `₹${Number(order.shippingFee || 0).toFixed(2)}`}</Text>
                     </View>
-                    <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Discount</Text>
-                        <Text style={styles.summaryValue}>-₹{order.discount || 0}</Text>
-                    </View>
+                    {(order as any).coupon_discount ? (
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Coupon Discount</Text>
+                            <Text style={[styles.summaryValue, { color: '#D32F2F' }]}>-₹{Number((order as any).coupon_discount || 0).toFixed(2)}</Text>
+                        </View>
+                    ) : order.discount ? (
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Discount</Text>
+                            <Text style={[styles.summaryValue, { color: '#D32F2F' }]}>-₹{Number(order.discount || 0).toFixed(2)}</Text>
+                        </View>
+                    ) : null}
                     <View style={[styles.summaryRow, { marginTop: 8 }]}>
                         <Text style={styles.totalLabel}>Grand Total</Text>
-                        <Text style={styles.totalValue}>₹{order.totalAmount}</Text>
+                        <Text style={styles.totalValue}>₹{Number(order.totalAmount).toFixed(2)}</Text>
                     </View>
                 </View>
 

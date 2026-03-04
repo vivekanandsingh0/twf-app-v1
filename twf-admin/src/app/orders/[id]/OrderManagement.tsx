@@ -106,19 +106,25 @@ export default function OrderManagement({ initialOrder }: { initialOrder: any })
                         <div className="space-y-3 text-sm">
                             <div className="flex justify-between text-slate-600">
                                 <span>Subtotal</span>
-                                <span>₹{order.items?.reduce((acc: number, x: any) => acc + (x.price * x.quantity), 0) || order.total_amount}</span>
+                                <span>₹{Number(order.items?.reduce((acc: number, x: any) => acc + (x.price * x.quantity), 0) || order.total_amount).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-slate-600">
                                 <span>Shipping Fee</span>
-                                <span>₹{order.shipping_fee || 0}</span>
+                                <span>₹{Number(order.shipping_fee || 0).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-slate-600">
                                 <span>Discount</span>
-                                <span className="text-green-600">-₹{order.discount || 0}</span>
+                                <span className="text-emerald-600">-₹{Number(order.discount || 0).toFixed(2)}</span>
                             </div>
+                            {Number(order.coupon_discount || 0) > 0 && (
+                                <div className="flex justify-between text-slate-600">
+                                    <span>Coupon Discount</span>
+                                    <span className="text-emerald-600">-₹{Number(order.coupon_discount).toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="border-t border-slate-100 pt-3 flex justify-between font-bold text-lg text-slate-900">
                                 <span>Total Amount</span>
-                                <span>₹{order.total_amount}</span>
+                                <span>₹{Number(order.total_amount || 0).toFixed(2)}</span>
                             </div>
                         </div>
                         <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-100 flex justify-between items-center">

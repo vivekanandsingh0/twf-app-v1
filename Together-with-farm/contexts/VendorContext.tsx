@@ -113,6 +113,8 @@ export interface VendorOrder {
     items: { productName: string; quantity: number; price: number; image?: any }[]; // Added image
     totalAmount: number;
     discount?: number; // Added
+    coupon_id?: string;
+    coupon_discount?: number;
     tax?: number;      // Added
     status: 'Pending' | 'Accepted' | 'Ready' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Picked' | 'On the Way';
     date: string;
@@ -669,6 +671,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
                 receiver_phone: order.receiverPhone,
                 order_type: (order as any).order_type || 'instant',
                 estimated_delivery: (order as any).estimated_delivery || null,
+                coupon_id: (order as any).coupon_id || null,
+                coupon_discount: (order as any).coupon_discount || 0,
             };
 
             console.log("💾 [VendorContext] Inserting order into DB:", JSON.stringify(insertData, null, 2));

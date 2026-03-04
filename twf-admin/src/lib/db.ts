@@ -192,8 +192,8 @@ export const db = {
 
             // For total revenue, we need to sum. Supabase doesn't have direct sum aggregation in JS client easily without RPC
             // So fetching orders total_amount
-            const { data: orders } = await supabase.from('orders').select('total_amount');
-            const totalRevenue = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+            const { data: orders } = await supabase.rpc('admin_get_all_orders');
+            const totalRevenue = orders?.reduce((sum: number, o: any) => sum + (o.total_amount || 0), 0) || 0;
             const { count: productsCount } = await supabase.from('products').select('*', { count: 'exact', head: true });
 
             return {
@@ -236,6 +236,14 @@ export const db = {
                 .upsert({ key, value })
                 .select()
                 .single();
+            return { data, error };
+        }
+    },
+    coupons: {
+        getAll: async () => {
+            const { data, error } = await supabase
+                .from('coupons')
+                .select('*, specific_product_id(*)');
             return { data, error };
         }
     }

@@ -9,7 +9,6 @@ import {
     Share,
     Platform,
     ActivityIndicator,
-    Image,
     NativeSyntheticEvent,
     NativeScrollEvent
 } from 'react-native';
@@ -18,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 // import { Image } from 'expo-image';
+import FastImage from '@/components/FastImage';
 import { useCart } from '@/contexts/CartContext';
 import { useMarket, MarketProduct } from '@/contexts/MarketContext';
 import { useFavourites } from '@/contexts/FavouritesContext';
@@ -168,7 +168,7 @@ export default function ProductDetailsScreen() {
                         >
                             {productImages.map((img, index) => (
                                 <View key={index} style={{ width: width, height: 250, alignItems: 'center', justifyContent: 'center' }}>
-                                    <Image source={img} style={{ width: width - 100, height: '100%' }} resizeMode="contain" />
+                                    <FastImage source={img} style={{ width: width - 100, height: '100%' }} contentFit="contain" />
                                 </View>
                             ))}
                         </ScrollView>
@@ -325,9 +325,10 @@ export default function ProductDetailsScreen() {
                                         <Text style={[styles.showMoreLink, isDark && { color: '#81C784' }]}>Show More About Farmer</Text>
                                     </TouchableOpacity>
                                 </View>
-                                <Image
+                                <FastImage
                                     source={vendor.image}
                                     style={styles.farmerAvatar}
+                                    contentFit="cover"
                                 />
                             </View>
                         </>
@@ -347,7 +348,7 @@ export default function ProductDetailsScreen() {
                                     <Text style={styles.discountText}>{item.discount || '-10%'}</Text>
                                 </View>
                                 <View style={styles.relatedImageContainer}>
-                                    <Image source={item.image} style={styles.relatedImage} resizeMode="contain" />
+                                    <FastImage source={item.image} style={styles.relatedImage} contentFit="contain" />
                                 </View>
                                 <View style={[styles.favIconSmall, isDark && { backgroundColor: '#444' }]}>
                                     <Ionicons name="heart-outline" size={16} color={isDark ? '#FFF' : '#1A1A1A'} />

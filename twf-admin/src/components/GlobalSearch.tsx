@@ -11,6 +11,7 @@ const NAV_ITEMS = [
     { label: "Farmer Payouts", description: "Manage payout requests", href: "/manage-payouts", icon: "💸", category: "Pages" },
     { label: "Products", description: "All listed products", href: "/products", icon: "📦", category: "Pages" },
     { label: "Orders", description: "View & manage orders", href: "/orders", icon: "🛍️", category: "Pages" },
+    { label: "Coupons", description: "Manage discount coupons", href: "/coupons", icon: "🎟️", category: "Pages" },
     { label: "Customers", description: "User accounts", href: "/users", icon: "👥", category: "Pages" },
     { label: "Manage Feed", description: "Articles, spotlights & sections", href: "/manage-feed", icon: "📰", category: "Pages" },
     { label: "Categories", description: "Product categories", href: "/manage-categories", icon: "📑", category: "Pages" },
@@ -119,7 +120,7 @@ export default function GlobalSearch() {
 
         const orderResults: SearchResult[] = (orderRes.data || []).map((o: any) => ({
             label: `Order #${o.id.slice(0, 8)}`,
-            description: `${o.status} — ₹${o.total_amount}`,
+            description: `${o.status} — ₹${Number(o.total_amount || 0).toFixed(2)}`,
             href: `/orders/${o.id}`,
             icon: "🛍️",
             category: "Orders",

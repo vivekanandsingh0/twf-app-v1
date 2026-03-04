@@ -69,7 +69,7 @@ export default function OrdersScreen() {
             orderNumber: `#${vo.id.split('-')[1] || vo.id}`,
             itemsSummary: itemSummary,
             date: `${vo.status} on ${formatDate(vo.date)}`,
-            total: `₹${vo.totalAmount}`,
+            total: `₹${Number(vo.totalAmount).toFixed(2)}`,
             status: vo.status as OrderStatus,
             image: firstItemImage,
             totalQuantity: itemCount

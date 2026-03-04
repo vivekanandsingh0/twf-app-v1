@@ -235,10 +235,10 @@ export default function VendorOrdersScreen() {
 
                                 <div style="display: flex; justify-content: flex-end;">
                                     <div style="width: 200px;">
-                                        <div class="summary-row"><span>Subtotal:</span> <span>₹${order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0)}</span></div>
-                                        <div class="summary-row"><span>Tax:</span> <span>₹${order.tax || 0}</span></div>
-                                        <div class="summary-row"><span>Discount:</span> <span>-₹${order.discount || 0}</span></div>
-                                        <div class="summary-row total-row"><span>Grand Total:</span> <span>₹${order.totalAmount}</span></div>
+                                        <div class="summary-row"><span>Subtotal:</span> <span>₹${order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0).toFixed(2)}</span></div>
+                                        <div class="summary-row"><span>Tax:</span> <span>₹${Number(order.tax || 0).toFixed(2)}</span></div>
+                                        <div class="summary-row"><span>Discount:</span> <span>-₹${Number((order as any).coupon_discount || order.discount || 0).toFixed(2)}</span></div>
+                                        <div class="summary-row total-row"><span>Grand Total:</span> <span>₹${Number(order.totalAmount).toFixed(2)}</span></div>
                                     </div>
                                 </div>
                                 
@@ -314,7 +314,7 @@ export default function VendorOrdersScreen() {
 
                     <View style={styles.amountRow}>
                         <Text style={styles.amountLabel}>Total Amount</Text>
-                        <Text style={styles.amountValue}>₹{order.totalAmount}</Text>
+                        <Text style={styles.amountValue}>₹{Number(order.totalAmount).toFixed(2)}</Text>
                     </View>
                 </View>
 

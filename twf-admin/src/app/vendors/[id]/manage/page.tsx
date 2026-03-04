@@ -88,7 +88,7 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Total Sales</h3>
-                    <p className="text-2xl font-bold text-slate-900">₹{totalSales.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-900">₹{Number(totalSales).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-amber-400">
                     <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Pending</h3>
@@ -144,7 +144,7 @@ export default async function VendorDashboardPage({ params }: { params: Promise<
                                             )}
                                         </div>
                                         <div className="text-right">
-                                            <div className="font-bold text-slate-900 text-sm">₹{order.total_amount}</div>
+                                            <div className="font-bold text-slate-900 text-sm">₹{Number(order.total_amount || 0).toFixed(2)}</div>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-700' :
                                                 order.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
                                                     'bg-slate-100 text-slate-700'

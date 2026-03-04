@@ -2,9 +2,13 @@ import 'react-native-url-polyfill/auto';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
+import * as ExpoSplashScreen from 'expo-splash-screen';
+
+// Keep native splash visible until our custom splash is ready
+ExpoSplashScreen.preventAutoHideAsync().catch(() => { });
 
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -57,6 +61,15 @@ function AppContent() {
   const isFontsReady = fontsLoaded || fontError;
 
   const [showSplash, setShowSplash] = useState(true);
+  // As soon as layout renders, hide the native Expo splash so our
+  // custom splash can take over seamlessly.
+  const hasHiddenNativeSplash = useRef(false);
+  useEffect(() => {
+    if (!hasHiddenNativeSplash.current) {
+      hasHiddenNativeSplash.current = true;
+      ExpoSplashScreen.hideAsync().catch(() => { });
+    }
+  }, []);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -236,6 +249,7 @@ function AppContent() {
                         <Stack.Screen name="business-dashboard" />
                         <Stack.Screen name="vendor-payment-methods" />
                         <Stack.Screen name="support" />
+                        <Stack.Screen name="promotions" />
                         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
                       </Stack>
                     </NavigationThemeWrapper>

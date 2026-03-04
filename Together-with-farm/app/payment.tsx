@@ -39,7 +39,7 @@ export default function PaymentScreen() {
     const [selectedId, setSelectedId] = useState<string>('phonepe_1');
     const { isDark } = useTheme();
 
-    const { quantities, clearCart } = useCart();
+    const { quantities, clearCart, appliedCoupon } = useCart();
     const { addOrder } = useVendor();
     const { products: marketProducts } = useMarket();
     const { userData, user, refreshOrders } = useUser();
@@ -123,13 +123,22 @@ export default function PaymentScreen() {
             // Use stable User ID if available, else fallback
             const finalUserId = user?.id || (userData.phoneNumber ? `user_${userData.phoneNumber.replace(/\D/g, '')}` : 'guest_user');
 
+            // Calculate the discount for this part of the order (or just apply it entirely to the first order)
+            const orderCouponDiscount = index === 0 && appliedCoupon ?
+                (appliedCoupon.discount_type === 'percentage'
+                    ? Math.min(cartSubtotal * (appliedCoupon.discount_value / 100), appliedCoupon.max_discount || Infinity)
+                    : appliedCoupon.discount_value)
+                : 0;
+
+            const finalOrderTotal = Math.max(0, vendorData.total + orderShippingFee - orderCouponDiscount);
+
             const newOrder: VendorOrder = {
                 id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                 userId: finalUserId,
                 vendorId: vendorId, // Link order to specific Vendor
                 customerName: userData ? userData.fullName : "Guest User",
                 items: vendorData.items,
-                totalAmount: vendorData.total,
+                totalAmount: finalOrderTotal,
                 status: 'Pending',
                 date: new Date().toISOString(),
                 paymentStatus: selectedId === 'cod' ? 'COD' : 'Paid',
@@ -145,6 +154,8 @@ export default function PaymentScreen() {
                 estimated_delivery: vendorData.hasPreorder
                     ? new Date(Date.now() + vendorData.maxDuration * 24 * 60 * 60 * 1000).toISOString()
                     : undefined,
+                coupon_id: index === 0 && appliedCoupon ? appliedCoupon.id : undefined,
+                coupon_discount: orderCouponDiscount,
             } as any;
 
             await addOrder(newOrder); // This adds it to the Vendor Context and Supabase

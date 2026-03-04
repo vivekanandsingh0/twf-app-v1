@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import FastImage from '@/components/FastImage';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -107,7 +108,7 @@ export default function FeedScreen() {
                   onPress={() => router.push(`/farmer/${farmer.id}`)}
                 >
                   <View style={[styles.spotlightImageContainer, isDark && { borderColor: '#444' }]}>
-                    <Image source={farmer.image} style={styles.spotlightImage} contentFit="cover" />
+                    <FastImage source={farmer.image} style={styles.spotlightImage} contentFit="cover" />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -157,7 +158,7 @@ export default function FeedScreen() {
               onPress={() => router.push(`/article/${article.id}` as any)}
               activeOpacity={0.9}
             >
-              <Image source={article.image} style={styles.articleImage} contentFit="cover" />
+              <FastImage source={article.image} style={styles.articleImage} contentFit="cover" />
 
               <View style={styles.imageOverlay}>
                 <View style={[styles.tagBadge, isDark && { backgroundColor: 'rgba(31, 94, 46, 0.8)', borderColor: '#1F5E2E' }]}>
@@ -207,7 +208,7 @@ export default function FeedScreen() {
                     onPress={() => router.push(`/article/${article.id}` as any)}
                     activeOpacity={0.9}
                   >
-                    <Image source={article.image} style={styles.articleImage} contentFit="cover" />
+                    <FastImage source={article.image} style={styles.articleImage} contentFit="cover" />
                     <View style={styles.imageOverlay}>
                       <View style={[styles.tagBadge, isDark && { backgroundColor: 'rgba(31, 94, 46, 0.8)', borderColor: '#1F5E2E' }]}>
                         <Text style={[styles.tagText, isDark && { color: '#FFF' }]}>{article.category}</Text>

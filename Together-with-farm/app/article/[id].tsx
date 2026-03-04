@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import FastImage from '@/components/FastImage';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -108,7 +109,7 @@ export default function ArticleDetailScreen() {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                 {/* Hero Image */}
                 <View style={styles.imageContainer}>
-                    <Image source={article.image} style={styles.heroImage} contentFit="cover" />
+                    <FastImage source={article.image} style={styles.heroImage} contentFit="cover" />
 
                     {/* Header Overlay */}
                     <View style={[styles.headerOverlay, { paddingTop: insets.top + 10 }]}>
@@ -140,9 +141,10 @@ export default function ArticleDetailScreen() {
 
                     {/* Author Meta */}
                     <View style={styles.authorRow}>
-                        <Image
+                        <FastImage
                             source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60' }}
                             style={styles.authorImage}
+                            contentFit="cover"
                         />
                         <View>
                             <Text style={[styles.authorName, isDark && { color: '#FFF' }]}>TWF Admin Team</Text>

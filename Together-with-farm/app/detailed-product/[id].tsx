@@ -241,12 +241,33 @@ export default function OrderDetailScreen() {
                         <Text style={[styles.paymentValue, isDark && { color: '#FFF' }]}>{order.status}</Text>
                     </View>
                     <View style={styles.paymentRow}>
-                        <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Payment Method</Text>
-                        <Text style={[styles.paymentValue, isDark && { color: '#FFF' }]}>{order.paymentMethod || 'Online'}</Text>
+                        <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Subtotal</Text>
+                        <Text style={[styles.paymentValue, isDark && { color: '#FFF' }]}>
+                            ₹{order.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0).toFixed(2)}
+                        </Text>
                     </View>
-                    <View style={[styles.paymentRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-                        <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Total</Text>
-                        <Text style={[styles.paymentTotal, isDark && { color: '#81C784' }]}>₹{order.totalAmount}</Text>
+
+                    {order.shippingFee !== undefined && (
+                        <View style={styles.paymentRow}>
+                            <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Delivery Fee</Text>
+                            <Text style={[styles.paymentValue, isDark && { color: '#FFF' }]}>
+                                {order.shippingFee === 0 ? 'FREE' : `₹${Number(order.shippingFee).toFixed(2)}`}
+                            </Text>
+                        </View>
+                    )}
+
+                    {(order as any).coupon_discount ? (
+                        <View style={styles.paymentRow}>
+                            <Text style={[styles.paymentLabel, isDark && { color: '#AAA' }]}>Coupon Discount</Text>
+                            <Text style={[styles.paymentValue, { color: '#D32F2F' }]}>
+                                -₹{Number((order as any).coupon_discount).toFixed(2)}
+                            </Text>
+                        </View>
+                    ) : null}
+
+                    <View style={[styles.paymentRow, { borderTopWidth: 1, borderTopColor: isDark ? '#333' : '#F0F0F0', paddingTop: 12, borderBottomWidth: 0, paddingBottom: 0, marginTop: 4 }]}>
+                        <Text style={[styles.paymentLabel, { fontFamily: 'DMSans_700Bold' }, isDark && { color: '#AAA' }]}>Grand Total</Text>
+                        <Text style={[styles.paymentTotal, isDark && { color: '#81C784' }]}>₹{Number(order.totalAmount).toFixed(2)}</Text>
                     </View>
                 </View>
 

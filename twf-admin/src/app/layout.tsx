@@ -61,6 +61,10 @@ export default function RootLayout({
               <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">🛍️</span>
               Orders
             </a>
+            <a href="/coupons" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">
+              <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-600 flex items-center justify-center transition-colors">🎟️</span>
+              Coupons
+            </a>
 
             <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6 mb-2">System</p>
             <a href="/users" className="group flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-700 rounded-xl transition-all duration-200 font-medium">

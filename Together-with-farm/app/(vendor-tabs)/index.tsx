@@ -195,7 +195,7 @@ export default function VendorHomeScreen() {
                 <Text style={styles.sectionTitle}>Business Insights</Text>
                 <View style={styles.insightsCard}>
                     <Text style={styles.insightsLabel}>Sales Overview</Text>
-                    <Text style={styles.totalSalesText}>Total Revenue: ₹{dashboardStats.totalSales}</Text>
+                    <Text style={styles.totalSalesText}>Total Revenue: ₹{Number(dashboardStats.totalSales).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
 
                     <View style={styles.chartContainer}>
                         {(() => {

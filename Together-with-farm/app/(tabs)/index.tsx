@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
+import FastImage from '@/components/FastImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavourites } from '@/contexts/FavouritesContext';
@@ -77,7 +78,7 @@ export default function MarketScreen() {
         activeOpacity={0.9}
       >
         <View style={[styles.productImageContainer, isDark && { backgroundColor: '#2C2C2C' }]}>
-          <Image source={item.image} style={styles.productImage} contentFit="contain" />
+          <FastImage source={item.image} style={styles.productImage} contentFit="contain" />
           {hasDiscount && (
             <View style={[styles.discountBadge, isDeal && { backgroundColor: '#FBC02D' }]}>
               <Text style={[styles.discountText, isDeal && { color: '#000' }]}>{item.discount}</Text>
