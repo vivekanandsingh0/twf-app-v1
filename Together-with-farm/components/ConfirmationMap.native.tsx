@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     StyleSheet, View, TouchableOpacity, ActivityIndicator,
     Alert, Text, TextInput, ScrollView, Keyboard
@@ -10,7 +10,7 @@ import { Address } from '@/contexts/AddressContext';
 
 interface Props {
     selectedAddress: Address | null;
-    onPinChange?: (latitude: number, longitude: number) => void;
+    onPinChange?: (latitude: number, longitude: number, resolvedAddress?: string) => void;
 }
 
 interface SearchResult {
@@ -31,10 +31,26 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
         longitude: selectedAddress?.longitude || 85.1376,
     });
 
-    // On mount: auto-locate user if address has no saved coordinates
+    // Reverse geocode a lat/lng to get a human-readable address string
+    const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string | undefined> => {
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'TogetherWithFarm/1.0' } });
+            if (!res.ok) return undefined;
+            const data = await res.json();
+            if (data && data.display_name) {
+                return data.display_name as string;
+            }
+        } catch (e) {
+            console.log('Reverse geocode failed', e);
+        }
+        return undefined;
+    }, []);
+
+    // On mount: initialize map at the saved address coordinates (NOT current GPS)
     useEffect(() => {
         const initializeMap = async () => {
-            // Priority 1: address already has saved GPS coords → use them
+            // Priority 1: address already has saved GPS coords → use them exactly
             if (selectedAddress?.latitude && selectedAddress?.longitude) {
                 const lat = selectedAddress.latitude;
                 const lng = selectedAddress.longitude;
@@ -44,27 +60,7 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
                 return;
             }
 
-            // Priority 2: No saved coords → auto-get current GPS location
-            setLoading(true);
-            try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status === 'granted') {
-                    const location = await Location.getCurrentPositionAsync({
-                        accuracy: Location.Accuracy.Balanced,
-                    });
-                    const { latitude, longitude } = location.coords;
-                    setCoordinate({ latitude, longitude });
-                    updateMapPosition(latitude, longitude);
-                    if (onPinChange) onPinChange(latitude, longitude);
-                    return; // Done — current location set
-                }
-            } catch (gpsError) {
-                console.log('Auto GPS failed, falling back to geocode', gpsError);
-            } finally {
-                setLoading(false);
-            }
-
-            // Priority 3: GPS denied → geocode the address text
+            // Priority 2: No saved coords → geocode the address text to place pin
             if (selectedAddress) {
                 setLoading(true);
                 try {
@@ -83,12 +79,12 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
                         if (onPinChange) onPinChange(latitude, longitude);
                     }
                 } catch (error) {
-                    console.log('Geocoding fallback also failed', error);
+                    console.log('Geocoding fallback failed', error);
                 } finally {
                     setLoading(false);
                 }
             }
-            // Priority 4: Everything failed — stays at default (city center)
+            // Priority 3: Everything failed — stays at default fallback coords
         };
         initializeMap();
     }, [selectedAddress?.id]);
@@ -181,18 +177,26 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
 
     var marker = L.marker([${coordinate.latitude}, ${coordinate.longitude}], { draggable: true }).addTo(map);
 
+    // Notify React Native whenever the pin position changes
+    function notifyPinChange(lat, lng) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'pinChange',
+        latitude: lat,
+        longitude: lng
+      }));
+    }
+
     marker.on('dragend', function(e) {
       var coord = e.target.getLatLng();
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        latitude: coord.lat,
-        longitude: coord.lng
-      }));
+      notifyPinChange(coord.lat, coord.lng);
     });
 
+    // Called from React Native via injectJavaScript
     function updateMarker(lat, lng) {
         var newLatLng = new L.LatLng(lat, lng);
         marker.setLatLng(newLatLng);
         map.setView(newLatLng, 15);
+        notifyPinChange(lat, lng);
     }
   </script>
 </body>
@@ -260,10 +264,19 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
                 originWhitelist={['*']}
                 source={{ html: leafletData }}
                 style={styles.map}
-                onMessage={(event) => {
-                    const data = JSON.parse(event.nativeEvent.data);
-                    setCoordinate(data);
-                    if (onPinChange) onPinChange(data.latitude, data.longitude);
+                onMessage={async (event) => {
+                    try {
+                        const data = JSON.parse(event.nativeEvent.data);
+                        if (data.type === 'pinChange') {
+                            const { latitude, longitude } = data;
+                            setCoordinate({ latitude, longitude });
+                            // Reverse geocode to get an address string matching the new pin
+                            const resolvedAddress = await reverseGeocode(latitude, longitude);
+                            if (onPinChange) onPinChange(latitude, longitude, resolvedAddress);
+                        }
+                    } catch (e) {
+                        console.log('WebView message parse error', e);
+                    }
                 }}
             />
 
