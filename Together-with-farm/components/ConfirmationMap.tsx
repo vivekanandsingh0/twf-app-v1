@@ -4,7 +4,7 @@ import { Address } from '@/contexts/AddressContext';
 
 interface Props {
     selectedAddress: Address | null;
-    onPinChange?: (latitude: number, longitude: number) => void;
+    onPinChange?: (latitude: number, longitude: number, resolvedAddress?: string) => void;
 }
 
 export default function ConfirmationMap({ selectedAddress }: Props) {

@@ -256,7 +256,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'DMSans_700Bold',
         color: '#FFFFFF',
-        letterSpacing: 0.5,
     },
     termsContainer: {
         height: 20, // fixed height to prevent jumping

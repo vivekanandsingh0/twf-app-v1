@@ -20,6 +20,8 @@ export default function ConfirmAddressScreen() {
             ? { lat: selectedAddress.latitude, lng: selectedAddress.longitude }
             : null
     );
+    // Resolved address text from reverse geocoding when pin is moved
+    const [resolvedAddressText, setResolvedAddressText] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     const handleConfirm = async () => {
@@ -36,14 +38,23 @@ export default function ConfirmAddressScreen() {
 
         setSaving(true);
         try {
-            // Save the pinned lat/lng back to Supabase via AddressContext
-            await updateAddress(selectedAddress.id, {
+            // Build the update — always save pinned lat/lng;
+            // if pin was moved and we have a resolved address, update address text too
+            const updatePayload: Record<string, any> = {
                 latitude: pinnedCoord.lat,
                 longitude: pinnedCoord.lng,
-            });
+            };
+            if (resolvedAddressText) {
+                // Parse city from resolved address (last meaningful part)
+                const parts = resolvedAddressText.split(',').map(p => p.trim()).filter(Boolean);
+                updatePayload.address = parts.slice(0, 3).join(', ');
+                if (parts.length > 1) {
+                    updatePayload.city = parts[parts.length - 3] || parts[parts.length - 1];
+                }
+            }
+            await updateAddress(selectedAddress.id, updatePayload);
         } catch (e) {
             console.error('Failed to persist pin location:', e);
-            // Non-fatal — continue to payment anyway
         } finally {
             setSaving(false);
         }
@@ -100,7 +111,11 @@ export default function ConfirmAddressScreen() {
                 <View style={styles.mapWrapper}>
                     <ConfirmationMap
                         selectedAddress={selectedAddress}
-                        onPinChange={(lat, lng) => setPinnedCoord({ lat, lng })}
+                        onPinChange={(lat, lng, resolvedAddress) => {
+                            setPinnedCoord({ lat, lng });
+                            // Store resolved address text so card & DB update on confirm
+                            if (resolvedAddress) setResolvedAddressText(resolvedAddress);
+                        }}
                     />
                 </View>
 
@@ -113,7 +128,10 @@ export default function ConfirmAddressScreen() {
                         <View style={{ flex: 1 }}>
                             <Text style={[styles.addressType, isDark && { color: '#FFF' }]}>{selectedAddress.type}</Text>
                             <Text style={[styles.addressText, isDark && { color: '#AAA' }]}>
-                                {selectedAddress.address}, {selectedAddress.city}
+                                {resolvedAddressText
+                                    ? resolvedAddressText.split(',').slice(0, 4).join(', ')
+                                    : `${selectedAddress.address}, ${selectedAddress.city}`
+                                }
                             </Text>
                             {selectedAddress.pincode && (
                                 <Text style={[styles.pincode, isDark && { color: '#888' }]}>PIN: {selectedAddress.pincode}</Text>

@@ -110,7 +110,9 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
             const { latitude, longitude } = location.coords;
             setCoordinate({ latitude, longitude });
             updateMapPosition(latitude, longitude);
-            if (onPinChange) onPinChange(latitude, longitude);
+            // Reverse geocode so the address card updates to current GPS location
+            const resolvedAddress = await reverseGeocode(latitude, longitude);
+            if (onPinChange) onPinChange(latitude, longitude, resolvedAddress);
         } catch (error) {
             Alert.alert('Error', 'Could not fetch location.');
         } finally {
@@ -148,7 +150,8 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
         const lng = parseFloat(result.lon);
         setCoordinate({ latitude: lat, longitude: lng });
         updateMapPosition(lat, lng);
-        if (onPinChange) onPinChange(lat, lng);
+        // Pass the full display_name as the resolved address string
+        if (onPinChange) onPinChange(lat, lng, result.display_name);
         setSearchResults([]);
         setSearchQuery(result.display_name.split(',').slice(0, 2).join(',').trim());
         Keyboard.dismiss();
