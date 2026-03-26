@@ -159,7 +159,7 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
         }
         setLoading(true);
         // Date of birth and gender defaults are fine for now, we just want name.
-        await updateProfile(name, 'Male', '01 Jan 2000');
+        await updateProfile(name, '', '');
         setLoading(false);
         onLoginSuccess();
     };

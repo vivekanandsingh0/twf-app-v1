@@ -183,14 +183,7 @@ export default function VendorProfileScreen() {
                             Alert.alert("Support", "Support contact is currently unavailable.");
                         }
                     })}
-                    <View style={styles.divider} />
-                    <TouchableOpacity style={styles.menuItem} onPress={handleSwitchRole}>
-                        <View style={styles.menuIconContainer}>
-                            <Ionicons name="construct-outline" size={22} color="#E65100" />
-                        </View>
-                        <Text style={[styles.menuLabel, { color: '#E65100' }]}>Switch to User (Dev)</Text>
-                        <Ionicons name="swap-horizontal-outline" size={20} color="#E65100" />
-                    </TouchableOpacity>
+
                     <View style={styles.divider} />
                     {renderMenuItem('information-circle-outline', 'About Us', () => router.push('/about-us'))}
                 </View>

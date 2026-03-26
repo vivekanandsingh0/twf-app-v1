@@ -57,8 +57,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [userData, setUserDataState] = useState<UserData>({
         phoneNumber: '',
         fullName: '',
-        gender: 'Male',
-        dob: '10 August 1999',
+        gender: '',
+        dob: '',
         userType: 'User',
         vendorApproved: false,
         profileImage: ''
@@ -152,8 +152,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setUserDataState({
                 phoneNumber: '',
                 fullName: '',
-                gender: 'Male',
-                dob: '10 August 1999',
+                gender: '',
+                dob: '',
                 userType: 'User',
                 vendorApproved: false,
                 profileImage: ''
@@ -176,7 +176,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         ...prev,
                         phoneNumber: session.user.phone || '',
                         fullName: profile.full_name || '',
-                        gender: profile.gender || 'Male',
+                        gender: profile.gender || '',
                         dob: profile.dob || '',
                         userType: profile.user_type || 'User',
                         vendorApproved: profile.vendor_approved === true,
@@ -390,8 +390,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setUserDataState({
             phoneNumber: '',
             fullName: '',
-            gender: 'Male',
-            dob: '10 August 1999',
+            gender: '',
+            dob: '',
             userType: 'User',
             vendorApproved: false
         });

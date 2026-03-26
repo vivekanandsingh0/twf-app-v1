@@ -134,13 +134,7 @@ export default function ProfileScreen() {
                     {renderMenuItem('location-outline', 'Addresses', () => router.push('/addresses'))}
                     {renderMenuItem('help-circle-outline', 'Help & Support', () => router.push('/support'))}
                     {renderMenuItem('settings-outline', 'Settings', () => router.push('/settings'))}
-                    <TouchableOpacity style={[styles.menuItem, isDark && { backgroundColor: '#1E1E1E', shadowColor: 'transparent' }]} onPress={handleSwitchRole} activeOpacity={0.7}>
-                        <View style={styles.menuIconContainer}>
-                            <Ionicons name="construct-outline" size={22} color="#E65100" />
-                        </View>
-                        <Text style={[styles.menuText, { color: '#E65100' }]}>Switch to Vendor (Dev)</Text>
-                        <Ionicons name="swap-horizontal-outline" size={20} color="#E65100" />
-                    </TouchableOpacity>
+
                 </View>
 
 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,29 +39,51 @@ export default function DeleteAccountScreen() {
 
         setCheckingOrders(true);
         try {
+            // Get user explicitly first
+            const userRes = await supabase.auth.getUser();
+            const userId = userRes.data.user?.id;
+            
+            if (!userId) {
+                Alert.alert("Error", "User not found.");
+                return;
+            }
+
             // Client-side quick check
             const { data: activeOrders, error } = await supabase
                 .from('orders')
                 .select('id, status')
-                .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+                .eq('user_id', userId)
                 .not('status', 'in', '("Delivered","Cancelled","Returned")') // Active defined as NOT these statuses
                 .limit(1);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Error from Supabase:", error);
+                throw error;
+            }
 
             if (activeOrders && activeOrders.length > 0) {
-                Alert.alert(
-                    "Cannot Delete Account",
-                    "You have active orders in progress. Please wait for them to be delivered or cancel them before deleting your account.",
-                    [{ text: "View Orders", onPress: () => router.push('/orders') }, { text: "OK" }]
-                );
+                if (Platform.OS === 'web') {
+                    if (window.confirm("Cannot Delete Account: You have active orders in progress. Please wait for them to be delivered or cancel them before deleting your account. Go to orders?")) {
+                        router.push('/orders');
+                    }
+                } else {
+                    Alert.alert(
+                        "Cannot Delete Account",
+                        "You have active orders in progress. Please wait for them to be delivered or cancel them before deleting your account.",
+                        [{ text: "View Orders", onPress: () => router.push('/orders') }, { text: "OK" }]
+                    );
+                }
                 return;
             }
 
             // Proceed to OTP Verification
             startOtpVerification();
         } catch (e: any) {
-            Alert.alert("Error Checking Orders", e.message);
+            if (Platform.OS === 'web') {
+                window.alert("Error Checking Orders: " + e.message);
+            } else {
+                Alert.alert("Error Checking Orders", e.message);
+            }
         } finally {
             setCheckingOrders(false);
         }
@@ -75,9 +97,17 @@ export default function DeleteAccountScreen() {
 
             setStage('VERIFY_OTP');
             startTimer();
-            Alert.alert("OTP Sent", `Please verifying your identity. An OTP has been sent to ${userData.phoneNumber}.`);
+            if (Platform.OS === 'web') {
+                window.alert(`OTP Sent: Please verifying your identity. An OTP has been sent to ${userData.phoneNumber}.`);
+            } else {
+                Alert.alert("OTP Sent", `Please verifying your identity. An OTP has been sent to ${userData.phoneNumber}.`);
+            }
         } catch (e: any) {
-            Alert.alert("Failed to Send OTP", e.message);
+            if (Platform.OS === 'web') {
+                window.alert("Failed to Send OTP: " + e.message);
+            } else {
+                Alert.alert("Failed to Send OTP", e.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -113,21 +143,31 @@ export default function DeleteAccountScreen() {
             }
 
             // Success!
-            // Show Success Message -> Logout -> Splash
-            Alert.alert(
-                "Account Deleted",
-                "Your account has been deleted successfully. We are sorry to see you go.",
-                [{
-                    text: "Goodbye",
-                    onPress: async () => {
-                        await signOut(); // Ensure local cleanup
-                        router.replace('/'); // Go to splash/login
-                    }
-                }]
-            );
+            if (Platform.OS === 'web') {
+                window.alert("Account Deleted: Your account has been deleted successfully. We are sorry to see you go.");
+                await signOut();
+                router.replace('/');
+            } else {
+                Alert.alert(
+                    "Account Deleted",
+                    "Your account has been deleted successfully. We are sorry to see you go.",
+                    [{
+                        text: "Goodbye",
+                        onPress: async () => {
+                            await signOut(); // Ensure local cleanup
+                            router.replace('/'); // Go to splash/login
+                        }
+                    }]
+                );
+            }
 
         } catch (e: any) {
-            Alert.alert("Deletion Failed", e.message);
+            console.error("Deletion Error:", e);
+            if (Platform.OS === 'web') {
+                window.alert("Deletion Failed: " + (e.message || "Unknown error"));
+            } else {
+                Alert.alert("Deletion Failed", e.message || "Unknown error");
+            }
             setStage('VERIFY_OTP'); // Go back to OTP stage on error (unless critical, but safe to allow retry)
         } finally {
             setLoading(false);

@@ -30,7 +30,7 @@ export default function NameInputScreen({ onFinish }: { onFinish: () => void }) 
         }
         setLoading(true);
         // Default gender and dob for now
-        await updateProfile(name, 'Male', '01 Jan 2000');
+        await updateProfile(name, '', '');
         setLoading(false);
         onFinish();
     };

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NGO Logo Animation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+    }
+
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 1000px;
+    }
+
+    /* Particles Background */
+    .particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    .particle {
+      position: absolute;
+      background: rgba(255, 223, 0, 0.8);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(255, 223, 0, 0.5);
+      pointer-events: none;
+    }
+
+    /* Core Center Light */
+    .center-glow {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(230, 200, 50, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+      z-index: 1;
+      opacity: 0;
+      mix-blend-mode: screen;
+    }
+
+    /* Logo Container */
+    .logo-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .layer {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: url('images/twf-logo.png');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    /* Petals Layer - Reveals in a circle */
+    .petals-layer {
+      z-index: 2;
+      opacity: 0;
+      transform: scale(0.6) rotate(-20deg);
+      filter: drop-shadow(0 0 10px rgba(255,200,0,0.2));
+    }
+
+    /* Black hole to hide original eye in petals layer */
+    .black-hole {
+      position: absolute;
+      width: 38%; /* Adjusted to estimate eye size */
+      height: 38%;
+      background: #000;
+      border-radius: 50%;
+      z-index: 3;
+      box-shadow: 0 0 20px 10px #000;
+    }
+
+    /* Eye Layer - Reveals later */
+    .eye-layer {
+      z-index: 4;
+      opacity: 0;
+      transform: scale(0.8);
+      /* Mask out the petals, keep only the eye */
+      -webkit-mask-image: radial-gradient(circle, black 36%, transparent 40%);
+      mask-image: radial-gradient(circle, black 36%, transparent 40%);
+    }
+
+    /* Eye Highlights & Interaction */
+    .eye-shimmer {
+      position: absolute;
+      width: 40%;
+      height: 40%;
+      border-radius: 50%;
+      z-index: 5;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 20%);
+      opacity: 0;
+      mix-blend-mode: overlay;
+    }
+
+    /* Energy Ripple */
+    .energy-ripple {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 3px solid rgba(80, 180, 255, 0.8);
+      box-shadow: 0 0 20px rgba(80, 180, 255, 0.6), inset 0 0 15px rgba(80, 180, 255, 0.4);
+      z-index: 6;
+      opacity: 0;
+      transform: scale(0.3);
+      pointer-events: none;
+    }
+
+    /* Final Background Halo */
+    .hero-halo {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 220, 50, 0.1) 0%, rgba(255, 200, 50, 0.05) 30%, transparent 70%);
+      z-index: 0;
+      opacity: 0;
+    }
+
+    /* Tagline */
+    .tagline-container {
+      position: absolute;
+      bottom: 8%;
+      width: 100%;
+      text-align: center;
+      z-index: 10;
+    }
+    .tagline {
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.9);
+      opacity: 0;
+      filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+    }
+
+    .tagline span {
+      display: inline-block;
+      opacity: 0;
+    }
+  </script>
+</head>
+<body>
+
+  <div class="scene">
+    <div class="hero-halo"></div>
+    <div class="particles" id="particles"></div>
+    <div class="center-glow"></div>
+    
+    <div class="logo-container">
+      <!-- Holds the petals, revealed using JS conic-gradient -->
+      <div class="layer petals-layer" id="petals"></div>
+      
+      <!-- Hides the center eye of the petals layer -->
+      <div class="black-hole"></div>
+      
+      <!-- Holds only the eye, fades in later -->
+      <div class="layer eye-layer" id="eye"></div>
+      
+      <!-- Special effect for the eye -->
+      <div class="eye-shimmer" id="shimmer"></div>
+      
+      <!-- Pulse propagating from the eye -->
+      <div class="energy-ripple" id="ripple"></div>
+    </div>
+    
+    <div class="tagline-container">
+      <div class="tagline" id="tagline">Vision for Humanity</div>
+    </div>
+  </div>
+
+  <script>
+    // 0. Setup Particles
+    const particlesContainer = document.getElementById('particles');
+    for (let i = 0; i < 40; i++) {
+      let p = document.createElement('div');
+      p.classList.add('particle');
+      p.style.left = Math.random() * 100 + 'vw';
+      p.style.top = Math.random() * 100 + 'vh';
+      let size = Math.random() * 3 + 1;
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      
+      // Random initial delay and opacity
+      p.style.opacity = Math.random() * 0.5 + 0.2;
+      particlesContainer.appendChild(p);
+      
+      gsap.to(p, {
+        y: "-=150",
+        x: () => "+=" + (Math.random() * 60 - 30),
+        opacity: 0,
+        duration: Math.random() * 4 + 3,
+        repeat: -1,
+        yoyo: false,
+        ease: "none",
+        delay: Math.random() * 5
+      });
+    }
+
+    // Split timeline for sequential animation
+    const tl = gsap.timeline();
+
+    // 1. Opening Scene
+    // Faint warm glow emerges
+    tl.to('.center-glow', {
+      opacity: 1,
+      scale: 1.5,
+      duration: 1.5,
+      ease: "power2.inOut"
+    });
+
+    // 2. Petal Formation
+    // One by one outward, blooming.
+    let proxy = { angle: 0 };
+    tl.to(proxy, {
+      angle: 360,
+      duration: 2.5,
+      ease: "power1.inOut",
+      onUpdate: () => {
+        let pct = proxy.angle;
+        // Soft gradient edge for an organic reveal instead of harsh slice
+        let str = `conic-gradient(from 0deg, black 0deg, black ${pct}deg, transparent ${pct + 15}deg)`;
+        document.getElementById('petals').style.webkitMaskImage = str;
+        document.getElementById('petals').style.maskImage = str;
+      }
+    }, "bloom");
+    
+    tl.to('.petals-layer', {
+      opacity: 1,
+      scale: 1,
+      rotation: 0,
+      duration: 2.5,
+      ease: "power2.out"
+    }, "bloom");
+
+    // 3. Eye Emergence
+    tl.to('.eye-layer', {
+      opacity: 1,
+      scale: 1,
+      duration: 1.5,
+      ease: "power2.out"
+    }, "bloom+=2");
+
+    tl.to('#shimmer', {
+      opacity: 0.8,
+      duration: 1,
+      ease: "power1.inOut"
+    }, "bloom+=2.5");
+
+    // Eye breathing/shimmer loop
+    gsap.to('.eye-layer', {
+      scale: 1.02,
+      duration: 2.5,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+      delay: 5
+    });
+
+    // 4. Energy Pulse
+    tl.to('.energy-ripple', {
+      opacity: 1,
+      scale: 0.38,
+      duration: 0.2,
+      ease: "power2.out"
+    }, "pulse");
+    
+    tl.to('.energy-ripple', {
+      scale: 1.2,
+      opacity: 0,
+      duration: 1.5,
+      ease: "power2.out"
+    }, "pulse+=0.2");
+
+    // Petals slight glow
+    tl.to('.petals-layer', {
+      filter: "drop-shadow(0 0 20px rgba(80, 180, 255, 0.4)) brightness(1.2)",
+      duration: 0.8,
+      yoyo: true,
+      repeat: 1,
+      ease: "sine.inOut"
+    }, "pulse+=0.2");
+
+    // 5. Final Hero Frame
+    tl.to('.hero-halo', {
+      opacity: 1,
+      scale: 1.1,
+      duration: 2,
+      ease: "power2.out"
+    }, "hero");
+
+    // Split text animation for tagline
+    const taglineObj = document.getElementById('tagline');
+    const chars = taglineObj.innerText.split('');
+    taglineObj.innerHTML = '';
+    chars.forEach(char => {
+      let span = document.createElement('span');
+      span.innerText = char === ' ' ? '\u00A0' : char;
+      taglineObj.appendChild(span);
+    });
+
+    tl.to('.tagline', { opacity: 1, duration: 0.1 }, "hero-=0.5");
+    tl.to('.tagline span', {
+      opacity: 1,
+      y: -5,
+      duration: 0.8,
+      stagger: 0.05,
+      ease: "back.out(1.5)"
+    }, "hero");
+
+    // Add a glowing effect that pulses slightly on the center glow
+    gsap.to('.center-glow', {
+      scale: 1.6,
+      opacity: 0.8,
+      duration: 3,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+      delay: 2
+    });
+
+  </script>
+</body>
+</html>
