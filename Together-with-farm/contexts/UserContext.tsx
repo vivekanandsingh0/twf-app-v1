@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { usePostHog } from 'posthog-react-native';
 
 import { VendorOrder } from './VendorContext'; // Import generic Order type
 
@@ -53,6 +54,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState<VendorOrder[]>([]); // User orders
+    const posthog = usePostHog();
 
     const [userData, setUserDataState] = useState<UserData>({
         phoneNumber: '',
@@ -185,6 +187,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         bio: profile.bio,
                         profileImage: proxyUrl(profile.profile_image)
                     }));
+                    
+                    if (posthog && userId) {
+                        posthog.identify(userId, {
+                            user_type: profile.user_type || 'User',
+                            vendor_approved: profile.vendor_approved === true
+                        });
+                    }
                 }
 
                 const fetchOrders = async () => {

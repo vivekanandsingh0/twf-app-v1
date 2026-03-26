@@ -30,6 +30,8 @@ import { VendorProvider } from '@/contexts/VendorContext';
 import { MarketProvider } from '@/contexts/MarketContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { usePathname } from 'expo-router';
+import { usePostHog } from 'posthog-react-native';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -48,9 +50,19 @@ function NavigationThemeWrapper({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const router = useRouter(); // Initialize router
+  const pathname = usePathname(); // Get current screen route
+  const posthog = usePostHog(); // Hook into PostHog
+
   const { session, loading, userData } = useUser(); // Destructure userData
   console.log("_layout: AppContent rendered", { session: !!session, loading });
   const colorScheme = useColorScheme();
+
+  // Automatically track every screen view
+  useEffect(() => {
+    if (pathname && posthog) {
+      posthog.screen(pathname);
+    }
+  }, [pathname]);
 
   const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular,
@@ -335,13 +347,17 @@ function AppContent() {
   );
 }
 
+import { PostHogProvider } from 'posthog-react-native';
+
 export default function RootLayout() {
   return (
-    <UserProvider>
-      <CustomThemeProvider>
-        <AppContent />
-      </CustomThemeProvider>
-    </UserProvider>
+    <PostHogProvider apiKey="phc_7BsLqcDF8xLWLFEaVaq2PiWMA9WCXv2E8bsPdpwHuD6" options={{ host: 'https://us.i.posthog.com' }}>
+      <UserProvider>
+        <CustomThemeProvider>
+          <AppContent />
+        </CustomThemeProvider>
+      </UserProvider>
+    </PostHogProvider>
   );
 }
 
