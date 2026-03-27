@@ -46,6 +46,21 @@ export default function SelectLocationScreen() {
                         console.log("Geocoding error", e);
                     }
                 }
+            } else {
+                // Auto-locate user by default if no address is selected
+                try {
+                    let { status } = await Location.getForegroundPermissionsAsync();
+                    if (status !== 'granted') {
+                        const req = await Location.requestForegroundPermissionsAsync();
+                        status = req.status;
+                    }
+                    if (status === 'granted') {
+                        const loc = await Location.getCurrentPositionAsync({});
+                        setCoordinate({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+                    }
+                } catch (e) {
+                    console.log("Auto-locate error", e);
+                }
             }
         };
         initializeLocation();

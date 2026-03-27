@@ -40,17 +40,6 @@ export default function VendorProfileScreen() {
         }, [])
     );
 
-    const handleSwitchRole = async () => {
-        // Dev Only: Immediate switch for testing without dialogs that might be blocked
-        console.log("Switching to User...");
-        const success = await switchUserRole('User');
-        if (success) {
-            router.replace('/(tabs)');
-        } else {
-            alert("Failed to switch role. Check console.");
-        }
-    };
-
     const handleLogout = async () => {
         await signOut();
     };

@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import Constants from 'expo-constants';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -130,7 +131,7 @@ export default function SettingsScreen() {
                 {renderSettingItem(
                     'information-circle-outline',
                     'App Version',
-                    '1.0.0',
+                    Constants.expoConfig?.version || '1.0.0',
                     undefined,
                     true
                 )}

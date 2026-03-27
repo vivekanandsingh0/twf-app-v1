@@ -17,17 +17,6 @@ export default function ProfileScreen() {
     const { unreadCount } = useNotifications();
     const { isDark } = useTheme();
 
-    const handleSwitchRole = async () => {
-        // Dev Only: Immediate switch for testing without dialogs that might be blocked
-        console.log("Switching to Vendor...");
-        const success = await switchUserRole('Vendor');
-        if (success) {
-            router.replace('/(vendor-tabs)');
-        } else {
-            alert("Failed to switch role. Check console.");
-        }
-    };
-
     const handleLogout = () => {
         console.log("Logout button pressed");
         if (Platform.OS === 'web') {

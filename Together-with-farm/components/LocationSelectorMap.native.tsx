@@ -98,7 +98,8 @@ export default function LocationSelectorMap({ latitude, longitude, onLocationCha
             <WebView
                 ref={webViewRef}
                 originWhitelist={['*']}
-                source={{ html: leafletData }}
+                source={{ html: leafletData, baseUrl: 'https://togetherwithfarm.com/' }}
+                userAgent="TogetherWithFarmApp/1.0"
                 style={{ flex: 1 }}
                 onMessage={(event) => {
                     const data = JSON.parse(event.nativeEvent.data);

@@ -9,9 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "1",
+      "bundleIdentifier": "com.togetherwithfarm.app"
     },
     "android": {
+      "versionCode": 1,
       "package": "com.togetherwithfarm.app",
       "permissions": [
         "INTERNET",

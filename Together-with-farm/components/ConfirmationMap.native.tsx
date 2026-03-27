@@ -77,6 +77,7 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
                         setCoordinate({ latitude, longitude });
                         updateMapPosition(latitude, longitude);
                         if (onPinChange) onPinChange(latitude, longitude);
+                        return;
                     }
                 } catch (error) {
                     console.log('Geocoding fallback failed', error);
@@ -84,7 +85,25 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
                     setLoading(false);
                 }
             }
-            // Priority 3: Everything failed — stays at default fallback coords
+            
+            // Priority 3: Fallback to current location by default
+            try {
+                let { status } = await Location.getForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    const req = await Location.requestForegroundPermissionsAsync();
+                    status = req.status;
+                }
+                if (status === 'granted') {
+                    const location = await Location.getCurrentPositionAsync({});
+                    const { latitude, longitude } = location.coords;
+                    setCoordinate({ latitude, longitude });
+                    updateMapPosition(latitude, longitude);
+                    const resolvedAddress = await reverseGeocode(latitude, longitude);
+                    if (onPinChange) onPinChange(latitude, longitude, resolvedAddress);
+                }
+            } catch (error) {
+                console.log('Default locate me failed', error);
+            }
         };
         initializeMap();
     }, [selectedAddress?.id]);
@@ -265,7 +284,8 @@ export default function ConfirmationMap({ selectedAddress, onPinChange }: Props)
             <WebView
                 ref={webViewRef}
                 originWhitelist={['*']}
-                source={{ html: leafletData }}
+                source={{ html: leafletData, baseUrl: 'https://togetherwithfarm.com/' }}
+                userAgent="TogetherWithFarmApp/1.0"
                 style={styles.map}
                 onMessage={async (event) => {
                     try {
