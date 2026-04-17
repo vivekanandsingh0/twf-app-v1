@@ -96,7 +96,7 @@ export default function ProfileScreen() {
                 {/* User Profile Card */}
                 <View style={[styles.profileCard, isDark && { backgroundColor: '#1E1E1E' }]}>
                     <Image
-                        source={userData.profileImage ? { uri: userData.profileImage } : { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop' }}
+                        source={userData.profileImage ? { uri: userData.profileImage } : require('@/assets/images/default-dp.png')}
                         style={styles.avatar}
                         contentFit="cover"
                     />

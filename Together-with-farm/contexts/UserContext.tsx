@@ -110,10 +110,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 const { data: { session }, error } = await supabase.auth.getSession();
 
                 if (error) {
-                    console.error("Supabase Session Error:", error.message);
-                    if (error.message.includes("Refresh Token")) {
-                        // The async storage token is invalid/expired. Clear it immediately.
-                        await supabase.auth.signOut();
+                    console.warn("Supabase Session Warning:", error.message);
+                    if (error.message.includes("Refresh Token") || error.message.includes("Invalid token")) {
+                        // The storage token is corrupted or invalid. Wipe it locally.
+                        console.log("Cleaning up invalid session storage...");
+                        await supabase.auth.signOut({ scope: 'local' });
                     }
                 }
 
@@ -125,9 +126,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         setLoading(false); // ONLY set false if not logged in. If logged in, loadUserResources will turn it false.
                     }
                 }
-            } catch (error) {
-                console.error("Session init error:", error);
-                setLoading(false);
+            } catch (error: any) {
+                console.error("Session init error caught:", error);
+                
+                // If the error happens inside getSession itself (which it can for refresh token issues)
+                if (error?.message?.includes("Refresh Token")) {
+                    console.log("Forcing cleanup after caught refresh error");
+                    await supabase.auth.signOut({ scope: 'local' });
+                }
+                
+                if (mounted) setLoading(false);
             }
         };
 

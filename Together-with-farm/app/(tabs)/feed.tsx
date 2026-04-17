@@ -26,6 +26,7 @@ export default function FeedScreen() {
   const { unreadCount } = useNotifications();
   const { isDark } = useTheme();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -35,10 +36,18 @@ export default function FeedScreen() {
   // Build category list dynamically from real articles
   const categories = ['All', ...Array.from(new Set(articles.map(a => a.category).filter(Boolean)))];
 
-  // Filter articles by selected category
-  const recentArticles = activeCategory === 'All'
-    ? articles
-    : articles.filter(a => a.category === activeCategory);
+  // Filter articles by selected category AND search query
+  const filteredArticles = articles.filter(a => {
+    const matchesCategory = activeCategory === 'All' || a.category === activeCategory;
+    const matchesSearch = !searchQuery || 
+      a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      a.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.content && a.content.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    return matchesCategory && matchesSearch;
+  });
+
+  const recentArticles = filteredArticles;
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -82,10 +91,17 @@ export default function FeedScreen() {
         <View style={[styles.searchContainer, isDark && { backgroundColor: '#333' }]}>
           <Ionicons name="search-outline" size={20} color={isDark ? '#AAA' : '#666'} style={styles.searchIcon} />
           <TextInput
-            placeholder="Search fresh products or brands"
+            placeholder="Search articles, tips or health benefits"
             placeholderTextColor={isDark ? '#888' : '#999'}
             style={[styles.searchInput, isDark && { color: '#FFF' }]}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={isDark ? '#AAA' : '#999'} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Spotlight Section */}
@@ -141,7 +157,9 @@ export default function FeedScreen() {
 
         {/* All Articles Section */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>All Articles</Text>
+          <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>
+            {searchQuery ? `Search Results (${filteredArticles.length})` : 'All Articles'}
+          </Text>
         </View>
 
         <ScrollView
@@ -149,35 +167,42 @@ export default function FeedScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.articlesContainer}
         >
-          {recentArticles.map((article) => (
-            <TouchableOpacity
-              key={article.id}
-              style={[styles.articleCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
-              onPress={() => router.push(`/article/${article.id}` as any)}
-              activeOpacity={0.9}
-            >
-              <FastImage source={article.image} style={styles.articleImage} contentFit="cover" />
+          {recentArticles.length > 0 ? (
+            recentArticles.map((article) => (
+              <TouchableOpacity
+                key={article.id}
+                style={[styles.articleCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
+                onPress={() => router.push(`/article/${article.id}` as any)}
+                activeOpacity={0.9}
+              >
+                <FastImage source={article.image} style={styles.articleImage} contentFit="cover" />
 
-              <View style={styles.imageOverlay}>
-                <View style={[styles.tagBadge, isDark && { backgroundColor: 'rgba(31, 94, 46, 0.8)', borderColor: '#1F5E2E' }]}>
-                  <Text style={[styles.tagText, isDark && { color: '#FFF' }]}>{article.category}</Text>
+                <View style={styles.imageOverlay}>
+                  <View style={[styles.tagBadge, isDark && { backgroundColor: 'rgba(31, 94, 46, 0.8)', borderColor: '#1F5E2E' }]}>
+                    <Text style={[styles.tagText, isDark && { color: '#FFF' }]}>{article.category}</Text>
+                  </View>
+                  <View style={[styles.timeBadge, isDark && { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                    <Text style={[styles.timeText, isDark && { color: '#FFF' }]}>{article.time}</Text>
+                  </View>
                 </View>
-                <View style={[styles.timeBadge, isDark && { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-                  <Text style={[styles.timeText, isDark && { color: '#FFF' }]}>{article.time}</Text>
-                </View>
-              </View>
 
-              <View style={styles.articleContent}>
-                <Text style={[styles.articleTitle, isDark && { color: '#FFF' }]} numberOfLines={2}>
-                  {article.title}
-                </Text>
-                <View style={styles.readMoreLink}>
-                  <Text style={styles.readMoreText}>Read article</Text>
-                  <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
+                <View style={styles.articleContent}>
+                  <Text style={[styles.articleTitle, isDark && { color: '#FFF' }]} numberOfLines={2}>
+                    {article.title}
+                  </Text>
+                  <View style={styles.readMoreLink}>
+                    <Text style={styles.readMoreText}>Read article</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#1F5E2E" />
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center', width: Dimensions.get('window').width - 40 }}>
+              <Ionicons name="documents-outline" size={48} color="#DDD" />
+              <Text style={{ color: '#999', marginTop: 8 }}>No articles found for "{searchQuery}"</Text>
+            </View>
+          )}
         </ScrollView>
 
         {/* Dynamic Sections from Admin */}

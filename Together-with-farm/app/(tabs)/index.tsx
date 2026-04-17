@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -35,15 +35,38 @@ const LOCATIONS = [
 
 export default function MarketScreen() {
   const router = useRouter();
-  const { products } = useMarket();
+  const { marketSections, products } = useMarket();
   const { toggleFavourite, isFavourite } = useFavourites();
   const { addresses, selectedAddress, setSelectedAddress } = useAddresses();
   const { updateQuantity, getItemQuantity } = useCart();
   const { unreadCount } = useNotifications();
   const { isDark } = useTheme();
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Attribute-based filter options
+  const FILTER_OPTIONS = ['All', 'Instant', 'Pre-orders', 'Special Deals', 'Organic'];
+
+  // Filter logic based on attributes
+  const filteredProducts = useMemo(() => {
+    if (activeFilter === 'All') return [];
+    
+    return products.filter(p => {
+      switch (activeFilter) {
+        case 'Instant':
+          return p.order_type === 'instant';
+        case 'Pre-orders':
+          return p.order_type === 'pre-order';
+        case 'Special Deals':
+          return (p.discountValue && p.discountValue > 0) || p.specialOffer;
+        case 'Organic':
+          return p.tag?.toLowerCase().includes('organic');
+        default:
+          return true;
+      }
+    });
+  }, [activeFilter, products]);
 
   const insets = useSafeAreaInsets();
 
@@ -221,20 +244,20 @@ export default function MarketScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesContainer}
           >
-            {CATEGORIES.map((cat, index) => (
+            {FILTER_OPTIONS.map((filter, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
                   styles.categoryChip,
-                  activeCategory === cat ? styles.activeCategoryChip : styles.inactiveCategoryChip
+                  activeFilter === filter ? styles.activeCategoryChip : styles.inactiveCategoryChip
                 ]}
-                onPress={() => setActiveCategory(cat)}
+                onPress={() => setActiveFilter(filter)}
               >
                 <Text style={[
                   styles.categoryText,
-                  activeCategory === cat ? styles.activeCategoryText : styles.inactiveCategoryText
+                  activeFilter === filter ? styles.activeCategoryText : styles.inactiveCategoryText
                 ]}>
-                  {cat}
+                  {filter}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -265,21 +288,36 @@ export default function MarketScreen() {
             </View>
           </View>
         ) : (
-          // Normal Sections View
+          // Normal Sections or Attribute Filter View
           <>
-
-            {useMarket().marketSections?.map(section => (
-              <React.Fragment key={section.id}>
-                <View style={styles.sectionHeader}>
-                  <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>{section.name}</Text>
+            {activeFilter === 'All' ? (
+              marketSections?.map(section => (
+                <View key={section.id} style={{ marginBottom: 24 }}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>{section.name}</Text>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
+                    {section.products.map(renderProductCard)}
+                  </ScrollView>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsContainer}>
-                  {section.products.map(renderProductCard)}
-                </ScrollView>
-              </React.Fragment>
-            ))}
-
-
+              ))
+            ) : (
+              <View style={styles.searchResultsContainer}>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>{activeFilter} Products ({filteredProducts.length})</Text>
+                </View>
+                <View style={[styles.gridContainer, { flexWrap: 'wrap', flexDirection: 'row' }]}>
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map(renderProductCard)
+                  ) : (
+                    <View style={[styles.noResults, { width: '100%' }]}>
+                      <Ionicons name="filter-outline" size={48} color="#DDD" />
+                      <Text style={styles.noResultText}>No items found for "{activeFilter}"</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
           </>
         )}
 
@@ -299,30 +337,44 @@ export default function MarketScreen() {
               onPress={() => setShowLocationPicker(false)}
             />
             <View style={[styles.locationDropdown, { top: Math.max(insets.top + 55, 75) }, isDark && { backgroundColor: '#333' }]}>
-              {addresses.map((addr) => (
+                {addresses.map((addr) => (
+                  <TouchableOpacity
+                    key={addr.id}
+                    style={[styles.locationOption, isDark && { borderBottomColor: '#444' }]}
+                    onPress={() => {
+                      setSelectedAddress(addr);
+                      setShowLocationPicker(false);
+                    }}
+                  >
+                    <Ionicons
+                      name={selectedAddress?.id === addr.id ? "radio-button-on" : "radio-button-off"}
+                      size={18}
+                      color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
+                    />
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                      <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#81C784' }, isDark && selectedAddress?.id !== addr.id && { color: '#FFF' }]}>
+                        {addr.type}
+                      </Text>
+                      <Text style={[styles.locationOptionAddress, isDark && { color: '#AAA' }]} numberOfLines={2}>
+                        {addr.address}, {addr.city}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Add New Address Option */}
                 <TouchableOpacity
-                  key={addr.id}
-                  style={[styles.locationOption, isDark && { borderBottomColor: '#444' }]}
+                  style={[styles.locationOption, { borderBottomWidth: 0 }]}
                   onPress={() => {
-                    setSelectedAddress(addr);
                     setShowLocationPicker(false);
+                    router.push('/addresses');
                   }}
                 >
-                  <Ionicons
-                    name={selectedAddress?.id === addr.id ? "radio-button-on" : "radio-button-off"}
-                    size={18}
-                    color={selectedAddress?.id === addr.id ? "#1F5E2E" : "#999"}
-                  />
-                  <View style={{ marginLeft: 12, flex: 1 }}>
-                    <Text style={[styles.locationOptionTitle, selectedAddress?.id === addr.id && { color: '#81C784' }, isDark && selectedAddress?.id !== addr.id && { color: '#FFF' }]}>
-                      {addr.type}
-                    </Text>
-                    <Text style={[styles.locationOptionAddress, isDark && { color: '#AAA' }]} numberOfLines={2}>
-                      {addr.address}, {addr.city}
-                    </Text>
-                  </View>
+                  <Ionicons name="add-circle-outline" size={20} color="#1F5E2E" />
+                  <Text style={[styles.locationOptionTitle, { marginLeft: 12, color: '#1F5E2E' }]}>
+                    Add New Address
+                  </Text>
                 </TouchableOpacity>
-              ))}
             </View>
           </View>
         )

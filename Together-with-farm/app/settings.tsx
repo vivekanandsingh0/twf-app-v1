@@ -30,13 +30,15 @@ export default function SettingsScreen() {
         showSwitch: boolean = false,
         switchValue?: boolean,
         onSwitchChange?: (value: boolean) => void
-    ) => (
-        <TouchableOpacity
-            style={[styles.settingItem, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
-            onPress={onPress}
-            activeOpacity={showSwitch ? 1 : 0.7}
-            disabled={showSwitch}
-        >
+    ) => {
+        const Container = onPress ? TouchableOpacity : View;
+        return (
+            <Container
+                style={[styles.settingItem, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}
+                onPress={onPress}
+                activeOpacity={showSwitch ? 1 : 0.7}
+                disabled={showSwitch}
+            >
             <View style={styles.settingLeft}>
                 <View style={[styles.iconContainer, isDark && { backgroundColor: '#333' }]}>
                     <Ionicons name={icon} size={20} color={isDark ? '#FFF' : '#1A1A1A'} />
@@ -56,8 +58,9 @@ export default function SettingsScreen() {
             ) : showArrow ? (
                 <Ionicons name="chevron-forward" size={20} color={isDark ? '#555' : '#999'} />
             ) : null}
-        </TouchableOpacity>
-    );
+            </Container>
+        );
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top + 10 }, isDark && { backgroundColor: '#121212' }]}>
@@ -133,7 +136,7 @@ export default function SettingsScreen() {
                     'App Version',
                     Constants.expoConfig?.version || '1.0.0',
                     undefined,
-                    true
+                    false
                 )}
 
                 <TouchableOpacity style={[

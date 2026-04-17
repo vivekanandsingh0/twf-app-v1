@@ -92,7 +92,7 @@ export default function AddressesScreen() {
     };
 
     const handleSaveAddress = async () => {
-        if (!formData.type || !formData.address || !formData.city) {
+        if (!formData.type || !formData.address || !formData.city || !formData.pincode) {
             Alert.alert('Error', 'Please fill in all required fields');
             return;
         }
@@ -325,7 +325,7 @@ export default function AddressesScreen() {
                         </View>
 
                         <View style={styles.formField}>
-                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Pincode</Text>
+                            <Text style={[styles.formLabel, isDark && { color: '#FFF' }]}>Pincode *</Text>
                             <TextInput
                                 style={[styles.formInput, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
                                 placeholder="Enter pincode"

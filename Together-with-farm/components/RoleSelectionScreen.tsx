@@ -42,7 +42,7 @@ export default function RoleSelectionScreen({ onSelectUser, onSelectVendor }: Ro
 
                 {/* Foreground Content */}
                 <View style={styles.foregroundContent}>
-                    <Text style={[styles.title, isDark && { color: '#FFF' }]}>Continue as,</Text>
+                    <Text style={[styles.title, isDark && { color: '#FFF' }]}>Continue as</Text>
 
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
@@ -50,7 +50,7 @@ export default function RoleSelectionScreen({ onSelectUser, onSelectVendor }: Ro
                             onPress={onSelectUser}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.userButtonText}>User</Text>
+                            <Text style={styles.userButtonText}>Consumer</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity

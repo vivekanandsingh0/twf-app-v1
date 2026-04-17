@@ -8,7 +8,8 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
-    Keyboard
+    Keyboard,
+    ScrollView
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -177,13 +178,18 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
     return (
         <View style={[styles.container, { paddingTop: insets.top }, isDark && { backgroundColor: '#121212' }]}>
             <StatusBar style={isDark ? "light" : "dark"} />
-
-            {/* Header Content */}
-            <View style={styles.contentContainer}>
+ 
+            <ScrollView 
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+            >
+                {/* Top Content */}
+                <View style={styles.contentContainer}>
                 {step === 'phone' ? (
                     <>
                         <Text style={[styles.welcomeText, isDark && { color: '#FFF' }]}>Welcome Back</Text>
-                        <Text style={[styles.subtext, isDark && { color: '#AAA' }]}>Continue Journey As {userType === 'Vendor' ? 'Farmer' : userType}</Text>
+                        <Text style={[styles.subtext, isDark && { color: '#AAA' }]}>Continue Journey As {userType === 'Vendor' ? 'Farmer' : 'Consumer'}</Text>
 
                         <View style={styles.logoContainer}>
                             <Image
@@ -204,7 +210,7 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                     </>
                 ) : step === 'otp' ? (
                     <>
-                        <View style={[styles.logoContainer, { marginTop: 60, marginBottom: 40 }]}>
+                        <View style={[styles.logoContainer, { marginTop: height < 700 ? 10 : 30, marginBottom: height < 700 ? 10 : 20 }]}>
                             <Image
                                 source={require('@/assets/images/twf-logo.png')}
                                 style={styles.logo}
@@ -260,7 +266,8 @@ export default function LoginScreen({ onLoginSuccess, onBack, userType }: LoginS
                         </TouchableOpacity>
                     </KeyboardAvoidingView>
                 )}
-            </View>
+                </View>
+            </ScrollView>
 
             {/* Custom Keyboard - Only for Phone and OTP */}
             {step !== 'name' && (
@@ -298,11 +305,14 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
+    scrollContent: {
+        flexGrow: 1,
+    },
     contentContainer: {
-        flex: 1,
         alignItems: 'center',
         paddingHorizontal: 24,
-        paddingTop: 40,
+        paddingTop: height < 700 ? 20 : 40,
+        paddingBottom: 20,
     },
     welcomeText: {
         fontSize: 20,
@@ -314,12 +324,13 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'DMSans_700Bold',
         color: '#1A1A1A',
-        marginBottom: 40,
+        marginBottom: height < 700 ? 10 : 20,
+        textAlign: 'center',
     },
     logoContainer: {
-        width: 150,
-        height: 150,
-        marginBottom: 40,
+        width: height < 700 ? 80 : 120,
+        height: height < 700 ? 80 : 120,
+        marginBottom: height < 700 ? 15 : 30,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -373,10 +384,10 @@ const styles = StyleSheet.create({
     },
     keyButton: {
         width: '30%',
-        height: 80,
+        height: height < 700 ? 60 : 80,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 10,
+        marginBottom: height < 700 ? 5 : 10,
     },
     keyText: {
         fontSize: 24,

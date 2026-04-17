@@ -7,7 +7,8 @@ import {
     TouchableOpacity,
     Platform,
     ScrollView,
-    Alert
+    Alert,
+    Pressable
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/contexts/UserContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function ProfileEditScreen() {
     const router = useRouter();
@@ -29,6 +31,26 @@ export default function ProfileEditScreen() {
     const [gender, setGender] = useState(userData.gender);
     const [dob, setDob] = useState(userData.dob);
     const [profileImage, setProfileImage] = useState(userData.profileImage || '');
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    const onDateChange = (event: any, selectedDate?: Date) => {
+        setShowDatePicker(false);
+        if (selectedDate) {
+            const day = selectedDate.getDate().toString().padStart(2, '0');
+            const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+            const year = selectedDate.getFullYear();
+            setDob(`${day}/${month}/${year}`);
+        }
+    };
+
+    const parseDob = (dateStr: string) => {
+        if (!dateStr) return new Date(2000, 0, 1);
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        }
+        return new Date(2000, 0, 1);
+    };
 
     const pickImage = async () => {
         try {
@@ -89,7 +111,7 @@ export default function ProfileEditScreen() {
                 <View style={styles.avatarContainer}>
                     <TouchableOpacity onPress={pickImage}>
                         <Image
-                            source={profileImage ? { uri: profileImage } : { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2574&auto=format&fit=crop' }}
+                            source={profileImage ? { uri: profileImage } : require('@/assets/images/default-dp.png')}
                             style={styles.avatar}
                             contentFit="cover"
                         />
@@ -159,12 +181,29 @@ export default function ProfileEditScreen() {
 
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, isDark && { color: '#FFF' }]}>Date of Birth</Text>
-                        <TextInput
-                            style={[styles.input, isDark && { backgroundColor: '#333', borderColor: '#444', color: '#FFF' }]}
-                            placeholderTextColor={isDark ? '#888' : '#999'}
-                            value={dob}
-                            onChangeText={setDob}
-                        />
+                        <Pressable 
+                            onPress={() => setShowDatePicker(true)}
+                            style={[styles.input, isDark && { backgroundColor: '#333', borderColor: '#444' }, { justifyContent: 'center' }]}
+                        >
+                            <Text style={[styles.dobValue, isDark && { color: '#FFF' }, !dob && { color: isDark ? '#888' : '#999' }]}>
+                                {dob || 'Select date of birth'}
+                            </Text>
+                            <Ionicons 
+                                name="calendar-outline" 
+                                size={20} 
+                                color={isDark ? '#AAA' : '#666'} 
+                                style={{ position: 'absolute', right: 16 }} 
+                            />
+                        </Pressable>
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={parseDob(dob)}
+                                mode="date"
+                                display="default"
+                                onChange={onDateChange}
+                                maximumDate={new Date()}
+                            />
+                        )}
                     </View>
                 </View>
 
@@ -295,6 +334,12 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
+        fontSize: 14,
+        fontFamily: 'DMSans_500Medium',
+        color: '#333',
+        height: 50,
+    },
+    dobValue: {
         fontSize: 14,
         fontFamily: 'DMSans_500Medium',
         color: '#333',
