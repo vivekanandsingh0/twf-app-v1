@@ -14,9 +14,21 @@
                 "buildType": "apk"
             }
         },
-        "production": {}
+        "production": {
+            "distribution": "store",
+            "android": {
+                "buildType": "app-bundle",
+                "credentialsSource": "remote"
+            },
+            "autoIncrement": false
+        }
     },
     "submit": {
-        "production": {}
+        "production": {
+            "android": {
+                "serviceAccountKeyPath": "./google-play-service-account.json",
+                "track": "internal"
+            }
+        }
     }
 }

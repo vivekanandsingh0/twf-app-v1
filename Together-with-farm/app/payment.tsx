@@ -11,7 +11,8 @@ import { useUser } from '@/contexts/UserContext';
 import { useAddresses } from '@/contexts/AddressContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-
+// @ts-ignore
+import RazorpayCheckout from 'react-native-razorpay';
 // Types for Payment Methods
 type PaymentMethod = {
     id: string;
@@ -23,20 +24,16 @@ type PaymentMethod = {
 };
 
 const LINKED_METHODS: PaymentMethod[] = [
-    { id: 'phonepe_1', type: 'upi', title: 'PhonePe', subtitle: 'UPI id-9873638368@ybl', icon: 'alpha-p-circle', iconProvider: 'MaterialCommunityIcons' },
-    { id: 'cod', type: 'cod', title: 'Cash On Delivery', icon: 'cash', iconProvider: 'Ionicons' },
+    { id: 'razorpay', type: 'upi', title: 'Pay Online', subtitle: 'UPI, Credit/Debit Cards, Netbanking', icon: 'shield-check', iconProvider: 'MaterialCommunityIcons' },
+    { id: 'cod', type: 'cod', title: 'Cash On Delivery', subtitle: 'Pay when your order arrives', icon: 'cash', iconProvider: 'Ionicons' },
 ];
 
-const SAVED_METHODS: PaymentMethod[] = [
-    { id: 'visa_1', type: 'card', title: 'VISA ending6790', subtitle: 'Expires 06/27', icon: 'credit-card', iconProvider: 'FontAwesome5' },
-    { id: 'phonepe_2', type: 'upi', title: 'PhonePe', subtitle: 'UPI id-9873638368@ybl', icon: 'alpha-p-circle', iconProvider: 'MaterialCommunityIcons' },
-    { id: 'paytm', type: 'upi', title: 'PayTM', subtitle: 'UPI id-979995373@ptyes', icon: 'wallet', iconProvider: 'Ionicons' },
-];
+const SAVED_METHODS: PaymentMethod[] = [];
 
 export default function PaymentScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const [selectedId, setSelectedId] = useState<string>('phonepe_1');
+    const [selectedId, setSelectedId] = useState<string>('razorpay');
     const { isDark } = useTheme();
 
     const { quantities, clearCart, appliedCoupon } = useCart();
@@ -113,65 +110,106 @@ export default function PaymentScreen() {
         const isFreeDelivery = cartSubtotal >= deliverySettings.min_order;
         const shippingFee = isFreeDelivery ? 0 : deliverySettings.fee;
 
-        // 3. Create Vendor Orders (async loop)
-        const orderPromises = Object.keys(ordersByVendor).map(async (vendorId, index) => {
-            const vendorData = ordersByVendor[vendorId];
+        let totalCouponDiscount = 0;
+        if (appliedCoupon) {
+            totalCouponDiscount = appliedCoupon.discount_type === 'percentage'
+                ? Math.min(cartSubtotal * (appliedCoupon.discount_value / 100), appliedCoupon.max_discount || Infinity)
+                : appliedCoupon.discount_value;
+        }
 
-            // Assign shipping fee to the first order only (or split it)
-            const orderShippingFee = index === 0 ? shippingFee : 0;
+        const grandTotal = Math.max(0, cartSubtotal + shippingFee - totalCouponDiscount);
 
-            // Use stable User ID if available, else fallback
-            const finalUserId = user?.id || (userData.phoneNumber ? `user_${userData.phoneNumber.replace(/\D/g, '')}` : 'guest_user');
+        const processOrders = async (paymentId?: string) => {
+            // 3. Create Vendor Orders (async loop)
+            const orderPromises = Object.keys(ordersByVendor).map(async (vendorId, index) => {
+                const vendorData = ordersByVendor[vendorId];
 
-            // Calculate the discount for this part of the order (or just apply it entirely to the first order)
-            const orderCouponDiscount = index === 0 && appliedCoupon ?
-                (appliedCoupon.discount_type === 'percentage'
-                    ? Math.min(cartSubtotal * (appliedCoupon.discount_value / 100), appliedCoupon.max_discount || Infinity)
-                    : appliedCoupon.discount_value)
-                : 0;
+                // Assign shipping fee to the first order only (or split it)
+                const orderShippingFee = index === 0 ? shippingFee : 0;
 
-            const finalOrderTotal = Math.max(0, vendorData.total + orderShippingFee - orderCouponDiscount);
+                // Use stable User ID if available, else fallback
+                const finalUserId = user?.id || (userData?.phoneNumber ? `user_${userData.phoneNumber.replace(/\D/g, '')}` : 'guest_user');
 
-            const newOrder: VendorOrder = {
-                id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                userId: finalUserId,
-                vendorId: vendorId, // Link order to specific Vendor
-                customerName: userData ? userData.fullName : "Guest User",
-                items: vendorData.items,
-                totalAmount: finalOrderTotal,
-                status: 'Pending',
-                date: new Date().toISOString(),
-                paymentStatus: selectedId === 'cod' ? 'COD' : 'Paid',
-                paymentMethod: LINKED_METHODS.find(m => m.id === selectedId)?.title || SAVED_METHODS.find(m => m.id === selectedId)?.title || 'Unknown',
-                customerPhone: userData?.phoneNumber || '+91 99999 99999',
-                shippingFee: orderShippingFee, // Dynamic shipping fee applied to first order
-                deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.pincode}` : "Patna, Bihar",
-                deliveryLatitude: selectedAddress?.latitude,
-                deliveryLongitude: selectedAddress?.longitude,
-                receiverName: selectedAddress?.receiverName,
-                receiverPhone: selectedAddress?.receiverPhone,
-                order_type: vendorData.hasPreorder ? 'pre-order' : 'instant',
-                estimated_delivery: vendorData.hasPreorder
-                    ? new Date(Date.now() + vendorData.maxDuration * 24 * 60 * 60 * 1000).toISOString()
-                    : undefined,
-                coupon_id: index === 0 && appliedCoupon ? appliedCoupon.id : undefined,
-                coupon_discount: orderCouponDiscount,
-            } as any;
+                // Calculate the discount for this part of the order (or just apply it entirely to the first order)
+                const orderCouponDiscount = index === 0 && appliedCoupon ?
+                    (appliedCoupon.discount_type === 'percentage'
+                        ? Math.min(cartSubtotal * (appliedCoupon.discount_value / 100), appliedCoupon.max_discount || Infinity)
+                        : appliedCoupon.discount_value)
+                    : 0;
 
-            await addOrder(newOrder); // This adds it to the Vendor Context and Supabase
-        });
+                const finalOrderTotal = Math.max(0, vendorData.total + orderShippingFee - orderCouponDiscount);
 
-        await Promise.all(orderPromises);
+                const newOrder: VendorOrder = {
+                    id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                    userId: finalUserId,
+                    vendorId: vendorId, // Link order to specific Vendor
+                    customerName: userData ? userData.fullName : "Guest User",
+                    items: vendorData.items,
+                    totalAmount: finalOrderTotal,
+                    status: 'Pending',
+                    date: new Date().toISOString(),
+                    paymentStatus: selectedId === 'cod' ? 'COD' : 'Paid',
+                    paymentMethod: LINKED_METHODS.find(m => m.id === selectedId)?.title || SAVED_METHODS.find(m => m.id === selectedId)?.title || 'Online',
+                    transactionId: paymentId,
+                    customerPhone: userData?.phoneNumber || '+91 99999 99999',
+                    shippingFee: orderShippingFee, // Dynamic shipping fee applied to first order
+                    deliveryAddress: selectedAddress ? `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.pincode}` : "Patna, Bihar",
+                    deliveryLatitude: selectedAddress?.latitude,
+                    deliveryLongitude: selectedAddress?.longitude,
+                    receiverName: selectedAddress?.receiverName,
+                    receiverPhone: selectedAddress?.receiverPhone,
+                    order_type: vendorData.hasPreorder ? 'pre-order' : 'instant',
+                    estimated_delivery: vendorData.hasPreorder
+                        ? new Date(Date.now() + vendorData.maxDuration * 24 * 60 * 60 * 1000).toISOString()
+                        : undefined,
+                    coupon_id: index === 0 && appliedCoupon ? appliedCoupon.id : undefined,
+                    coupon_discount: orderCouponDiscount,
+                } as any;
 
-        // Slight delay to ensure DB propagation
-        await new Promise(resolve => setTimeout(resolve, 500));
+                await addOrder(newOrder); // This adds it to the Vendor Context and Supabase
+            });
 
-        // 4. Force refresh User Orders (to ensure they appear immediately even if realtime is slow)
-        await refreshOrders();
+            await Promise.all(orderPromises);
 
-        // 5. Clear Cart and Redirect
-        clearCart();
-        router.push('/order-success');
+            // Slight delay to ensure DB propagation
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // 4. Force refresh User Orders (to ensure they appear immediately even if realtime is slow)
+            await refreshOrders();
+
+            // 5. Clear Cart and Redirect
+            clearCart();
+            router.push('/order-success');
+        };
+
+        if (selectedId === 'cod') {
+            await processOrders();
+        } else {
+            // Trigger Razorpay for Online Payments
+            const options = {
+                description: 'Order from Together With Farm',
+                image: 'https://i.imgur.com/3g7nmJC.png', // Replace with your logo if applicable
+                currency: 'INR',
+                key: 'rzp_live_SW93HyQQLI49af',
+                amount: Math.round(grandTotal * 100), // Amount in paisa
+                name: 'Together With Farm',
+                prefill: {
+                  email: user?.email || 'test@example.com',
+                  contact: userData?.phoneNumber || '',
+                  name: userData?.fullName || 'Guest User'
+                },
+                theme: { color: '#1F5E2E' }
+            };
+            
+            try {
+                const data = await RazorpayCheckout.open(options);
+                // Payment successful
+                await processOrders(data.razorpay_payment_id);
+            } catch (error: any) {
+                // If the user cancelled or payment failed
+                Alert.alert("Payment Failed", error.description || "Could not complete the transaction.");
+            }
+        }
     };
 
     const renderMethodItem = (item: PaymentMethod) => {
@@ -188,10 +226,8 @@ export default function PaymentScreen() {
                     {/* Icon */}
                     <View style={[styles.iconContainer, isDark && { backgroundColor: '#333', borderColor: '#444' }]}>
                         {/* Custom handling for icons based on type */}
-                        {item.id.includes('phonepe') && <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#5f259f' }}>Pe</Text>}
-                        {item.id.includes('paytm') && <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#00b9f5' }}>Paytm</Text>}
+                        {item.id === 'razorpay' && <MaterialCommunityIcons name="shield-check" size={24} color={isDark ? '#FFF' : '#1F5E2E'} />}
                         {item.type === 'cod' && <Ionicons name="cash-outline" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />}
-                        {item.type === 'card' && <FontAwesome5 name="credit-card" size={20} color={isDark ? '#FFF' : '#1A1A1A'} />}
                     </View>
 
                     {/* Text */}
@@ -228,32 +264,9 @@ export default function PaymentScreen() {
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                {/* Linked Methods */}
-                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Linked Methods</Text>
+                {/* Payment Methods */}
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Payment Options</Text>
                 {LINKED_METHODS.map(renderMethodItem)}
-
-                {/* Saved Methods */}
-                <View style={{ height: 24 }} />
-                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Saved Methods</Text>
-                {SAVED_METHODS.map(renderMethodItem)}
-
-                {/* Add Methods */}
-                <View style={{ height: 24 }} />
-                {/* Add Methods */}
-                <View style={{ height: 24 }} />
-                <Text style={[styles.sectionTitle, isDark && { color: '#FFF' }]}>Add Methods</Text>
-                <TouchableOpacity style={[styles.methodCard, isDark && { backgroundColor: '#1E1E1E', borderColor: '#333' }]}>
-                    <View style={styles.row}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#fff', borderWidth: 0 }, isDark && { backgroundColor: '#333' }]}>
-                            <Ionicons name="add" size={24} color={isDark ? '#FFF' : '#1A1A1A'} />
-                        </View>
-                        <View style={styles.textContainer}>
-                            <Text style={[styles.methodTitle, isDark && { color: '#FFF' }]}>Add New Method</Text>
-                            <Text style={[styles.methodSubtitle, isDark && { color: '#AAA' }]}>UPI, Netbanking, etc</Text>
-                        </View>
-                        <Ionicons name="ellipsis-horizontal" size={20} color={isDark ? '#FFF' : '#666'} />
-                    </View>
-                </TouchableOpacity>
 
             </ScrollView>
 

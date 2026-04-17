@@ -7,3 +7,5 @@ ios/
 *.aab
 *.ipa
 .git/
+tmp-test-app/
+supabase/
